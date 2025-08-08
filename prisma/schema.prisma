@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Platform {
+  LINKEDIN
+  TWITTER
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum Status {
+  DRAFTED
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL
+}
+
+enum NotificationType {
+  POST_PUBLISHED
+  POST_FAILED
+  POST_SCHEDULED
+  ACCOUNT_DISCONNECTED
+  SUBSCRIPTION_RENEWAL
+  GENERAL
+}
+
+
+model Account {
+  id                       String   @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?  @db.Text
+  access_token             String?  @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?  @db.Text
+  session_state            String?
+  refresh_token_expires_in Int?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  image         String?
+  password      String?
+  role          Role           @default(USER)
+  verifiedEmail Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  socialAccounts  SocialAccount[]
+  notifications   Notification[]
+  media           Media[]
+  posts           Post[]
+
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model SocialAccount {
+  id               String       @id @default(cuid())
+  platform         Platform
+  accessToken      String       @db.LongText
+  refreshToken     String?      @db.LongText
+  tokenExpiresAt   DateTime?
+  platformUserId   String
+  platformUsername String
+  plafromUserPageId String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  user             User         @relation(fields: [userId], references: [id])
+  userId           String
+  isConnected      Boolean      @default(true)
+
+  @@unique([userId, platform])
+  @@index([userId])
+}
+
+model Post {
+  id           String   @id @default(cuid())
+  userId       String
+  content      String
+  caption      String?
+  platform     Platform
+  publishedAt  DateTime?
+  scheduledAt  DateTime?
+  status       Status   @default(DRAFTED)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  media        Media[]
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  type      MediaType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id          String            @id @default(cuid())
+  userId      String
+  type        NotificationType
+  title       String
+  message     String
+  read        Boolean           @default(false)
+  metadata    Json?             // store extra info like postId, platform, etc.
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
