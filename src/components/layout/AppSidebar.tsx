@@ -1,9 +1,10 @@
-import * as React from "react"
-import { ArrowLeft, Calendar, LayoutDashboard, Users, Bell, Settings, Plus, Infinity, CheckCircle, User, LogOut } from 'lucide-react'
+import Link from "next/link";
+import Image from "next/image";
+import * as React from "react";
+import { Calendar, Users, Bell, Settings, Plus, LogOut } from 'lucide-react';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import {
   Sidebar,
   SidebarContent,
@@ -17,10 +18,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
-import Image from "next/image"
-import Link from "next/link"
+} from "@/components/ui/sidebar";
 
 // Sample data for navigation
 const navigation = {
@@ -35,7 +33,7 @@ const navigation = {
     {
       title: "Accounts",
       icon: Users,
-      url: "#",
+      url: "/accounts",
     },
   ],
   activity: [
@@ -54,9 +52,18 @@ const navigation = {
   ],
 }
 
-export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps {
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+}
+
+export default function AppSidebar({ user }: AppSidebarProps) {
   return (
-    <Sidebar {...props} collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarHeader className="flex items-center justify-between p-4 relative">
         <div className="flex items-center gap-2">
           <Image
@@ -169,16 +176,16 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-2">
+      <SidebarFooter>
         {/* User Profile */}
         <div className="flex items-center p-2 bg-white rounded-md group-data-[collapsible=icon]:hidden">
           <Avatar className="size-8">
-            <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Hasan Cagli" />
-            <AvatarFallback>HC</AvatarFallback>
+            <AvatarImage src={user?.image ?? ''} alt={user?.name ?? ''} />
+            <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col text-sm">
-            <span className="font-semibold">Hasan Cagli</span>
-            <span className="text-xs text-gray-600">hasancaglivideo@gmail.com</span>
+            <span className="font-semibold">{user.name}</span>
+            <span className="text-xs text-gray-600">{user.email}</span>
           </div>
         </div>
 

@@ -60,7 +60,7 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl: '/accounts',
       });
 
       if (result?.error) {
@@ -69,7 +69,7 @@ export default function RegisterPage() {
 
       if (result?.ok) {
         toast.success('Registration successful!');
-        router.push('/dashboard');
+        router.push('/accounts');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -83,7 +83,7 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       const result = await signIn('google', { 
-        callbackUrl: '/dashboard',
+        callbackUrl: '/accounts',
         redirect: false 
       });
       
@@ -105,7 +105,7 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       const result = await signIn('facebook', { 
-        callbackUrl: '/dashboard',
+        callbackUrl: '/accounts',
         redirect: false 
       });
       
@@ -137,7 +137,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="z-10 relative space-y-3">
                     <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
-                      <Image src="/logo2.png" alt="Logo" width={80} height={80} unoptimized unselectable="on" />
+                      <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized unselectable="on" />
                     </div>
                     <div>
                     <h1 className="text-2xl font-bold mb-1">Create Account</h1>

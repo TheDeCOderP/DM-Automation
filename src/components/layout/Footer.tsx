@@ -41,7 +41,7 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center space-x-3">
-              <Image src="/logo.png" alt="logo" height={60} width={60} unoptimized className="border border-white rounded-full"/>
+              <Image src="/icons/logo.png" alt="logo" height={60} width={60} unoptimized className="border border-white rounded-full"/>
               <div>
                 <span className="text-2xl font-bold bg-white bg-clip-text text-transparent">
                   Prabisha Consulting

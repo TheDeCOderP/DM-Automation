@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `Post` MODIFY `platform` ENUM('ALL', 'LINKEDIN', 'TWITTER', 'FACEBOOK', 'INSTAGRAM') NOT NULL;
+
+-- AlterTable
+ALTER TABLE `SocialAccount` MODIFY `platform` ENUM('ALL', 'LINKEDIN', 'TWITTER', 'FACEBOOK', 'INSTAGRAM') NOT NULL;

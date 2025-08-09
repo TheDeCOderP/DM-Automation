@@ -1,8 +1,7 @@
 // lib/social/facebook.ts
 import { prisma } from "@/lib/prisma";
-import { GeneratedContent } from "@prisma/client";
 
-export async function publishToFacebook(generatedContent: GeneratedContent, userId: string) {
+export async function publishToFacebook(generatedContent: any, userId: string) {
     try {
         if(!generatedContent || !userId) throw new Error('Invalid input');
 

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const longLivedTokenData = await longLivedTokenRes.json();
     const accessToken = longLivedTokenData.access_token || tokenData.access_token;
     
-    // Handle expiration - Facebook sometimes returns expires_in as a string
+    // Handle expiration
     let expiresIn = 60 * 60 * 24 * 60; // Default 60 days if not provided
     if (longLivedTokenData.expires_in) {
       expiresIn = parseInt(longLivedTokenData.expires_in.toString());
@@ -50,9 +50,8 @@ export async function GET(request: NextRequest) {
     }
 
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
-    console.log('Token expiration:', tokenExpiresAt);
 
-    // 3. Fetch Facebook profile and pages
+    // 3. Fetch Facebook profile (and pages if available)
     const profileRes = await fetch(
       `https://graph.facebook.com/v19.0/me?fields=id,name,accounts{id,name,access_token}&access_token=${accessToken}`
     );
@@ -66,11 +65,10 @@ export async function GET(request: NextRequest) {
     // 4. Save to database if you have a user ID in state
     if (state) {
       try {
-        const firstPage = profile.accounts?.data?.[0];
-        
-        if (!firstPage) {
-          throw new Error('No Facebook pages found for this account');
-        }
+        // Use page token if available, otherwise use user token
+        const tokenToStore = profile.accounts?.data?.[0]?.access_token || accessToken;
+        const platformUserId = profile.id;
+        const platformUsername = profile.name;
 
         // Validate the expiration date
         if (isNaN(tokenExpiresAt.getTime())) {
@@ -85,20 +83,20 @@ export async function GET(request: NextRequest) {
             }
           },
           update: {
-            accessToken: firstPage.access_token,
-            platformUserId: profile.id,
-            platformUsername: profile.name,
+            accessToken: tokenToStore,
+            platformUserId,
+            platformUsername,
             isConnected: true,
-            tokenExpiresAt: tokenExpiresAt,
+            tokenExpiresAt,
           },
           create: {
             platform: 'FACEBOOK',
-            accessToken: firstPage.access_token,
-            platformUserId: profile.id,
-            platformUsername: profile.name,
+            accessToken: tokenToStore,
+            platformUserId,
+            platformUsername,
             userId: state,
             isConnected: true,
-            tokenExpiresAt: tokenExpiresAt,
+            tokenExpiresAt,
           }
         });
       } catch (dbError) {
@@ -107,7 +105,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const dashboardUrl = new URL('/dashboard', request.nextUrl.origin);
+    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
     dashboardUrl.searchParams.set('facebook', 'connected');
     return NextResponse.redirect(dashboardUrl.toString());
   } catch (error) {

@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     });
     
     // Use absolute URL for redirect
-    const dashboardUrl = new URL('/dashboard', request.nextUrl.origin);
+    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
     dashboardUrl.searchParams.set('linkedin', 'connected');
     
     return NextResponse.redirect(dashboardUrl.toString());

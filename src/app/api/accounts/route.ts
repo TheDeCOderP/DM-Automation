@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
-import { Platform } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+
+import { Platform } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +16,15 @@ export async function GET(req: NextRequest) {
         userId: token.id as string,
         isConnected: true,
       },
-      include: {
+      select: {
+        id: true,
+        platform: true,
+        platformUserId: true,
+        platformUsername: true,
+        tokenExpiresAt: true,
+        isConnected: true,
+        createdAt: true,
+        updatedAt: true,
         user: true,
       },
     });

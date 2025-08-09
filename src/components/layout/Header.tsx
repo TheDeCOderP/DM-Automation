@@ -37,7 +37,7 @@ export default function Header() {
           <div className={`flex items-center gap-4 p-4 m-2 rounded-md transition-all ${hasScrolled ? 'border border-slate-300 bg-white' : 'bg-transparent'}`}>
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/logo.png" alt="Logo" width={32} height={32} />
+              <Image src="/icons/logo.png" alt="Logo" width={32} height={32} />
               <span className="text-lg font-semibold text-slate-900">Prabisha Consulting</span>
             </Link>
 

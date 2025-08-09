@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${process.env.FACEBOOK_CLIENT_ID}&redirect_uri=${process.env.FACEBOOK_REDIRECT_URI}&scope=pages_manage_posts,pages_read_engagement,public_profile&state=${userId}`;
+  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${process.env.FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.FACEBOOK_REDIRECT_URI!)}&scope=pages_manage_posts,pages_read_engagement,pages_show_list,public_profile&state=${userId}`;
   
   return NextResponse.redirect(authUrl);
 }

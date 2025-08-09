@@ -52,7 +52,7 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       await signIn(provider, { 
-        callbackUrl: '/dashboard',
+        callbackUrl: '/accounts',
         redirect: false 
       });
     } catch (error) {
@@ -87,7 +87,7 @@ export default function LoginPage() {
         email: formData.email,
         password: formData.password,
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl: '/accounts',
       });
 
       if (result?.error) {
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
       if (result?.ok) {
         toast.success('Login successful!');
-        router.push('/dashboard');
+        router.push('/accounts');
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -118,7 +118,7 @@ export default function LoginPage() {
           </div>
           <div className="z-10 text-center space-y-3">
             <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
-              <Image src="/logo2.png" alt="Logo" width={80} height={80} unoptimized />
+              <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized />
             </div>
             <h2 className="text-2xl font-bold">Welcome Back</h2>
             <p className="text-white/90 max-w-xs mx-auto text-sm">

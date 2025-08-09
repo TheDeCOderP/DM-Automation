@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { GeneratedContent, SocialAccount } from "@prisma/client";
 
 interface TwitterTokenResponse {
     access_token: string;
@@ -53,7 +52,7 @@ interface TweetBody {
     };
 }
 
-async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string> {
+async function refreshTwitterToken(socialAccount: any): Promise<string> {
     if (!socialAccount.refreshToken) {
         throw new Error('Twitter refresh token is missing. User needs to re-authenticate.');
     }
@@ -106,7 +105,7 @@ async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string
 }
 
 export async function publishToTwitter(
-  generatedContent: GeneratedContent,
+  generatedContent: any,
   imageBase64: string | null,
   userId: string
 ): Promise<TwitterTweetResponse['data']> {

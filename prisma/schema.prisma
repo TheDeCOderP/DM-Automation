@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -20,10 +19,18 @@ enum Role {
 }
 
 enum Platform {
+  ALL
   LINKEDIN
   TWITTER
   FACEBOOK
   INSTAGRAM
+}
+
+enum Frequency {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
 }
 
 enum Status {
@@ -90,7 +97,7 @@ model User {
   image         String?
   password      String?
   role          Role           @default(USER)
-  verifiedEmail Boolean        @default(false)
+  emailVerified DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -125,11 +132,12 @@ model SocialAccount {
 model Post {
   id           String   @id @default(cuid())
   userId       String
-  content      String
-  caption      String?
+  content      String   @db.LongText
+  caption      String?  @db.LongText
   platform     Platform
   publishedAt  DateTime?
   scheduledAt  DateTime?
+  frequency    Frequency?
   status       Status   @default(DRAFTED)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

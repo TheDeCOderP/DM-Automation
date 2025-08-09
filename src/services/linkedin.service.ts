@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { GeneratedContent } from "@prisma/client";
 
 interface LinkedInMedia {
   status: string;
@@ -32,7 +31,7 @@ interface LinkedInPostBody {
 }
 
 export async function publishToLinkedin(
-  generatedContent: GeneratedContent, 
+  generatedContent: any, 
   imageBase64: string | null, 
   userId: string
 ) {
