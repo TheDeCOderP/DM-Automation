@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/facebook/callback`;
+  const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/callback`;
   const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid,profile,email,w_member_social&state=${userId}`;
   
   return NextResponse.redirect(authUrl);
