@@ -104,7 +104,8 @@ export async function POST(req: NextRequest) {
         // Parse JSON data from FormData
         const captions = JSON.parse(formData.get('captions') as string);
         const schedule = JSON.parse(formData.get('schedule') as string);
-        
+
+        console.log('Schedule:', schedule);
         // Get files from FormData
         const files = formData.getAll('files') as File[];
         
@@ -136,6 +137,18 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const startDate = new Date(schedule.startDate);
+        const [hours, minutes] = schedule.startTime.split(':').map(Number);
+        const scheduledDate = new Date(
+            startDate.getFullYear(),
+            startDate.getMonth(),
+            startDate.getDate(),
+            hours,
+            minutes,
+            0,
+            0
+        );
+
         // Generate cron expression from schedule
         const { cron: cronExpression, expiresAt } = generateCronExpression(schedule);
         
@@ -150,7 +163,7 @@ export async function POST(req: NextRequest) {
                     content: caption,
                     caption: caption,
                     platform: platform as Platform,
-                    scheduledAt: new Date(schedule.startDate),
+                    scheduledAt: scheduledDate.toISOString(),
                     status: Status.SCHEDULED,
                     userId: token.id,
                     frequency: schedule.frequency.toUpperCase() as Frequency,

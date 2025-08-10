@@ -152,7 +152,6 @@ export async function publishToLinkedin(
     });
 
     const data = await response.json();
-    console.log('LinkedIn Response:', data);
 
     if (!response.ok) {
       await handleLinkedInPostFailure(post, data);

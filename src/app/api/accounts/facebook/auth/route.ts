@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const redirectUri = `${req.headers.get('origin')}/api/accounts/facebook/callback`;
+  const redirectUri = `${req.nextUrl.origin}/api/accounts/facebook/callback`;
 
   const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${process.env.FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=pages_manage_posts,pages_read_engagement,pages_show_list,public_profile&state=${userId}`;
   
