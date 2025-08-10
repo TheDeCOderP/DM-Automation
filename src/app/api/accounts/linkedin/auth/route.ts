@@ -2,8 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  const userId = request.nextUrl.searchParams.get('userId');
+export async function GET(req: NextRequest) {
+  const userId = req.nextUrl.searchParams.get('userId');
   
   if (!userId) {
     return NextResponse.json(
@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${process.env.LINKEDIN_REDIRECT_URI}&scope=openid,profile,email,w_member_social&state=${userId}`;
+  const redirectUri = `${req.headers.get('origin')}/api/accounts/facebook/callback`;
+  const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid,profile,email,w_member_social&state=${userId}`;
   
   return NextResponse.redirect(authUrl);
 }
