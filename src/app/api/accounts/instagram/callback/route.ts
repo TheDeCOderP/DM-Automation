@@ -1,7 +1,8 @@
 // app/api/social-accounts/instagram/callback/route.ts
-import { NextResponse } from 'next/server';
-import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { NextResponse, NextRequest } from 'next/server';
+
+import { FacebookPage } from '@/types/facebook';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
     
     const pagesData = await pagesRes.json();
-    const pageWithInstagram = pagesData.data.find((page: any) => page.instagram_business_account);
+    const pageWithInstagram = pagesData.data.find((page: FacebookPage) => page.instagram_business_account);
 
     if (!pageWithInstagram) {
       throw new Error('No Instagram account connected to your Facebook pages');

@@ -7,10 +7,9 @@ import { Sparkles, Facebook, Instagram, Linkedin, Twitter } from "lucide-react"
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 import CaptionInput from "./CaptionInput"
 
@@ -68,7 +67,7 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
         return newCaptions
       })
     }
-  }, [useSameCaption, commonCaption, platformCaptions, selectedPlatforms])
+  }, [useSameCaption, commonCaption, platformCaptions, setPlatformCaptions, selectedPlatforms])
 
   const handleGenerateClick = () => {
     setIsPromptDialogOpen(true)

@@ -101,8 +101,8 @@ export default function AccountsCard({ accounts, selectedAccounts, setSelectedAc
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            {accounts.map(account => {
-              const PlatformIcon = platformIcons[account.platform] || Facebook;
+            {accounts.map((account: SocialAccount) => {
+              const PlatformIcon = platformIcons[account.platform  as keyof typeof platformIcons];
               return (
                 <div key={account.id} className="flex items-center gap-2">
                   <Checkbox

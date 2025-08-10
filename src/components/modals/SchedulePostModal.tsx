@@ -1,18 +1,23 @@
 'use client'
-import * as React from 'react'
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { CalendarIcon, ClockIcon } from 'lucide-react'
-import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
-import { ScheduleData } from '@/types/scheduled-data';
+
+import { format } from 'date-fns';
+import cronParser from 'cron-parser';
+import { useState, useEffect, useCallback } from 'react';
+import { CalendarIcon, ClockIcon } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+
+import { ScheduleData } from '@/types/scheduled-data'
+
+type FrequencyType = 'once' | 'minutes' | 'daily' | 'monthly' | 'yearly' | 'custom';
 
 interface SchedulePostModalProps {
   onSubmit: () => void
@@ -22,12 +27,17 @@ interface SchedulePostModalProps {
 
 export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: SchedulePostModalProps) {
   const [open, setOpen] = useState(false)
+  const [nextExecutions, setNextExecutions] = useState<string[]>([])
 
-  const handleScheduleChange = (field: keyof ScheduleData, value: any) => {
+  const handleScheduleChange = (field: keyof ScheduleData, value: ScheduleData[keyof ScheduleData]) => {
     setSchedule(prev => ({ ...prev, [field]: value }))
   }
 
-  const generateCronExpression = () => {
+  const generateCronExpression = useCallback(() => {
+    if (schedule.frequency === 'once') {
+      return null // No cron expression for one-time schedule
+    }
+
     const [hours, minutes] = schedule.startTime.split(':').map(Number)
     const day = schedule.startDate.getDate()
     const month = schedule.startDate.getMonth() + 1 // Months are 0-indexed
@@ -38,54 +48,56 @@ export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: S
       case 'daily':
         return `${minutes} ${hours} * * *`
       case 'monthly':
-        return `${minutes} ${hours} ${schedule.dayOfMonth || 1} * *`
+        return `${minutes} ${hours} ${schedule.dayOfMonth || day} * *`
       case 'yearly':
-        return `${minutes} ${hours} ${schedule.dayOfMonth || 1} ${schedule.month || 1} *`
+        return `${minutes} ${hours} ${schedule.dayOfMonth || day} ${schedule.month || month} *`
       case 'custom':
         return schedule.customExpression || ''
       default:
         return `${minutes} ${hours} * * *`
     }
-  }
-
-  const [nextExecutions, setNextExecutions] = useState<string[]>([])
-
-  const calculateNextExecutions = () => {
-    const cronExpression = generateCronExpression()
-    // In a real app, you would use a cron parser library to calculate next runs
-    // This is a simplified version for demo purposes
-    const now = new Date()
-    const executions: string[] = []
-    
-    for (let i = 0; i < 5; i++) {
-      const nextDate = new Date(now)
-      if (schedule.frequency === 'minutes') {
-        nextDate.setMinutes(nextDate.getMinutes() + (schedule.interval || 15) * (i + 1))
-      } else if (schedule.frequency === 'daily') {
-        nextDate.setDate(nextDate.getDate() + (i + 1))
-        nextDate.setHours(parseInt(schedule.startTime.split(':')[0]))
-        nextDate.setMinutes(parseInt(schedule.startTime.split(':')[1]))
-      } else if (schedule.frequency === 'monthly') {
-        nextDate.setMonth(nextDate.getMonth() + (i + 1))
-        nextDate.setDate(schedule.dayOfMonth || 1)
-        nextDate.setHours(parseInt(schedule.startTime.split(':')[0]))
-        nextDate.setMinutes(parseInt(schedule.startTime.split(':')[1]))
-      } else if (schedule.frequency === 'yearly') {
-        nextDate.setFullYear(nextDate.getFullYear() + (i + 1))
-        nextDate.setMonth((schedule.month || 1) - 1)
-        nextDate.setDate(schedule.dayOfMonth || 1)
-        nextDate.setHours(parseInt(schedule.startTime.split(':')[0]))
-        nextDate.setMinutes(parseInt(schedule.startTime.split(':')[1]))
-      }
-      executions.push(format(nextDate, "EEEE, MMMM d, yyyy h:mm a"))
-    }
-    
-    setNextExecutions(executions)
-  }
-
-  React.useEffect(() => {
-    calculateNextExecutions()
   }, [schedule])
+
+  const calculateNextExecutions = useCallback(() => {
+    if (schedule.frequency === 'once') {
+      // For one-time schedule, just show the scheduled date/time
+      const dateTime = new Date(schedule.startDate)
+      const [hours, minutes] = schedule.startTime.split(':').map(Number)
+      dateTime.setHours(hours, minutes, 0, 0)
+      setNextExecutions([format(dateTime, "EEEE, MMMM d, yyyy h:mm a")])
+      return
+    }
+
+    const cronExpression = generateCronExpression()
+    if (!cronExpression) return
+
+    try {
+      const interval = cronParser.parse(cronExpression, {
+        currentDate: schedule.startDate,
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone
+      })
+
+      const executions: string[] = []
+      for (let i = 0; i < 5; i++) {
+        try {
+          const nextDate = interval.next().toDate()
+          executions.push(format(nextDate, "EEEE, MMMM d, yyyy h:mm a"))
+        } catch (error: unknown) {
+          console.error(`Error getting execution ${i + 1}: `, error instanceof Error ? error.message : 'Unknown error');
+          break
+        }
+      }
+
+      setNextExecutions(executions)
+    } catch (error: unknown) {
+      console.error('Error parsing cron expression: ', error instanceof Error ? error.message : 'Unknown error');
+      setNextExecutions(['Invalid schedule expression'])
+    }
+  }, [schedule, generateCronExpression])
+
+  useEffect(() => {
+    calculateNextExecutions()
+  }, [calculateNextExecutions])
 
   return (
     <>
@@ -145,9 +157,13 @@ export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: S
                 <Label>Execution schedule</Label>
                 <RadioGroup
                   value={schedule.frequency}
-                  onValueChange={(value) => handleScheduleChange('frequency', value)}
+                  onValueChange={(value) => handleScheduleChange('frequency', value as FrequencyType)}
                   className="space-y-4"
                 >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="once" id="once" />
+                    <Label htmlFor="once">Once at {schedule.startTime} on {format(schedule.startDate, "MMM d, yyyy")}</Label>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="minutes" id="minutes" />
                     <Label htmlFor="minutes" className="flex items-center gap-2">
@@ -174,7 +190,7 @@ export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: S
                         className="w-16 h-8" 
                         min="1" 
                         max="31" 
-                        value={schedule.dayOfMonth || 1} 
+                        value={schedule.dayOfMonth || schedule.startDate.getDate()} 
                         onChange={(e) => handleScheduleChange('dayOfMonth', parseInt(e.target.value))}
                         disabled={schedule.frequency !== 'monthly'}
                       /> of the month at {schedule.startTime}
@@ -188,11 +204,11 @@ export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: S
                         className="w-16 h-8" 
                         min="1" 
                         max="31" 
-                        value={schedule.dayOfMonth || 1} 
+                        value={schedule.dayOfMonth || schedule.startDate.getDate()} 
                         onChange={(e) => handleScheduleChange('dayOfMonth', parseInt(e.target.value))}
                         disabled={schedule.frequency !== 'yearly'}
                       /> <Select
-                        value={(schedule.month || 1).toString()}
+                        value={(schedule.month || (schedule.startDate.getMonth() + 1)).toString()}
                         onValueChange={(value) => handleScheduleChange('month', parseInt(value))}
                         disabled={schedule.frequency !== 'yearly'}
                       >
@@ -228,9 +244,13 @@ export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: S
               <div className="space-y-2">
                 <Label>Next executions</Label>
                 <div className="border rounded-md p-4 space-y-2">
-                  {nextExecutions.map((execution, i) => (
-                    <div key={i}>{execution}</div>
-                  ))}
+                  {nextExecutions.length > 0 ? (
+                    nextExecutions.map((execution, i) => (
+                      <div key={i}>{execution}</div>
+                    ))
+                  ) : (
+                    <div>No upcoming executions</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -241,7 +261,7 @@ export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: S
               Cancel
             </Button>
             <Button 
-              onClick={() => {
+              onClick={async() => {
                 onSubmit();
                 setOpen(false);
               }}

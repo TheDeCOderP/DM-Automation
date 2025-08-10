@@ -1,12 +1,13 @@
 "use client"
 
 import Image from "next/image"
-import * as React from "react"
-import { useDropzone } from "react-dropzone"
-import { CloudUpload, FileVideo, ZoomIn, ZoomOut, X, Plus, Equal, Info, ImageIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRef, useEffect, useState, useCallback } from "react"
+import { useDropzone } from "react-dropzone";
+import { CloudUpload, FileVideo, ZoomIn, ZoomOut, X, Plus, Equal, Info, ImageIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface MediaFile {
   file: File
@@ -19,14 +20,14 @@ interface MediaUploadProps {
 }
 
 export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = React.useState<MediaFile[]>([])
-  const [selectedFile, setSelectedFile] = React.useState<MediaFile | null>(null)
-  const [zoomLevel, setZoomLevel] = React.useState<number>(1) // State for zoom level, 1 means no zoom
-  const [isHoveringImage, setIsHoveringImage] = React.useState<boolean>(false) // State to track if mouse is over the main image preview
-  const [mousePosition, setMousePosition] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 }) // State for mouse position relative to image
-  const imagePreviewRef = React.useRef<HTMLDivElement>(null) // Ref for the main image preview container
+  const [uploadedFiles, setUploadedFiles] = useState<MediaFile[]>([])
+  const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null)
+  const [zoomLevel, setZoomLevel] = useState<number>(1) // State for zoom level, 1 means no zoom
+  const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false) // State to track if mouse is over the main image preview
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 }) // State for mouse position relative to image
+  const imagePreviewRef = useRef<HTMLDivElement>(null) // Ref for the main image preview container
 
-  const onDrop = React.useCallback(
+  const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       const newMediaFiles: MediaFile[] = acceptedFiles.map((file) => ({
         file,
@@ -58,12 +59,12 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
     noClick: true,
   })
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Clean up object URLs when component unmounts
     return () => {
       uploadedFiles.forEach((mediaFile) => URL.revokeObjectURL(mediaFile.src))
     }
-  }, []) // Empty dependency array means this only runs on unmount
+  }, [uploadedFiles])
 
   const handleRemoveFile = (fileToRemove: MediaFile) => {
     setUploadedFiles((prev) => {
@@ -74,7 +75,7 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
     })
 
     if (selectedFile === fileToRemove) {
-      setSelectedFile((prev) => {
+      setSelectedFile(() => {
         const updatedFiles = uploadedFiles.filter((mf) => mf !== fileToRemove)
         return updatedFiles.length > 0 ? updatedFiles[0] : null
       })

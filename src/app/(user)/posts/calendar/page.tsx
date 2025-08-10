@@ -4,38 +4,37 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+
+import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getPlatformIcon } from "@/utils/ui/icons";
 import { Post, Platform } from "@prisma/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MoreHorizontal, Heart, MessageCircle, Send } from "lucide-react";
 
-const platformIconMap = {
-  [Platform.FACEBOOK]: getPlatformIcon(Platform.FACEBOOK),
-  [Platform.INSTAGRAM]: getPlatformIcon(Platform.INSTAGRAM),
-  [Platform.LINKEDIN]: getPlatformIcon(Platform.LINKEDIN),
-};
-import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
 import { Status } from "@prisma/client";  
+import { DateClickArg } from "@fullcalendar/interaction";
+import { EventClickArg, EventContentArg } from "@fullcalendar/core/index.js";
+import { VariantProps } from "class-variance-authority";
 
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function CalendarUI() {
-  const { data, isLoading, mutate } = useSWR("/api/posts", fetcher, {
+  const { data, isLoading } = useSWR("/api/posts", fetcher, {
     refreshInterval: 300000, // refresh every 5 minutes
   });
 
-  const handleDateClick = (arg: any) => {
+  const handleDateClick = (arg: DateClickArg) => {
     console.log("Date clicked:", arg.dateStr);
     // You could open a modal to create a new post here
   };
 
-  const handleEventClick = (info: any) => {
+  const handleEventClick = (info: EventClickArg) => {
     console.log("Event clicked:", info.event);
     // You could open a modal with post details here
   };
@@ -110,9 +109,10 @@ function getEventColor(platform: Platform): string {
   return colors[platform] || "#6B7280";
 }
 
-function renderEventContent(eventInfo: any) {
+function renderEventContent(eventInfo: EventContentArg) {
   const platform = eventInfo.event.extendedProps.platform as Platform;
   const status = eventInfo.event.extendedProps.status as Status;
+  const content = eventInfo.event.extendedProps.content;
   const PlatformIcon = getPlatformIcon(platform);
   
   const statusVariantMap = {
@@ -122,21 +122,118 @@ function renderEventContent(eventInfo: any) {
     [Status.DRAFTED]: "outline",
   };
 
+  const PlatformPreview = ({ platform, content }: { platform: Platform; content: string }) => {
+    switch (platform) {
+      case Platform.FACEBOOK:
+        return (
+          <div className="w-64 bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+            <div className="p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-blue-500"></div>
+                <div className="text-sm font-semibold">Your Page</div>
+              </div>
+              <p className="text-sm mb-3">{content}</p>
+              <div className="h-40 bg-gray-100 flex items-center justify-center text-gray-400">
+                Media Preview
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
+                <span>Like</span>
+                <span>Comment</span>
+                <span>Share</span>
+              </div>
+            </div>
+          </div>
+        );
+      case Platform.INSTAGRAM:
+        return (
+          <div className="w-64 bg-white rounded-lg border border-gray-300">
+            <div className="p-2 flex items-center justify-between border-b">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-pink-500"></div>
+                <div className="text-sm font-semibold">your_username</div>
+              </div>
+              <MoreHorizontal className="h-4 w-4" />
+            </div>
+            <div className="h-64 bg-gray-100 flex items-center justify-center text-gray-400">
+              Media Preview
+            </div>
+            <div className="p-2">
+              <div className="flex gap-4 mb-2">
+                <Heart className="h-5 w-5" />
+                <MessageCircle className="h-5 w-5" />
+                <Send className="h-5 w-5" />
+              </div>
+              <p className="text-sm">{content}</p>
+            </div>
+          </div>
+        );
+      case Platform.TWITTER:
+        return (
+          <div className="w-64 bg-white rounded-lg border border-gray-200 p-3">
+            <div className="flex gap-2 mb-2">
+              <div className="w-10 h-10 rounded-full bg-blue-400"></div>
+              <div>
+                <div className="font-bold text-sm">Your Account</div>
+                <div className="text-gray-500 text-xs">@yourhandle</div>
+              </div>
+            </div>
+            <p className="text-sm mb-3">{content}</p>
+            <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mb-2">
+              Media Preview
+            </div>
+            <div className="flex justify-between text-gray-500 text-xs">
+              <span>12 Retweets</span>
+              <span>34 Likes</span>
+            </div>
+          </div>
+        );
+      case Platform.LINKEDIN:
+        return (
+          <div className="w-64 bg-white rounded-lg border border-gray-300">
+            <div className="p-3">
+              <div className="flex gap-2 mb-3">
+                <div className="w-10 h-10 rounded-full bg-blue-700"></div>
+                <div>
+                  <div className="font-semibold text-sm">Your Name</div>
+                  <div className="text-xs text-gray-500">Your Headline</div>
+                </div>
+              </div>
+              <p className="text-sm mb-3">{content}</p>
+              <div className="h-32 bg-gray-100 rounded flex items-center justify-center text-gray-400 mb-2">
+                Media Preview
+              </div>
+              <div className="flex gap-4 text-xs text-gray-500">
+                <span>Like</span>
+                <span>Comment</span>
+                <span>Repost</span>
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="w-64 p-3 bg-white rounded-lg border border-gray-200">
+            <p className="text-sm">{content}</p>
+          </div>
+        );
+    }
+  };
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div className={cn(
           "flex items-center gap-2 p-1 w-full cursor-pointer",
-          "border-l-4 rounded-sm", // Compact border indicator
+          "border-l-4 rounded-sm",
           status === Status.PUBLISHED && "border-l-green-500 bg-green-50",
           status === Status.FAILED && "border-l-red-500 bg-red-50",
           status === Status.SCHEDULED && "border-l-blue-500 bg-blue-50",
           status === Status.DRAFTED && "border-l-gray-500 bg-gray-50",
-          "hover:bg-accent transition-colors" // Subtle hover effect
+          "hover:bg-accent transition-colors"
         )}>
           {PlatformIcon}
           <Badge 
-            variant={statusVariantMap[status] as "destructive" | "secondary" | "outline" | "default"}
+            variant={statusVariantMap[status] as VariantProps<typeof Badge>["variant"]}
             className="h-5 px-1.5 text-xs"
           >
             {status.substring(0, 3)}
@@ -146,18 +243,8 @@ function renderEventContent(eventInfo: any) {
           </span>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[200px]">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            {PlatformIcon}
-            <span className="font-medium">{platform}</span>
-          </div>
-          <p className="break-words text-sm">{eventInfo.event.extendedProps.content}</p>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Status: {status}</span>
-            <span>{eventInfo.timeText}</span>
-          </div>
-        </div>
+      <TooltipContent side="top" className="p-0 bg-transparent border-0 shadow-none">
+        <PlatformPreview platform={platform} content={content} />
       </TooltipContent>
     </Tooltip>
   );

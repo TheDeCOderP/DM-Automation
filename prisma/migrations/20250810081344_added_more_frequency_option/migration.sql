@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Post` MODIFY `frequency` ENUM('IMMEDIATELY', 'ONCE', 'HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY') NULL;

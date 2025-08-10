@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Post, Media, SocialAccount } from "@prisma/client";
 
 interface TwitterTokenResponse {
     access_token: string;
@@ -26,6 +27,9 @@ interface TwitterMediaUploadResponse {
         w: number;
         h: number;
     };
+    video?: {
+        video_type: string;
+    };
 }
 
 interface TwitterTweetResponse {
@@ -45,14 +49,12 @@ interface TwitterTweetResponse {
 
 interface TweetBody {
     text: string;
-    for_super_followers_only?: boolean;
-    nullcast?: boolean;
     media?: {
         media_ids: string[];
     };
 }
 
-async function refreshTwitterToken(socialAccount: any): Promise<string> {
+async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string> {
     if (!socialAccount.refreshToken) {
         throw new Error('Twitter refresh token is missing. User needs to re-authenticate.');
     }
@@ -104,145 +106,195 @@ async function refreshTwitterToken(socialAccount: any): Promise<string> {
     return newAccessToken;
 }
 
-export async function publishToTwitter(
-  generatedContent: any,
-  imageBase64: string | null,
-  userId: string
-): Promise<TwitterTweetResponse['data']> {
-  if (!generatedContent?.content || !userId) {
-    throw new Error('Invalid input for publishToTwitter');
-  }
-
-  // 1. Get Twitter account
-  const socialAccount = await prisma.socialAccount.findUnique({
-    where: {
-      userId_platform: {
-        userId,
-        platform: 'TWITTER'
-      },
-      isConnected: true
+export async function publishToTwitter(post: Post & { media?: Media[] }): Promise<TwitterTweetResponse['data']> {
+    if (!post) {
+        throw new Error('Invalid input for publishToTwitter');
     }
-  });
 
-  if (!socialAccount || !socialAccount.isConnected) {
-    throw new Error('No active Twitter account found for this user');
-  }
+    // 1. Get Twitter account with user relation for notifications
+    const socialAccount = await prisma.socialAccount.findUnique({
+        where: {
+            userId_platform: {
+                userId: post.userId,
+                platform: 'TWITTER'
+            },
+            isConnected: true
+        },
+        include: {
+            user: true
+        }
+    });
 
-  // 2. Handle token refresh if needed
-  let { accessToken } = socialAccount;
-  if (isTokenExpired(socialAccount.tokenExpiresAt)) {
-    accessToken = await refreshTwitterToken(socialAccount);
-  }
+    if (!socialAccount) {
+        // Update post status to failed if no connected account
+        await prisma.post.update({
+            where: { id: post.id },
+            data: { 
+                status: "FAILED",
+                updatedAt: new Date()
+            }
+        });
 
-  // 3. Prepare tweet body
-  const tweetBody: TweetBody = {
-    text: generatedContent.content.slice(0, 250),
-    nullcast: false,
-  };
+        // Create notification for the user
+        await prisma.notification.create({
+            data: {
+                userId: post.userId,
+                type: "POST_FAILED",
+                title: "Post Failed",
+                message: `Failed to publish your post on Twitter - no connected account`,
+                metadata: {
+                    postId: post.id,
+                    platform: "TWITTER"
+                }
+            }
+        });
 
-  // 4. Handle image upload if provided
-  if (imageBase64) {
-    try {
-      const mediaId = await uploadBase64ImageToTwitter(imageBase64, accessToken);
-      tweetBody.media = { media_ids: [mediaId] };
-    } catch (error) {
-      console.error('Image upload failed, posting as text-only:', error);
+        throw new Error('User has no connected Twitter account');
     }
-  }
 
-  // 5. Post the tweet
-  const tweetResponse = await fetch('https://api.twitter.com/2/tweets', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(tweetBody)
-  });
+    // 2. Handle token refresh if needed
+    let { accessToken } = socialAccount;
+    if (isTokenExpired(socialAccount.tokenExpiresAt)) {
+        accessToken = await refreshTwitterToken(socialAccount);
+    }
 
-  const data: TwitterTweetResponse = await tweetResponse.json();
+    // 3. Get media for the post if not already included
+    const media = post.media || await prisma.media.findMany({
+        where: { postId: post.id }
+    });
 
-  if (!tweetResponse.ok) {
-    await handleTwitterPostFailure(generatedContent.id, data);
-    throw new Error(`Twitter API error: ${data.errors?.[0]?.detail || 'Unknown error'}`);
-  }
+    // 4. Prepare tweet body
+    const tweetBody: TweetBody = {
+        text: post.caption || post.content,
+    };
 
-  // 6. Record successful post
-  await recordSuccessfulPost(generatedContent.id, socialAccount.id, data.data.id);
-  return data.data;
+    // 5. Handle media upload if provided
+    if (media.length > 0) {
+        try {
+            const mediaIds = await Promise.all(
+                media.map(m => uploadMediaToTwitter(m, accessToken))
+            );
+            tweetBody.media = { media_ids: mediaIds };
+        } catch (error) {
+            console.error('Media upload failed:', error);
+            // Optionally proceed with text-only tweet if media fails
+            // throw error; // Uncomment to fail the entire post if media upload fails
+        }
+    }
+
+    // 6. Post the tweet
+    const tweetResponse = await fetch('https://api.twitter.com/2/tweets', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(tweetBody)
+    });
+
+    const data: TwitterTweetResponse = await tweetResponse.json();
+
+    if (!tweetResponse.ok) {
+        await handleTwitterPostFailure(post, socialAccount, data);
+        throw new Error(`Twitter API error: ${data.errors?.[0]?.detail || 'Unknown error'}`);
+    }
+
+    // 7. Record successful post
+    await recordSuccessfulPost(post, socialAccount, data.data.id);
+    return data.data;
 }
 
-async function uploadBase64ImageToTwitter(
-  imageBase64: string,
-  accessToken: string
-): Promise<string> {
-  // 1. Validate base64 string
-  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-  if (base64Data.length > 7 * 1024 * 1024) { // ~5MB when encoded
-    throw new Error('Image exceeds Twitter size limits');
-  }
+async function uploadMediaToTwitter(media: Media, accessToken: string): Promise<string> {
+    // 1. Get the media file from URL
+    const response = await fetch(media.url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch media from URL: ${media.url}`);
+    }
 
-  // 2. Upload directly to Twitter
-  const uploadResponse = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      media_data: base64Data,
-      media_category: 'tweet_image'
-    })
-  });
+    const blob = await response.blob();
+    const formData = new FormData();
+    formData.append('media', blob);
 
-  const uploadData: TwitterMediaUploadResponse = await uploadResponse.json();
+    // 2. Upload to Twitter
+    const uploadResponse = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+        },
+        body: formData
+    });
 
-  if (!uploadResponse.ok || !uploadData.media_id_string) {
-    throw new Error(`Failed to upload image to Twitter: ${JSON.stringify(uploadData)}`);
-  }
+    const uploadData: TwitterMediaUploadResponse = await uploadResponse.json();
 
-  return uploadData.media_id_string;
+    if (!uploadResponse.ok || !uploadData.media_id_string) {
+        throw new Error(`Failed to upload media to Twitter: ${JSON.stringify(uploadData)}`);
+    }
+
+    return uploadData.media_id_string;
 }
 
 async function recordSuccessfulPost(
-  contentId: string,
-  accountId: string,
-  tweetId: string
+    post: Post,
+    socialAccount: { id: string },
+    tweetId: string
 ) {
-  await prisma.$transaction([
-    prisma.platformPost.create({
-      data: {
-        platform: 'TWITTER',
-        platformPostId: tweetId,
-        postUrl: `https://twitter.com/i/status/${tweetId}`,
-        postedAt: new Date(),
-        status: 'PUBLISHED',
-        generatedContentId: contentId,
-        socialAccountId: accountId
-      }
-    }),
-    prisma.generatedContent.update({
-      where: { id: contentId },
-      data: { 
-        status: 'PUBLISHED',
-        publishedAt: new Date() 
-      }
-    })
-  ]);
+    await prisma.$transaction([
+        prisma.post.update({
+            where: { id: post.id },
+            data: { 
+                status: 'PUBLISHED',
+                publishedAt: new Date(),
+                updatedAt: new Date()
+            }
+        }),
+        prisma.notification.create({
+            data: {
+                userId: post.userId,
+                type: "POST_PUBLISHED",
+                title: "Post Published",
+                message: `Your post has been successfully published on Twitter`,
+                metadata: {
+                    postId: post.id,
+                    platform: "TWITTER",
+                    tweetUrl: `https://twitter.com/i/status/${tweetId}`
+                }
+            }
+        })
+    ]);
 }
 
 async function handleTwitterPostFailure(
-  contentId: string,
-  errorData: TwitterTweetResponse
+    post: Post,
+    socialAccount: { id: string, user: { id: string } },
+    errorData: TwitterTweetResponse
 ) {
-  await prisma.generatedContent.update({
-    where: { id: contentId },
-    data: { status: 'FAILED' }
-  });
-  console.error('Twitter post failed:', errorData);
+    await prisma.$transaction([
+        prisma.post.update({
+            where: { id: post.id },
+            data: { 
+                status: 'FAILED',
+                updatedAt: new Date()
+            }
+        }),
+        prisma.notification.create({
+            data: {
+                userId: post.userId,
+                type: "POST_FAILED",
+                title: "Post Failed",
+                message: `Failed to publish your post on Twitter`,
+                metadata: {
+                    postId: post.id,
+                    platform: "TWITTER",
+                    error: errorData.errors?.[0]?.detail || 'Unknown error'
+                }
+            }
+        })
+    ]);
+
+    console.error('Twitter post failed:', errorData);
 }
 
 function isTokenExpired(expiresAt: Date | null): boolean {
-  if (!expiresAt) return true;
-  return new Date(expiresAt) < new Date(Date.now() + 60000); // 1 minute buffer
+    if (!expiresAt) return true;
+    return new Date(expiresAt) < new Date(Date.now() + 60000); // 1 minute buffer
 }

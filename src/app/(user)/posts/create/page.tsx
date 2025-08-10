@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useState } from 'react';
 import { Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
 
-import { Skeleton } from '@/components/ui/skeleton';
 import MediaUpload from '@/components/features/MediaUpload';
 import CaptionsCard from '@/components/features/CaptionsCard'
 import AccountsCard from '@/components/features/AccountsCard'
@@ -33,12 +32,13 @@ const socialMediaPlatforms: SocialPlatform[] = [
 ]
 
 export default function CreatePostPage() {
-  const { data, error, isLoading } = useSwr('/api/accounts', fetcher);
+  const { data } = useSwr('/api/accounts', fetcher);
 
   const [schedule, setSchedule] = useState<ScheduleData>({
     startDate: new Date(),
     startTime: '12:00',
-    frequency: 'daily'
+    frequency: 'daily',
+    customExpression: '',
   });
   const [platformCaptions, setPlatformCaptions] = useState<{ [key: string]: string }>(() => {
     const initialCaptions: { [key: string]: string } = {}
@@ -64,7 +64,7 @@ export default function CreatePostPage() {
       const formData = new FormData();
       
       // Add files to FormData
-      uploadedFiles.forEach((file, index) => {
+      uploadedFiles.forEach((file) => {
         formData.append(`files`, file);
       });
       

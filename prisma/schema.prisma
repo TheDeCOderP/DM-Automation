@@ -27,6 +27,8 @@ enum Platform {
 }
 
 enum Frequency {
+  IMMEDIATELY
+  ONCE
   HOURLY
   DAILY
   WEEKLY
