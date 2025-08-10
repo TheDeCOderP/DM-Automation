@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 
+const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/callback`;
+
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId');
   
@@ -12,7 +14,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/callback`;
   const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid,profile,email,w_member_social&state=${userId}`;
   
   return NextResponse.redirect(authUrl);
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
     params.append('code', code);
-    params.append('redirect_uri', process.env.LINKEDIN_REDIRECT_URI!);
+    params.append('redirect_uri', redirectUri);
     params.append('client_id', process.env.LINKEDIN_CLIENT_ID!);
     params.append('client_secret', process.env.LINKEDIN_CLIENT_SECRET!);
     

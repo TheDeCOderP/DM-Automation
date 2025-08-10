@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+  const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/twitter/callback`;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: process.env.TWITTER_REDIRECT_URI!,
+        redirect_uri: redirectUri,
         code_verifier: 'challenge',
       }),
     });
