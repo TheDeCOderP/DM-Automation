@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const redirectUri = `${req.headers.get('origin')}/api/accounts/twitter/callback`;
+  const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/twitter/callback`;
 
   const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
   authUrl.searchParams.append('response_type', 'code');

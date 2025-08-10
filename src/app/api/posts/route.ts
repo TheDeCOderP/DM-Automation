@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Create cron job for scheduling posts
-        const callbackUrl = `${req.headers.get('origin')}/api/cron-jobs/publish-post`;
+        const callbackUrl = `${process.env.NEXTAUTH_URL}/api/cron-jobs/publish-post`;
         const scheduleData = {
             job: {
                 url: callbackUrl,
