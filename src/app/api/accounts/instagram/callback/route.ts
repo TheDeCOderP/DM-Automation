@@ -2,128 +2,137 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse, NextRequest } from 'next/server';
 
-import { FacebookPage } from '@/types/facebook';
+const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/instagram/callback`;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
+  const error = searchParams.get('error');
+
+  if (error) {
+    return redirectWithError(request, `Facebook error: ${error}`);
+  }
 
   if (!code) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
-    errorUrl.searchParams.set('message', 'missing_code');
-    return NextResponse.redirect(errorUrl.toString());
+    return redirectWithError(request, 'Authorization code missing');
   }
 
   try {
-    // 1. Exchange code for token
+    // 1. Exchange code for short-lived token
     const tokenRes = await fetch('https://graph.facebook.com/v19.0/oauth/access_token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: process.env.INSTAGRAM_CLIENT_ID!,
-        client_secret: process.env.INSTAGRAM_CLIENT_SECRET!,
-        redirect_uri: process.env.INSTAGRAM_REDIRECT_URI!,
+        client_id: process.env.FACEBOOK_CLIENT_ID!,
+        client_secret: process.env.FACEBOOK_CLIENT_SECRET!,
+        redirect_uri: redirectUri,
         code,
       }),
     });
 
     const tokenData = await tokenRes.json();
-
     if (!tokenRes.ok) {
       throw new Error(`Token exchange failed: ${tokenData.error?.message || 'Unknown error'}`);
     }
 
-    // 2. Get long-lived token
+    // 2. Exchange for long-lived token (60 days)
     const longLivedTokenRes = await fetch(
-      `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.INSTAGRAM_CLIENT_ID}&client_secret=${process.env.INSTAGRAM_CLIENT_SECRET}&fb_exchange_token=${tokenData.access_token}`
+      `https://graph.facebook.com/v19.0/oauth/access_token?` +
+      `grant_type=fb_exchange_token&` +
+      `client_id=${process.env.FACEBOOK_CLIENT_ID}&` +
+      `client_secret=${process.env.FACEBOOK_CLIENT_SECRET}&` +
+      `fb_exchange_token=${tokenData.access_token}`
     );
     
     const longLivedTokenData = await longLivedTokenRes.json();
     const accessToken = longLivedTokenData.access_token || tokenData.access_token;
-    
-    // Handle expiration
-    let expiresIn = 60 * 60 * 24 * 60; // Default 60 days if not provided
-    if (longLivedTokenData.expires_in) {
-      expiresIn = parseInt(longLivedTokenData.expires_in.toString());
-    } else if (tokenData.expires_in) {
-      expiresIn = parseInt(tokenData.expires_in.toString());
-    }
-
+    const expiresIn = parseInt(
+      (longLivedTokenData.expires_in || tokenData.expires_in || (60 * 60 * 24 * 60)).toString()
+    );
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
 
-    // 3. Fetch Instagram account info
-    // First get the Facebook page connected to the Instagram account
+    // 3. Get user's pages to find connected Instagram account
     const pagesRes = await fetch(
-      `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account,access_token&access_token=${accessToken}`
+      `https://graph.facebook.com/v19.0/me/accounts?` +
+      `fields=id,name,access_token,instagram_business_account{id,username}&` +
+      `access_token=${accessToken}`
     );
-    
-    if (!pagesRes.ok) {
-      throw new Error('Failed to fetch Facebook pages');
-    }
-    
+
     const pagesData = await pagesRes.json();
-    const pageWithInstagram = pagesData.data.find((page: FacebookPage) => page.instagram_business_account);
-
-    if (!pageWithInstagram) {
-      throw new Error('No Instagram account connected to your Facebook pages');
+    if (!pagesRes.ok) {
+      throw new Error(`Failed to fetch pages: ${pagesData.error?.message}`);
     }
 
-    // Get Instagram business account details
-    const instagramRes = await fetch(
-      `https://graph.facebook.com/v19.0/${pageWithInstagram.instagram_business_account.id}?fields=id,username,name,profile_picture_url&access_token=${accessToken}`
+    // Find first page with Instagram connection
+    const connectedPage = pagesData.data.find(
+      (page: { instagram_business_account: { id: string } }) => page.instagram_business_account
     );
-    
-    if (!instagramRes.ok) {
-      throw new Error('Failed to fetch Instagram account');
+
+    if (!connectedPage) {
+      throw new Error(
+        'No Instagram Business account connected to a Facebook Page. ' +
+        'Please connect your Instagram account to a Facebook Page in Settings.'
+      );
     }
-    
+
+    // 4. Get full Instagram account details
+    const instagramRes = await fetch(
+      `https://graph.facebook.com/v19.0/${connectedPage.instagram_business_account.id}?` +
+      `fields=id,username,name,profile_picture_url,followers_count&` +
+      `access_token=${accessToken}`
+    );
+
     const instagramAccount = await instagramRes.json();
-
-    // 4. Save to database if you have a user ID in state
-    if (state) {
-      try {
-        await prisma.socialAccount.upsert({
-          where: {
-            userId_platform: {
-              userId: state,
-              platform: 'INSTAGRAM'
-            }
-          },
-          update: {
-            accessToken: pageWithInstagram.access_token,
-            platformUserId: instagramAccount.id,
-            platformUsername: instagramAccount.username,
-            isConnected: true,
-            tokenExpiresAt: tokenExpiresAt,
-          },
-          create: {
-            platform: 'INSTAGRAM',
-            accessToken: pageWithInstagram.access_token,
-            platformUserId: instagramAccount.id,
-            platformUsername: instagramAccount.username,
-            userId: state,
-            isConnected: true,
-            tokenExpiresAt: tokenExpiresAt,
-          }
-        });
-      } catch (dbError) {
-        console.error('Database error:', dbError);
-        throw dbError;
-      }
+    if (!instagramRes.ok) {
+      throw new Error(`Failed to get Instagram details: ${instagramAccount.error?.message}`);
     }
 
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
-    dashboardUrl.searchParams.set('instagram', 'connected');
-    return NextResponse.redirect(dashboardUrl.toString());
+    // 5. Save to database
+    if (state) {
+      await prisma.socialAccount.upsert({
+        where: {
+          userId_platform: {
+            userId: state,
+            platform: 'INSTAGRAM'
+          }
+        },
+        update: {
+          accessToken: accessToken, // Using the long-lived token
+          platformUserId: instagramAccount.id,
+          platformUsername: instagramAccount.username,
+          isConnected: true,
+          tokenExpiresAt: tokenExpiresAt,
+        },
+        create: {
+          platform: 'INSTAGRAM',
+          accessToken: accessToken,
+          platformUserId: instagramAccount.id,
+          platformUsername: instagramAccount.username,
+          userId: state,
+          isConnected: true,
+          tokenExpiresAt: tokenExpiresAt,
+        }
+      });
+    }
+
+    // Redirect to success page
+    const successUrl = new URL('/accounts', request.nextUrl.origin);
+    successUrl.searchParams.set('instagram', 'connected');
+    return NextResponse.redirect(successUrl.toString());
+
   } catch (error) {
     console.error('Instagram callback error:', error);
-    
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
-    errorUrl.searchParams.set(
-      'message', 
-      error instanceof Error ? error.message : 'Unknown error'
+    return redirectWithError(
+      request,
+      error instanceof Error ? error.message : 'Failed to connect Instagram account'
     );
-    return NextResponse.redirect(errorUrl.toString());
   }
+}
+
+// Helper function for error redirects
+function redirectWithError(request: NextRequest, message: string) {
+  const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+  errorUrl.searchParams.set('message', encodeURIComponent(message));
+  return NextResponse.redirect(errorUrl.toString());
 }
