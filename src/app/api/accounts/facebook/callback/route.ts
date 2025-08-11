@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/facebook/callback`;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
@@ -22,7 +24,7 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         client_id: process.env.FACEBOOK_CLIENT_ID!,
         client_secret: process.env.FACEBOOK_CLIENT_SECRET!,
-        redirect_uri: process.env.FACEBOOK_REDIRECT_URI!,
+        redirect_uri: redirectUri,
         code,
       }),
     });
