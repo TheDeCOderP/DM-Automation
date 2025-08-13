@@ -78,25 +78,43 @@ export async function publishToFacebook(
     });
 
     // 3. Determine the target (page or user profile)
-    const targetId = socialAccount.plafromUserPageId || socialAccount.platformUserId;
-    if (!targetId) {
-      throw new Error('No Facebook page or profile ID found');
+    if(!post.pageTokenId) {
+      throw new Error('Page ID is required');
+    }
+    
+    const pageToken = await prisma.pageToken.findFirst({
+      where: {
+        id: post.pageTokenId,
+        socialAccount: {
+          platform: 'FACEBOOK',
+        }
+      },
+    })
+
+    const targetId = pageToken?.pageId;
+    if(targetId == undefined) {
+      throw new Error('Page ID is missing');
+    }
+
+    const page_access_token = pageToken?.accessToken;
+    if(page_access_token == undefined) {
+      throw new Error('Page access token is missing');
     }
 
     // 4. Handle different post types based on media
     let responseData: FacebookPostResponse;
     if (media.length === 0) {
       // Text-only post
-      responseData = await createTextPost(targetId, socialAccount.accessToken, post);
+      responseData = await createTextPost(targetId, page_access_token, post);
     } else if (media.length === 1 && media[0].type === 'IMAGE') {
       // Single image post
-      responseData = await createPhotoPost(targetId, socialAccount.accessToken, post, media[0]);
+      responseData = await createPhotoPost(targetId, page_access_token, post, media[0]);
     } else if (media.length === 1 && media[0].type === 'VIDEO') {
       // Video post
-      responseData = await createVideoPost(targetId, socialAccount.accessToken, post, media[0]);
+      responseData = await createVideoPost(targetId, page_access_token, post, media[0]);
     } else {
       // Multiple media items (album) or unsupported types - fallback to text with link
-      responseData = await createTextPost(targetId, socialAccount.accessToken, post);
+      responseData = await createTextPost(targetId, page_access_token, post);
     }
 
     // 5. Record successful post
@@ -113,18 +131,51 @@ export async function publishToFacebook(
   }
 }
 
+export async function getFacebookPageAccessToken(
+  userAccessToken: string,
+  pageId: string
+){
+  try {
+    const url = `https://graph.facebook.com/${pageId}?fields=access_token,name&access_token=${userAccessToken}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        `Facebook API Error: ${errorData.error?.message || 'Unknown error'}`
+      );
+    }
+    
+    const data = await response.json();
+    
+    if (!data.access_token) {
+      throw new Error('No access token returned from Facebook');
+    }
+    
+    return data.access_token;
+    
+  } catch (error) {
+    console.error('Failed to get page access token:', error);
+    throw new Error(
+      `Failed to retrieve page access token: ${error}`
+    );
+  }
+}
+
 async function createTextPost(
   targetId: string,
   accessToken: string,
   post: Post
 ): Promise<FacebookPostResponse> {
+  console.log('Creating text post...', targetId, accessToken, post);
   const response = await fetch(`https://graph.facebook.com/v19.0/${targetId}/feed`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      message: post.caption || post.content,
+      message: post.content || post.content,
       access_token: accessToken
     })
   });
@@ -143,7 +194,7 @@ async function createPhotoPost(
   
   const formData = new FormData();
   formData.append('access_token', accessToken);
-  formData.append('message', post.caption || post.content);
+  formData.append('message', post.content || post.content);
   
   // Fetch the image from URL and append to form data
   const imageResponse = await fetch(media.url);
@@ -175,7 +226,7 @@ async function createVideoPost(
       },
       body: JSON.stringify({
         //file_size: media.size || 0, // You might want to store file size in your Media model
-        title: post.caption || 'Video post',
+        title: post.content || 'Video post',
         description: post.content
       })
     }
@@ -243,6 +294,8 @@ async function recordSuccessfulFacebookPost(
     })
   ]);
 }
+
+
 
 function isTokenExpired(expiresAt: Date | null): boolean {
   if (!expiresAt) return true;

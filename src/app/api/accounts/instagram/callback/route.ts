@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
+  const { userId, brandId } = JSON.parse(state!);
   const error = searchParams.get('error');
 
   if (error) {
@@ -89,11 +90,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 5. Save to database
-    if (state) {
+    if (userId) {
       await prisma.socialAccount.upsert({
         where: {
           userId_platform: {
-            userId: state,
+            userId: userId,
             platform: 'INSTAGRAM'
           }
         },
@@ -109,9 +110,10 @@ export async function GET(request: NextRequest) {
           accessToken: accessToken,
           platformUserId: instagramAccount.id,
           platformUsername: instagramAccount.username,
-          userId: state,
+          userId: userId,
           isConnected: true,
           tokenExpiresAt: tokenExpiresAt,
+          brandId: brandId
         }
       });
     }

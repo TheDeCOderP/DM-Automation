@@ -5,34 +5,39 @@ import { NextRequest, NextResponse } from "next/server";
 import { Platform } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token?.id) {
+    return NextResponse.redirect(new URL("/login", req.url))
+  }
+
   try {
-    const token = await getToken({ req });
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const socialAccounts = await prisma.socialAccount.findMany({
+    const userBrands = await prisma.userBrand.findMany({
       where: {
-        userId: token.id as string,
-        isConnected: true,
+        userId: token.id,
       },
-      select: {
-        id: true,
-        platform: true,
-        platformUserId: true,
-        platformUsername: true,
-        tokenExpiresAt: true,
-        isConnected: true,
-        createdAt: true,
-        updatedAt: true,
-        user: true,
+      include: {
+        brand: {
+          include: {
+            socialAccounts: {
+              include: {
+                pageTokens: true,
+              },
+            },
+          },
+        },
       },
-    });
+    })
 
-    return NextResponse.json({ data: socialAccounts }, { status: 200 });
+    return NextResponse.json(
+      {
+        data: userBrands.flatMap((ub) => ub.brand.socialAccounts),
+        brands: userBrands.map((ub) => ub.brand),
+      },
+      { status: 200 },
+    )
   } catch (error) {
-    console.error("Error fetching social accounts:", error);
-    return NextResponse.json({ error: "Failed to fetch social accounts" }, { status: 500 });
+    console.log("Error fetching accounts:", error)
+    return NextResponse.json({ error: `Error fetching accounts ${error}` }, { status: 500 })
   }
 }
 

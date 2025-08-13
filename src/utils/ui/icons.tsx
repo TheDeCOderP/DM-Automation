@@ -42,3 +42,18 @@ export function getPlatformIcon(platform: string) {
       return <Share2 className="h-4 w-4" />
   }
 }
+
+export function getPlatformColor(platform: string) {
+  switch (platform) {
+    case "LINKEDIN":
+      return "bg-blue-700";
+    case "TWITTER":
+      return "bg-sky-500";
+    case "FACEBOOK":
+      return "bg-blue-600";
+    case "INSTAGRAM":
+      return "bg-gradient-to-r from-purple-500 to-pink-500";
+    default:
+      return "";
+  }
+}

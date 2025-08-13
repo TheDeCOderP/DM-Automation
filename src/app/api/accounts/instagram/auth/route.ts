@@ -4,6 +4,7 @@ import { type NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId');
+  const brandId = req.nextUrl.searchParams.get('brandId');
   
   if (!userId) {
     return NextResponse.json(
@@ -13,8 +14,12 @@ export async function GET(req: NextRequest) {
   }
 
   const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/instagram/callback`;
+  const state = JSON.stringify({
+    userId,
+    brandId,
+  });
   // Instagram uses the same OAuth system as Facebook
-  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${process.env.FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=instagram_basic,instagram_content_publish,pages_show_list&state=${userId}`;
+  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${process.env.FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=instagram_basic,instagram_content_publish,pages_show_list&state=${state}`;
   
   return NextResponse.redirect(authUrl);
 }

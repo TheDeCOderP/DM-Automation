@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import Tessaract from "tesseract.js"
 import { useRef, useEffect, useState, useCallback } from "react"
 import { useDropzone } from "react-dropzone";
 import { CloudUpload, FileVideo, ZoomIn, ZoomOut, X, Plus, Equal, Info, ImageIcon } from "lucide-react";
@@ -34,6 +35,10 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
         src: URL.createObjectURL(file),
         type: file.type,
       }))
+
+      Tessaract.recognize(acceptedFiles[0], 'eng', { logger: console.log }).then(({ data: { text } }) => {
+        console.log(text);
+      })
 
       setUploadedFiles((prev) => {
         const updatedFiles = [...prev, ...newMediaFiles]

@@ -8,7 +8,8 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const state = searchParams.get('state'); // Contains your user ID
+  const state = searchParams.get('state');
+  const { userId, brandId } = JSON.parse(state!);
 
   if (!code) {
     const errorUrl = new URL('/auth/error', request.nextUrl.origin);
@@ -51,12 +52,12 @@ export async function GET(request: NextRequest) {
     const profile = await profileRes.json();
 
     // 3. Save to database if you have a user ID in state
-    if (state) {
+    if (userId && brandId) {
       try {
         // Check if social account already exists
         const existingAccount = await prisma.socialAccount.findFirst({
           where: {
-            userId: state,
+            userId: userId,
             platform: 'TWITTER'
           }
         });
@@ -73,7 +74,8 @@ export async function GET(request: NextRequest) {
               tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
               platformUserId: profile.data.id,
               platformUsername: profile.data.username,
-              isConnected: true
+              isConnected: true,
+              brandId: brandId
             }
           });
         } else {
@@ -85,7 +87,8 @@ export async function GET(request: NextRequest) {
               tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
               platformUserId: profile.data.id,
               platformUsername: profile.data.username,
-              userId: state,
+              userId: userId,
+              brandId: brandId,
               isConnected: true
             }
           });

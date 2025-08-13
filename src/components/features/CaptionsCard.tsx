@@ -43,6 +43,14 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
   const handleCaptionChange = (platformId: string, value: string) => {
     if (useSameCaption) {
       setCommonCaption(value)
+      // Update all selected platforms with the same caption
+      setPlatformCaptions((prev) => {
+        const newCaptions = { ...prev }
+        selectedPlatforms.forEach((platform) => {
+          newCaptions[platform] = value
+        })
+        return newCaptions
+      })
     } else {
       setPlatformCaptions((prev) => ({
         ...prev,
@@ -55,10 +63,20 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
     // When switching from independent to same caption, set commonCaption to the first selected platform's caption
     if (useSameCaption && commonCaption === "" && selectedPlatforms.length > 0) {
       const firstSelectedPlatform = selectedPlatforms[0]
-      setCommonCaption(platformCaptions[firstSelectedPlatform] || "")
+      const firstPlatformCaption = platformCaptions[firstSelectedPlatform] || ""
+      setCommonCaption(firstPlatformCaption)
+      
+      // Also update all selected platforms with this caption
+      setPlatformCaptions((prev) => {
+        const newCaptions = { ...prev }
+        selectedPlatforms.forEach((platformId) => {
+          newCaptions[platformId] = firstPlatformCaption
+        })
+        return newCaptions
+      })
     }
     // When switching from same to independent, copy commonCaption to all selected platforms
-    if (!useSameCaption && commonCaption !== "") {
+    else if (!useSameCaption && commonCaption !== "") {
       setPlatformCaptions((prev) => {
         const newCaptions = { ...prev }
         selectedPlatforms.forEach((platformId) => {
@@ -67,7 +85,17 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
         return newCaptions
       })
     }
-  }, [useSameCaption, commonCaption, platformCaptions, setPlatformCaptions, selectedPlatforms])
+    // When useSameCaption is true and we have a commonCaption, ensure all platforms have it
+    else if (useSameCaption && commonCaption !== "" && selectedPlatforms.length > 0) {
+      setPlatformCaptions((prev) => {
+        const newCaptions = { ...prev }
+        selectedPlatforms.forEach((platformId) => {
+          newCaptions[platformId] = commonCaption
+        })
+        return newCaptions
+      })
+    }
+  }, [useSameCaption, commonCaption, selectedPlatforms])
 
   const handleGenerateClick = () => {
     setIsPromptDialogOpen(true)
@@ -102,6 +130,14 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
 
       if (useSameCaption) {
         setCommonCaption(data.commonCaption)
+        // Also update all selected platforms with the common caption
+        setPlatformCaptions(prev => {
+          const newCaptions = { ...prev }
+          selectedPlatforms.forEach((platformId) => {
+            newCaptions[platformId] = data.commonCaption
+          })
+          return newCaptions
+        })
       } else {
         setPlatformCaptions(prev => ({
           ...prev,

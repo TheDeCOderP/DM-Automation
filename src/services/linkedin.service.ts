@@ -121,7 +121,7 @@ export async function publishToLinkedin(
       specificContent: {
         'com.linkedin.ugc.ShareContent': {
           shareCommentary: {
-            text: post.caption || post.content,
+            text: post.content,
           },
           shareMediaCategory: assetUrn ? 'IMAGE' : 'NONE',
           ...(assetUrn ? {

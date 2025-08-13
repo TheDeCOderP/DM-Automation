@@ -1,3 +1,4 @@
+'use client';
 import Link from "next/link";
 import Image from "next/image";
 import * as React from "react";
@@ -19,6 +20,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { signOut } from "next-auth/react";
 
 // Sample data for navigation
 const navigation = {
@@ -40,7 +42,7 @@ const navigation = {
     {
       title: "Notifications",
       icon: Bell,
-      url: "#",
+      url: "/notifications",
     },
   ],
   management: [
@@ -191,7 +193,7 @@ export default function AppSidebar({ user }: AppSidebarProps) {
 
         {/* Sign Out */}
         <div className="p-2 group-data-[collapsible=icon]:hidden">
-          <Button variant="ghost" className="w-full justify-start text-red-500 hover:bg-red-50 hover:text-red-600 mt-2">
+          <Button onClick={() => signOut()} variant="ghost" className="w-full justify-start text-red-500 hover:bg-red-50 hover:text-red-600 mt-2">
             <LogOut className="size-4" />
             <span className="ml-2">Sign Out</span>
           </Button>

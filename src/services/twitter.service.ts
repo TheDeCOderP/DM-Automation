@@ -165,7 +165,7 @@ export async function publishToTwitter(post: Post & { media?: Media[] }): Promis
 
     // 4. Prepare tweet body
     const tweetBody: TweetBody = {
-        text: post.caption || post.content,
+        text: post.content,
     };
 
     // 5. Handle media upload if provided
