@@ -14,15 +14,14 @@ export async function GET(req: NextRequest) {
   }
 
   const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/twitter/callback`;
-  const state = JSON.stringify({
-    userId,
-    brandId,
-  });
+  const state = encodeURIComponent(
+    JSON.stringify({ userId, brandId })
+  );
 
   const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
   authUrl.searchParams.append('response_type', 'code');
   authUrl.searchParams.append('client_id', process.env.TWITTER_CLIENT_ID!);
-  authUrl.searchParams.append('redirect_uri', encodeURIComponent(redirectUri));
+  authUrl.searchParams.append('redirect_uri', redirectUri);
   authUrl.searchParams.append('scope', 'tweet.read tweet.write users.read offline.access media.write');
   authUrl.searchParams.append('state', state);
   authUrl.searchParams.append('code_challenge', 'challenge');

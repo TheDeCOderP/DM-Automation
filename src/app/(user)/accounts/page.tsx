@@ -263,7 +263,9 @@ export default function BrandsPage() {
       <CreateBrandModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       <ConnectAccountsModal
         mutate={mutate}
-        accounts={brands?.data[0]?.socialAccounts ?? []}
+        accounts={
+          brands?.data.find((b: BrandWithSocialAccounts) => b.id === connectAccountsModal.brandId)?.socialAccounts ?? []
+        }
         open={connectAccountsModal.open}
         onOpenChange={(open) => setConnectAccountsModal({ ...connectAccountsModal, open })}
         brandId={connectAccountsModal.brandId}

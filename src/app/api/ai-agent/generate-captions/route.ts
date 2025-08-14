@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const model = togetherai('meta-llama/Llama-Vision-Free');
+  const model = togetherai('meta-llama/Llama-3.3-70B-Instruct-Turbo');
   
   try {
     const data = await req.json();

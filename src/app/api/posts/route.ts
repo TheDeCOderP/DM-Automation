@@ -117,8 +117,6 @@ export async function POST(req: NextRequest) {
     const captions = JSON.parse(formData.get("captions") as string)
     const schedule = JSON.parse((formData.get("schedule") as string) || "null")
 
-    console.log("Schedule:", schedule, "Captions:", captions, "Accounts:", accounts, "PageTokenIds:", pageTokenIds)
-
     const userBrand = await prisma.userBrand.findFirst({
       where: {
         userId: token.id,

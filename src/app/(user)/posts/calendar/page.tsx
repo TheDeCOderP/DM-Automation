@@ -12,7 +12,7 @@ import { Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getPlatformIcon } from "@/utils/ui/icons"
-import { type Post, Platform } from "@prisma/client"
+import { type Post, Media, Platform } from "@prisma/client"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { PostPreviewModal } from "@/components/modals/PostPreviewModal"
@@ -50,29 +50,29 @@ interface HoveredPost {
 interface PostWithUser extends Post {
   platform: Platform
   status: Status
-  mediaUrl: string[]
+  media: Media[]
   user: {
     name: string
-    socialAccounts: {
+    socialAccounts?: {
       platformUsername: string
-    }
-    avatarUrl: string
+    }[]
+    avatarUrl?: string
   }
-  name: string
-  socialAccounts: {
+  name?: string
+  socialAccounts?: {
     platformUsername: string
-  }
-  platformUsername: string
-  avatarUrl: string
+  }[]
+  platformUsername?: string
+  avatarUrl?: string
 }
 
 export default function CalendarUI() {
   const { data, isLoading } = useSWR("/api/posts", fetcher, {
     refreshInterval: 300000, // refresh every 5 minutes
   })
-
+console.log(data)
   const [hoveredPost, setHoveredPost] = useState<HoveredPost | null>(null)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout>(null)
 
   const handleDateClick = (arg: DateClickArg) => {
     console.log("Date clicked:", arg.dateStr)
@@ -141,7 +141,7 @@ export default function CalendarUI() {
           title: author?.title || "Content Creator",
         },
         image,
-        timestamp: new Date(info.event.start ?? ''),
+        timestamp: new Date(info.event.start ?? ""),
         engagement: {
           likes: Math.floor(Math.random() * 500) + 50,
           comments: Math.floor(Math.random() * 50) + 5,
@@ -158,6 +158,23 @@ export default function CalendarUI() {
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredPost(null)
     }, 150) // Small delay to prevent flickering
+  }
+
+  const getUserData = (post: PostWithUser) => {
+    const name = post.user?.name || post.name || "Unknown User"
+    const avatar = post.user?.avatarUrl || post.avatarUrl || "/placeholder.svg"
+
+    // Try multiple ways to get username with fallbacks
+    let username = "unknown"
+    if (post.user?.socialAccounts?.[0]?.platformUsername) {
+      username = post.user.socialAccounts[0].platformUsername
+    } else if (post.socialAccounts?.[0]?.platformUsername) {
+      username = post.socialAccounts[0].platformUsername
+    } else if (post.platformUsername) {
+      username = post.platformUsername
+    }
+
+    return { name, username, avatar }
   }
 
   return (
@@ -192,25 +209,25 @@ export default function CalendarUI() {
                 selectable={true}
                 selectMirror={true}
                 dayMaxEvents={3}
-                events={data?.posts?.map((post: PostWithUser) => ({
-                  id: post.id,
-                  title: post.content?.substring(0, 20) + (post.content?.length > 20 ? "..." : ""),
-                  platform: post.platform,
-                  start: post.scheduledAt,
-                  end: post.scheduledAt,
-                  extendedProps: {
-                    status: post.status,
-                    content: post.content,
-                    image: post.mediaUrl?.[0],
-                    author: {
-                      name: post.user.name,
-                      username: post.user.socialAccounts.platformUsername,
-                      avatar: post.user.avatarUrl,
+                events={data?.posts?.map((post: PostWithUser) => {
+                  const userData = getUserData(post)
+
+                  return {
+                    id: post.id,
+                    title: post.content?.substring(0, 20) + (post.content?.length > 20 ? "..." : ""),
+                    platform: post.platform,
+                    start: post.scheduledAt,
+                    end: post.scheduledAt,
+                    extendedProps: {
+                      status: post.status,
+                      content: post.content,
+                      image: post?.media && post.media.length > 0 ? post.media[0].url : null,
+                      author: userData,
                     },
-                  },
-                  backgroundColor: getEventColor(post.platform),
-                  borderColor: getEventColor(post.platform),
-                }))}
+                    backgroundColor: getEventColor(post.platform),
+                    borderColor: getEventColor(post.platform),
+                  }
+                })}
                 eventContent={(eventInfo) =>
                   renderEventContent(eventInfo, handleEventMouseEnter, handleEventMouseLeave)
                 }

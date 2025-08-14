@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const { userId, brandId } = JSON.parse(state!);
+  const { userId, brandId } = JSON.parse(decodeURIComponent(state!));
 
   if (!code) {
     const errorUrl = new URL('/auth/error', request.nextUrl.origin);

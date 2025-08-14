@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import type { Platform, SocialAccount, Brand, PageToken } from "@prisma/client"
-import type { ScheduleData } from "@/types/scheduled-data"
+import type { ScheduleData } from "@/types/scheduled-data";
+import { Avatar, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -168,6 +169,10 @@ export default function CreatePostPage() {
           <SelectContent>
             {brands.map((brand) => (
               <SelectItem key={brand.id} value={brand.id}>
+                <Avatar className="mr-2">
+                  <AvatarImage className="w-8 h-8" src={brand?.logo ?? ''} />
+                  <AvatarFallback>{brand.name[0]}</AvatarFallback>
+                </Avatar>
                 {brand.name}
               </SelectItem>
             ))}
