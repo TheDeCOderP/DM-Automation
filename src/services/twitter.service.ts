@@ -114,11 +114,11 @@ export async function publishToTwitter(post: Post & { media?: Media[] }): Promis
     // 1. Get Twitter account with user relation for notifications
     const socialAccount = await prisma.socialAccount.findUnique({
         where: {
-            userId_platform: {
-                userId: post.userId,
-                platform: 'TWITTER'
+            userId_platform_brandId: {
+            userId: post.userId,
+            platform: 'TWITTER',
+            brandId: post.brandId
             },
-            isConnected: true
         },
         include: {
             user: true

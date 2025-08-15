@@ -1,20 +1,22 @@
 "use client"
-import useSWR from "swr"
-import { useState } from "react"
-import { format } from "date-fns"
-import { Plus, MoreHorizontal, Edit, Trash2, Settings, Globe, RefreshCw, AlertCircle } from "lucide-react"
+import useSWR from "swr";
+import { toast } from "sonner";
+import { useState } from "react";
+import { format } from "date-fns";
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import { CreateBrandModal } from "@/components/modals/CreateBrandModal";
+import { getPlatformIcon } from "@/utils/ui/icons";
+import { BrandModal } from "@/components/modals/BrandModal";
 import { ConnectAccountsModal } from "@/components/modals/ConnectAccountsModal";
-import type { Brand, SocialAccount } from "@prisma/client"
-import { getPlatformIcon } from "@/utils/ui/icons"
+
+import type { Brand, SocialAccount } from "@prisma/client";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -71,7 +73,9 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function BrandsPage() {
-  const { data: brands, isLoading, error, mutate } = useSWR("/api/brands", fetcher)
+  const { data: brands, isLoading, error, mutate } = useSWR("/api/brands", fetcher);
+  const [selectedBrand, setSelectedBrand] = useState<BrandWithSocialAccounts | null>(null);
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [connectAccountsModal, setConnectAccountsModal] = useState<{
     open: boolean
@@ -83,11 +87,37 @@ export default function BrandsPage() {
     mutate()
   }
 
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/brands/${id}`, {
+        method: "DELETE",
+      });
+
+      if(!response.ok){
+        throw new Error(response.statusText);
+      }
+      mutate()
+      toast.success("Successfully deleted the brand");
+      
+    } catch (err) {
+      console.error(err)
+      toast.error("Something went wrong while deleting the brand");
+    }
+  }
+
+  const handleEdit = (brand: BrandWithSocialAccounts) => {
+    setSelectedBrand(brand)
+    setIsCreateModalOpen(true)
+  }
+
+  const handleSuccess = () => {
+    setIsCreateModalOpen(false)
+    mutate()
+  }
+
   const openConnectModal = (brandId: string, brandName: string) => {
     setConnectAccountsModal({ open: true, brandId, brandName })
   }
-
-  console.log(brands)
 
   return (
     <>
@@ -237,15 +267,11 @@ export default function BrandsPage() {
                             <Globe className="h-4 w-4 mr-2" />
                             Connect Accounts
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(brand)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Brand
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Settings
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive">
+                          <DropdownMenuItem onClick={() => handleDelete(brand.id)} className="text-destructive focus:text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete Brand
                           </DropdownMenuItem>
@@ -260,7 +286,13 @@ export default function BrandsPage() {
         </div>
       )}
 
-      <CreateBrandModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <BrandModal 
+        brand={selectedBrand}
+        open={isCreateModalOpen} 
+        onSuccess={handleSuccess}
+        onOpenChange={setIsCreateModalOpen} 
+      />
+
       <ConnectAccountsModal
         mutate={mutate}
         accounts={

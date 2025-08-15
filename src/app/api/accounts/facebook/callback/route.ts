@@ -64,9 +64,10 @@ export async function GET(request: NextRequest) {
     if (userId) {
       await prisma.socialAccount.upsert({
         where: {
-          userId_platform: {
+          userId_platform_brandId: {
             userId: userId,
-            platform: 'FACEBOOK'
+            platform: 'FACEBOOK',
+            brandId: brandId
           }
         },
         update: {

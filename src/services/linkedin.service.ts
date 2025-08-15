@@ -51,9 +51,10 @@ export async function publishToLinkedin(
     // 1. Get LinkedIn account with user relation for notifications
     const socialAccount = await prisma.socialAccount.findUnique({
       where: {
-        userId_platform: {
+        userId_platform_brandId: {
           userId: post.userId,
-          platform: 'LINKEDIN'
+          platform: 'LINKEDIN',
+          brandId: post.brandId
         },
         isConnected: true
       },

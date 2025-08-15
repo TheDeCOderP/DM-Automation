@@ -187,7 +187,7 @@ export default function LoginPage() {
               <div className="space-y-1">
                 <label htmlFor="captchaInput" className="text-xs font-medium text-slate-700">Security Code</label>
                 <div className="flex gap-2 items-center">
-                  <div className="bg-secondary text-white px-3 py-2 rounded-lg font-mono text-sm tracking-widest min-w-0 flex-shrink-0 select-none">
+                  <div className="bg-secondary px-3 py-2 rounded-lg font-mono text-sm tracking-widest min-w-0 flex-shrink-0 select-none">
                     {captcha}
                   </div>
                   <Input

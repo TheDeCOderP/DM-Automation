@@ -1,4 +1,4 @@
-"use client"
+'use client'
 import { useState, useRef } from "react"
 import useSWR from "swr"
 import FullCalendar from "@fullcalendar/react"
@@ -8,18 +8,16 @@ import interactionPlugin from "@fullcalendar/interaction"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
 import { cn } from "@/lib/utils"
-import { Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { getPlatformIcon } from "@/utils/ui/icons"
 import { type Post, Media, Platform } from "@prisma/client"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Card, CardHeader, CardContent } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { PostPreviewModal } from "@/components/modals/PostPreviewModal"
 
-import { Status } from "@prisma/client"
-import type { VariantProps } from "class-variance-authority"
-import type { DateClickArg } from "@fullcalendar/interaction"
+import { Status } from "@prisma/client";
+import { getPlatformIcon } from "@/utils/ui/icons";
+import type { VariantProps } from "class-variance-authority";
+import type { DateClickArg } from "@fullcalendar/interaction";
 import type { EventClickArg, EventContentArg } from "@fullcalendar/core/index.js"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -67,21 +65,17 @@ interface PostWithUser extends Post {
 }
 
 export default function CalendarUI() {
-  const { data, isLoading } = useSWR("/api/posts", fetcher, {
-    refreshInterval: 300000, // refresh every 5 minutes
-  })
-console.log(data)
+  const { data, isLoading } = useSWR("/api/posts", fetcher);
+
   const [hoveredPost, setHoveredPost] = useState<HoveredPost | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout>(null)
 
   const handleDateClick = (arg: DateClickArg) => {
     console.log("Date clicked:", arg.dateStr)
-    // You could open a modal to create a new post here
   }
 
   const handleEventClick = (info: EventClickArg) => {
     console.log("Event clicked:", info.event)
-    // You could open a modal with post details here
   }
 
   const calculateModalPosition = (mouseX: number, mouseY: number, modalWidth: number, modalHeight: number) => {
@@ -89,25 +83,21 @@ console.log(data)
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
 
-    let x = mouseX + 15 // Default offset from cursor
-    let y = mouseY - modalHeight / 2 // Center vertically on cursor
+    let x = mouseX + 15
+    let y = mouseY - modalHeight / 2
 
-    // Check right edge overflow
     if (x + modalWidth + padding > viewportWidth) {
-      x = mouseX - modalWidth - 15 // Position to the left of cursor
+      x = mouseX - modalWidth - 15
     }
 
-    // Check left edge overflow
     if (x < padding) {
       x = padding
     }
 
-    // Check bottom edge overflow
     if (y + modalHeight + padding > viewportHeight) {
       y = viewportHeight - modalHeight - padding
     }
 
-    // Check top edge overflow
     if (y < padding) {
       y = padding
     }
@@ -137,7 +127,7 @@ console.log(data)
           name: author?.name || "Unknown User",
           username: author?.username || "unknown",
           avatar: author?.avatar || "/placeholder.svg",
-          verified: Math.random() > 0.7, // Random verification for demo
+          verified: Math.random() > 0.7,
           title: author?.title || "Content Creator",
         },
         image,
@@ -157,14 +147,13 @@ console.log(data)
   const handleEventMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredPost(null)
-    }, 150) // Small delay to prevent flickering
+    }, 150)
   }
 
   const getUserData = (post: PostWithUser) => {
     const name = post.user?.name || post.name || "Unknown User"
     const avatar = post.user?.avatarUrl || post.avatarUrl || "/placeholder.svg"
 
-    // Try multiple ways to get username with fallbacks
     let username = "unknown"
     if (post.user?.socialAccounts?.[0]?.platformUsername) {
       username = post.user.socialAccounts[0].platformUsername
@@ -180,15 +169,8 @@ console.log(data)
   return (
     <div className="relative">
       <TooltipProvider>
-        <Card className="h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <h2 className="text-xl font-semibold">Content Calendar</h2>
-            <Button size="sm" variant="outline" className="rounded-full bg-transparent">
-              <Plus className="h-4 w-4" />
-              <span className="sr-only">Add new post</span>
-            </Button>
-          </CardHeader>
-          <CardContent>
+        <Card className="h-full border-0 shadow-none">
+          <CardContent className="p-0">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-8 w-full" />
@@ -225,7 +207,7 @@ console.log(data)
                       author: userData,
                     },
                     backgroundColor: getEventColor(post.platform),
-                    borderColor: getEventColor(post.platform),
+                    borderColor: 'transparent',
                   }
                 })}
                 eventContent={(eventInfo) =>

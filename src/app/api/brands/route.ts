@@ -14,6 +14,9 @@ export async function GET(req: NextRequest) {
         const userBrands = await prisma.userBrand.findMany({
             where: {
                 userId: token.id,
+                brand: {
+                    deleted: false
+                }
             },
             include: {
                 brand: {

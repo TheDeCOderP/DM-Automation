@@ -1,6 +1,7 @@
 "use client"
+
 import { toast } from "sonner"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,13 +11,15 @@ import { ImagePlus, X } from "lucide-react"
 import Image from "next/image"
 import { Brand } from "@prisma/client"
 
-interface CreateBrandModalProps {
+interface BrandModalProps {
+  brand?: Brand | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCreateSuccess?: (newBrand: Brand) => void
+  onSuccess?: (brand: Brand) => void
 }
 
-export function CreateBrandModal({ open, onOpenChange, onCreateSuccess }: CreateBrandModalProps) {
+export function BrandModal({ open, onOpenChange, onSuccess, brand }: BrandModalProps) {
+  const isEditMode = !!brand
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -26,6 +29,22 @@ export function CreateBrandModal({ open, onOpenChange, onCreateSuccess }: Create
     website: "",
     logo: null as File | null
   })
+
+  // Prefill form for editing
+  useEffect(() => {
+    if (brand) {
+      setFormData({
+        name: brand.name,
+        description: brand.description || "",
+        website: brand.website || "",
+        logo: null
+      })
+      setLogoPreview(brand.logo || null)
+    } else {
+      setFormData({ name: "", description: "", website: "", logo: null })
+      setLogoPreview(null)
+    }
+  }, [brand])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -49,37 +68,42 @@ export function CreateBrandModal({ open, onOpenChange, onCreateSuccess }: Create
 
     try {
       const formPayload = new FormData()
-      formPayload.append('name', formData.name)
-      formPayload.append('description', formData.description)
-      formPayload.append('website', formData.website)
+      formPayload.append("name", formData.name)
+      formPayload.append("description", formData.description)
+      formPayload.append("website", formData.website)
       if (formData.logo) {
-        formPayload.append('logo', formData.logo)
+        formPayload.append("logo", formData.logo)
       }
 
-      const response = await fetch('/api/brands', {
-        method: 'POST',
-        body: formPayload,
-      })
+      const response = await fetch(
+        isEditMode ? `/api/brands/${brand?.id}` : "/api/brands",
+        {
+          method: isEditMode ? "PUT" : "POST",
+          body: formPayload
+        }
+      )
 
       if (!response.ok) {
-        throw new Error('Failed to create brand')
+        throw new Error(isEditMode ? "Failed to update brand" : "Failed to create brand")
       }
 
-      const newBrand = await response.json()
+      const savedBrand = await response.json()
 
-      toast(`${formData.name} has been added to your brands.`);
+      toast.success(
+        isEditMode
+          ? `${formData.name} has been updated.`
+          : `${formData.name} has been added to your brands.`
+      )
 
-      if (onCreateSuccess) {
-        onCreateSuccess(newBrand)
-      }
-
-      // Reset form and close modal
-      setFormData({ name: "", description: "", website: "", logo: null })
-      setLogoPreview(null)
+      onSuccess?.(savedBrand)
       onOpenChange(false)
     } catch (error) {
-      console.error("Error creating brand:", error)
-      toast("There was an error creating your brand. Please try again.");
+      console.error("Error saving brand:", error)
+      toast.error(
+        isEditMode
+          ? "There was an error updating your brand."
+          : "There was an error creating your brand."
+      )
     } finally {
       setIsLoading(false)
     }
@@ -89,7 +113,7 @@ export function CreateBrandModal({ open, onOpenChange, onCreateSuccess }: Create
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Brand</DialogTitle>
+          <DialogTitle>{isEditMode ? "Edit Brand" : "Create New Brand"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -101,9 +125,9 @@ export function CreateBrandModal({ open, onOpenChange, onCreateSuccess }: Create
                 {logoPreview ? (
                   <>
                     <Image
-                      fill 
-                      src={logoPreview} 
-                      alt="Brand logo preview" 
+                      fill
+                      src={logoPreview}
+                      alt="Brand logo preview"
                       className="w-full h-full object-cover"
                     />
                     <button
@@ -179,20 +203,26 @@ export function CreateBrandModal({ open, onOpenChange, onCreateSuccess }: Create
 
           {/* Form Actions */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="bg-black text-white hover:bg-gray-800"
               disabled={isLoading || !formData.name}
             >
-              {isLoading ? "Creating..." : "Create Brand"}
+              {isLoading
+                ? isEditMode
+                  ? "Updating..."
+                  : "Creating..."
+                : isEditMode
+                ? "Update Brand"
+                : "Create Brand"}
             </Button>
           </div>
         </form>

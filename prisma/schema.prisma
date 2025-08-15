@@ -119,6 +119,7 @@ model Brand {
   description String?
   logo        String?
   website     String?
+  deleted     Boolean      @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   
@@ -164,7 +165,7 @@ model SocialAccount {
 
   pageTokens       PageToken[]
   
-  @@unique([userId, platform])
+  @@unique([userId, platform, brandId])
   @@index([userId])
 }
 
@@ -191,7 +192,7 @@ model PageToken {
 model Post {
   id           String   @id @default(cuid())
   userId       String
-  content      String   @db.LongText
+  content      String   @db.Text
   platform     Platform
   publishedAt  DateTime?
   scheduledAt  DateTime?

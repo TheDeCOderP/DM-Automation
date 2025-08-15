@@ -11,9 +11,12 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') ?? '10');
     const offset = parseInt(searchParams.get('offset') ?? '0');
 
+    const unread = searchParams.get('status') === 'unread';
+
     const notifications = await prisma.notification.findMany({
       where: {
         userId: token.sub,
+        read: !unread
       },
       take: limit,
       skip: offset,

@@ -1,4 +1,5 @@
 "use client"
+import { toast } from "sonner"
 import { useState, useMemo } from "react"
 import useSWR from "swr"
 import {
@@ -12,8 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
-  Archive,
-  Star,
   CheckCircle2,
   XCircle,
   Calendar,
@@ -47,7 +46,8 @@ export default function NotificationsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [filter, setFilter] = useState<string>("all")
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([])
 
   const { data: notifications, mutate } = useSWR("/api/notifications", fetcher)
@@ -91,12 +91,51 @@ export default function NotificationsPage() {
     }
   }
 
+  const handleMarkAsRead = async (id: string) => {
+    setSubmitting(true);
+    try {
+      await fetch(`/api/notifications/${id}`, { method: "PUT" });
+      mutate();
+      toast.success("Notification marked as read");
+    } catch (error) {
+      toast.error("Failed to mark notification as read");
+      console.error(`Failed to mark notification ${id} as read:`, error)
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const handleBulkMarkAsRead = async () => {
+    setSubmitting(true)
+    try {
+      await Promise.all(
+        selectedNotifications.map((id) =>
+          fetch(`/api/notifications/${id}`, { method: "PUT" })
+        )
+      )
+      setSelectedNotifications([]);
+      mutate();
+      toast.success("Selected notifications marked as read");
+    } catch (error) {
+      setSelectedNotifications([]);
+      console.error("Failed to mark selected notifications as read:", error)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+
   const handleMarkAllAsRead = async () => {
+    setSubmitting(true);
     try {
       await fetch("/api/notifications/mark-all-read", { method: "POST" })
-      mutate()
+      mutate();
+      toast.success("All notifications marked as read");
     } catch (error) {
+      toast.error("Failed to mark all as read");
       console.error("Failed to mark all as read:", error)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -180,7 +219,7 @@ export default function NotificationsPage() {
                   setSearchQuery(e.target.value)
                   setCurrentPage(1)
                 }}
-                className="pl-10 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                className="pl-10 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 -z-10"
               />
             </div>
 
@@ -282,6 +321,7 @@ export default function NotificationsPage() {
                 <Button
                   variant="outline"
                   onClick={handleMarkAllAsRead}
+                  disabled={selectedNotifications.length === 0 || submitting}
                   className="gap-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                 >
                   <CheckCheck className="h-4 w-4" />
@@ -309,15 +349,22 @@ export default function NotificationsPage() {
 
               {selectedNotifications.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-transparent"
+                    onClick={handleBulkMarkAsRead}
+                    disabled={submitting}
+                  >
                     <CheckCheck className="h-4 w-4" />
                     Mark read
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                    <Archive className="h-4 w-4" />
-                    Archive
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2 text-red-600 hover:text-red-700 bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 text-red-600 hover:text-red-700 bg-transparent"
+                    disabled={submitting}
+                  >
                     <Trash2 className="h-4 w-4" />
                     Delete
                   </Button>
@@ -429,17 +476,9 @@ export default function NotificationsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem disabled={submitting} onClick={() => handleMarkAsRead(notification.id)}>
                                 <CheckCheck className="mr-2 h-4 w-4" />
                                 Mark as read
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Star className="mr-2 h-4 w-4" />
-                                Star
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Archive className="mr-2 h-4 w-4" />
-                                Archive
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-red-600">

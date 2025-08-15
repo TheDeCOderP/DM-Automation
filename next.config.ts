@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
       'randomuser.me'
     ],
   },
+  serverExternalPackages: ["twitter-api-v2"]
 };
 
 export default nextConfig;

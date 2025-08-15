@@ -30,9 +30,10 @@ export async function publishToFacebook(
     // 1. Get Facebook account with user relation for notifications
     const socialAccount = await prisma.socialAccount.findUnique({
       where: {
-        userId_platform: {
+        userId_platform_brandId: {
           userId: post.userId,
-          platform: 'FACEBOOK'
+          platform: 'FACEBOOK',
+          brandId: post.brandId
         },
         isConnected: true
       },
