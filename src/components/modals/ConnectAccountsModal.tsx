@@ -105,8 +105,8 @@ export function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, a
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${platform.color} text-white`}>
-                        {getPlatformIcon(platform.id)}
+                      <div className={`p-2 rounded-lg`}>
+                        {getPlatformIcon(platform.id, "h-6 w-6")}
                       </div>
                       <div>
                         <h3 className="font-medium">{platform.name}</h3>

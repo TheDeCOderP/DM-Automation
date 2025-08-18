@@ -72,6 +72,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "12")
+    const skip = (page - 1) * limit
+
+    // Get total count for pagination
+    const totalPosts = await prisma.post.count({
+      where: {
+        userId: token.id,
+      },
+    })
+
     const posts = await prisma.post.findMany({
       where: {
         userId: token.id,
@@ -88,13 +100,25 @@ export async function GET(req: NextRequest) {
           },
         },
       },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limit,
     })
 
-    if (!posts) {
-      throw new Error("No posts found")
-    }
+    const totalPages = Math.ceil(totalPosts / limit)
 
-    return NextResponse.json({ posts }, { status: 200 })
+    return NextResponse.json({ 
+      posts,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalPosts,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      }
+    }, { status: 200 })
   } catch (error) {
     console.log("Error fetching posts:", error)
     return NextResponse.json({ error: `Error fetching posts ${error}` }, { status: 500 })

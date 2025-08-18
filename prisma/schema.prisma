@@ -149,6 +149,7 @@ model SocialAccount {
   id               String       @id @default(cuid())
   platform         Platform
   accessToken      String       @db.LongText
+  accessTokenSecret String?     @db.Text
   refreshToken     String?      @db.LongText
   tokenExpiresAt   DateTime?
   platformUserId   String

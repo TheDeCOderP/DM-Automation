@@ -128,7 +128,7 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
       <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
         <div className="flex items-center gap-4">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <span className="bg-gray-100 rounded-full w-6 h-6 flex items-center justify-center text-xs">1</span>
+            <span className="bg-gray-100 dark:bg-gray-800 rounded-full w-6 h-6 flex items-center justify-center text-xs">1</span>
             Media
           </CardTitle>
           {uploadedFiles.length > 0 && selectedFile && (

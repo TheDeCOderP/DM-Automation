@@ -1,7 +1,18 @@
-// types/post-data.ts
 export interface PostData {
-  accountId?: string;
-  pageId?: string;
-  name: string;
-  accessToken: string;
+  content: string
+  author: {
+    name: string
+    username: string
+    avatar: string
+    verified?: boolean
+    title?: string
+  }
+  image?: string
+  timestamp: Date
+  engagement?: {
+    likes: number
+    comments: number
+    shares?: number
+    retweets?: number
+  }
 }

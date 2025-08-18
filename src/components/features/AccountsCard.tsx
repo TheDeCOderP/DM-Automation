@@ -1,20 +1,14 @@
 "use client"
 import type React from "react"
 import { useState } from "react"
-import { Facebook, Instagram, Linkedin, X, Info } from "lucide-react"
+import { Facebook, Info } from "lucide-react"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Checkbox } from "../ui/checkbox"
 import { Label } from "../ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import type { SocialAccount, PageToken } from "@prisma/client"
-
-const platformIcons = {
-  FACEBOOK: Facebook,
-  INSTAGRAM: Instagram,
-  TWITTER: X,
-  LINKEDIN: Linkedin,
-}
+import { getPlatformIcon } from "@/utils/ui/icons"
 
 type SocialAccountWithPageTokens = SocialAccount & {
   pageTokens: PageToken[]
@@ -122,7 +116,6 @@ export default function AccountsCard({
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {accounts.map((account: SocialAccountWithPageTokens) => {
-                const PlatformIcon = platformIcons[account.platform as keyof typeof platformIcons]
                 return (
                   <div key={account.id} className="flex items-center gap-2">
                     <Checkbox
@@ -130,10 +123,10 @@ export default function AccountsCard({
                       checked={isAccountSelected(account.id)}
                       onCheckedChange={(checked) => handleAccountChange(account.id, checked as boolean)}
                     />
-                    <Avatar className="size-6">
+                    <Avatar className="size-8">
                       <AvatarImage src={account.platformUserImage || undefined} alt={account.platformUsername} />
                       <AvatarFallback>
-                        <PlatformIcon className="size-4" />
+                        {getPlatformIcon(account.platform, "w-6 h-6")}
                       </AvatarFallback>
                     </Avatar>
                     <Label

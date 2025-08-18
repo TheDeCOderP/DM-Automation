@@ -2,10 +2,11 @@
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { debounce } from 'lodash';
+import { useTheme } from 'next-themes';
 import { signOut } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useCallback, useRef, useState } from 'react';
-import { Bell, Search, Settings, LogOut, X, Users, Calendar } from 'lucide-react';
+import { Bell, Search, LogOut, X, Users, Calendar, Sun, ChartNoAxesCombined } from 'lucide-react';
 
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -58,8 +59,10 @@ interface SearchResult {
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function AppHeader({ user }: AppHeaderProps) {
-  const pathname = usePathname();
   const router = useRouter();
+  const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activePage, setActivePage] = useState('Dashboard');
@@ -517,6 +520,15 @@ export default function AppHeader({ user }: AppHeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative hover:bg-accent"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            <Sun className="w-5 h-5" />
+          </Button>
+
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -546,9 +558,9 @@ export default function AppHeader({ user }: AppHeaderProps) {
                 <Bell className="mr-2 h-4 w-4" />
                 <span>Notifications</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
+              <DropdownMenuItem onClick={() => router.push('/analytics')}>
+                <ChartNoAxesCombined className="mr-2 h-4 w-4" />
+                <span>Analytics</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SessionProvider } from "@/providers/session-provider";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { SessionProvider } from "@/providers/session-provider";
 
 export const metadata: Metadata = {
   title: "Prabisha Digital Marketing Automation",
@@ -21,10 +22,12 @@ export default function RootLayout({
       <body
         className={`antialiased`}
        suppressHydrationWarning={true}>
-        <SessionProvider>
-          <Toaster richColors position="top-right" closeButton />
-          {children}
-        </SessionProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <SessionProvider>
+            <Toaster richColors position="top-right" closeButton />
+            {children}
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

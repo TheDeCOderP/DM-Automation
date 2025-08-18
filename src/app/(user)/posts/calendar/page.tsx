@@ -65,7 +65,7 @@ interface PostWithUser extends Post {
 }
 
 export default function CalendarUI() {
-  const { data, isLoading } = useSWR("/api/posts", fetcher);
+  const { data, isLoading } = useSWR("/api/posts?limit=1000", fetcher); // Get all posts for calendar view
 
   const [hoveredPost, setHoveredPost] = useState<HoveredPost | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout>(null)

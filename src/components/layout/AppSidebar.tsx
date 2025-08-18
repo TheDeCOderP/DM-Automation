@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import * as React from "react";
-import { Calendar, Users, Bell, Settings, Plus, LogOut } from 'lucide-react';
+import { Calendar, Users, Bell, Plus, LogOut, ChartNoAxesCombined } from 'lucide-react';
 
 import { Button } from "@/components/ui/button"
 import {
@@ -28,7 +28,7 @@ const navigation = {
       title: "Calendar",
       icon: Calendar,
       url: "/posts/calendar",
-    },
+    }
   ],
   configuration: [
     {
@@ -46,17 +46,17 @@ const navigation = {
   ],
   management: [
     {
-      title: "Settings",
-      icon: Settings,
-      url: "/settings",
-    },
+      title: "Analytics",
+      icon: ChartNoAxesCombined,
+      url: "/analytics",
+    }
   ],
 }
 
 export default function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="z-20">
-      <SidebarHeader className="flex items-center justify-between relative px-4 py-6 border-b-2 border-gray-200 z-50">
+      <SidebarHeader className="flex items-center justify-between relative px-4 py-6 border-b-2 z-50">
         <div className="flex items-center gap-2">
           <Image
             src="/icons/logo.png"
