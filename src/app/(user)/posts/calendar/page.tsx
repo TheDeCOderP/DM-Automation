@@ -244,6 +244,11 @@ function getEventColor(platform: Platform): string {
     [Platform.TWITTER]: "#1DA1F2",
     [Platform.LINKEDIN]: "#0A66C2",
     [Platform.ALL]: "#6B7280",
+    [Platform.GOOGLE]: "#4285F4",
+    [Platform.MEDUIM]: "#000000",
+    [Platform.PINTEREST]: "#E60023",
+    [Platform.QUORA]: "#B92B27",
+    [Platform.REDDIT]: "#FF4500",
   }
   return colors[platform] || "#6B7280"
 }

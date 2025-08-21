@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import Image from "next/image"
 import Tessaract from "tesseract.js"
@@ -8,7 +8,8 @@ import { CloudUpload, FileVideo, ZoomIn, ZoomOut, X, Plus, Equal, Info, ImageIco
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import GoogleDrivePicker from "./GoogleDrivePicker";
 
 interface MediaFile {
   file: File
@@ -23,35 +24,42 @@ interface MediaUploadProps {
 export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<MediaFile[]>([])
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null)
-  const [zoomLevel, setZoomLevel] = useState<number>(1) // State for zoom level, 1 means no zoom
-  const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false) // State to track if mouse is over the main image preview
-  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 }) // State for mouse position relative to image
-  const imagePreviewRef = useRef<HTMLDivElement>(null) // Ref for the main image preview container
+  const [zoomLevel, setZoomLevel] = useState<number>(1)
+  const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false)
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const imagePreviewRef = useRef<HTMLDivElement>(null)
+
+  const handleFileAdd = useCallback((file: File) => {
+    const mediaFile: MediaFile = {
+      file,
+      src: URL.createObjectURL(file),
+      type: file.type,
+    };
+
+    // Perform OCR for images
+    if (file.type.startsWith("image/")) {
+      Tessaract.recognize(file, 'eng', { logger: console.log }).then(({ data: { text } }) => {
+        console.log(text);
+      });
+    }
+
+    setUploadedFiles((prev) => {
+      const updatedFiles = [...prev, mediaFile];
+      // Call onFilesChange after state is updated
+      setTimeout(() => onFilesChange(updatedFiles.map((mf) => mf.file)), 0);
+      return updatedFiles;
+    });
+
+    if (!selectedFile) {
+      setSelectedFile(mediaFile);
+    }
+  }, [onFilesChange, selectedFile]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
-      const newMediaFiles: MediaFile[] = acceptedFiles.map((file) => ({
-        file,
-        src: URL.createObjectURL(file),
-        type: file.type,
-      }))
-
-      Tessaract.recognize(acceptedFiles[0], 'eng', { logger: console.log }).then(({ data: { text } }) => {
-        console.log(text);
-      })
-
-      setUploadedFiles((prev) => {
-        const updatedFiles = [...prev, ...newMediaFiles]
-        // Call onFilesChange after state is updated
-        setTimeout(() => onFilesChange(updatedFiles.map((mf) => mf.file)), 0)
-        return updatedFiles
-      })
-
-      if (!selectedFile && newMediaFiles.length > 0) {
-        setSelectedFile(newMediaFiles[0])
-      }
+      acceptedFiles.forEach(handleFileAdd);
     },
-    [onFilesChange, selectedFile],
+    [handleFileAdd],
   )
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -64,12 +72,18 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
     noClick: true,
   })
 
+  // Track latest files for unmount cleanup without revoking on every state change
+  const filesRef = useRef<MediaFile[]>([]);
+  useEffect(() => {
+    filesRef.current = uploadedFiles;
+  }, [uploadedFiles]);
+
   useEffect(() => {
     // Clean up object URLs when component unmounts
     return () => {
-      uploadedFiles.forEach((mediaFile) => URL.revokeObjectURL(mediaFile.src))
-    }
-  }, [uploadedFiles])
+      filesRef.current.forEach((mediaFile) => URL.revokeObjectURL(mediaFile.src));
+    };
+  }, [])
 
   const handleRemoveFile = (fileToRemove: MediaFile) => {
     setUploadedFiles((prev) => {
@@ -90,6 +104,11 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
     URL.revokeObjectURL(fileToRemove.src)
   }
 
+  // Reset zoom level when selected file changes
+  useEffect(() => {
+    setZoomLevel(1);
+  }, [selectedFile]);
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
     const k = 1024
@@ -99,12 +118,8 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
   }
 
   const getDimensions = (file: File) => {
-    // This function currently returns N/A for images.
-    // To get actual image dimensions, you'd need to load the image
-    // and get its naturalWidth/naturalHeight, which is asynchronous.
-    // For now, keeping the original behavior.
     if (file.type.startsWith("video/")) {
-      return "1080x1920px" // Placeholder, actual dimensions would need video metadata
+      return "1080x1920px"
     }
     return "N/A"
   }
@@ -119,7 +134,6 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
   }
 
   const handleZoomSliderChange = (value: number[]) => {
-    // Scale slider value (50-200) to zoom level (1-4)
     setZoomLevel(value[0] / 50)
   }
 
@@ -152,12 +166,13 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
           <div className="flex items-center gap-4">
             <ZoomOut className="w-4 h-4 text-gray-500" />
             <Slider
-              defaultValue={[50]} // Default to 50 for 1x zoom (no zoom)
-              max={200} // Max zoom level 4x (200/50)
-              min={50} // Min zoom level 1x (50/50)
+              defaultValue={[50]}
+              max={200}
+              min={50}
               step={1}
               className="w-[100px]"
               onValueChange={handleZoomSliderChange}
+              value={[zoomLevel * 50]} // Convert zoom level back to slider value
             />
             <ZoomIn className="w-4 h-4 text-gray-500" />
           </div>
@@ -186,8 +201,6 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
           <div className="flex h-[500px]">
             {/* Media Preview Thumbnails */}
             <div className="w-32 p-4 border-r flex flex-col gap-4 overflow-y-auto flex-shrink-0 no-scrollbar">
-              {" "}
-              {/* Added flex-shrink-0 to prevent shrinking */}
               <p className="text-sm text-gray-600">{uploadedFiles.length}/10 files</p>
               {uploadedFiles.map((mediaFile, index) => (
                 <div
@@ -240,7 +253,7 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
             {/* Main Media Display */}
             <div
               ref={imagePreviewRef}
-              className="flex-1 p-4 flex items-center justify-center bg-gray-50 relative overflow-hidden" // Added overflow-hidden for zoom effect
+              className="flex-1 p-4 flex items-center justify-center bg-gray-50 relative overflow-hidden"
               onMouseEnter={() => selectedFile?.type.startsWith("image/") && setIsHoveringImage(true)}
               onMouseLeave={() => setIsHoveringImage(false)}
               onMouseMove={handleMouseMove}
@@ -251,14 +264,13 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
                     fill
                     src={selectedFile.src || "/placeholder.svg"}
                     alt="Selected media preview"
-                    // Apply zoom styles conditionally based on hover and zoom level
                     style={{
-                      objectFit: isHoveringImage && zoomLevel > 1 ? "none" : "contain", // Change objectFit for zoom
+                      objectFit: isHoveringImage && zoomLevel > 1 ? "none" : "contain",
                       transform: isHoveringImage && zoomLevel > 1 ? `scale(${zoomLevel})` : "scale(1)",
                       transformOrigin:
                         isHoveringImage && zoomLevel > 1 ? `${mousePosition.x}% ${mousePosition.y}%` : "center center",
-                      transition: "transform 0.1s ease-out", // Smooth transition for zoom
-                      cursor: isHoveringImage && zoomLevel > 1 ? "zoom-out" : "zoom-in", // Cursor change for user feedback
+                      transition: "transform 0.1s ease-out",
+                      cursor: isHoveringImage && zoomLevel > 1 ? "zoom-out" : "zoom-in",
                     }}
                     className="rounded-md"
                   />
@@ -272,6 +284,9 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
           </div>
         )}
       </CardContent>
+      <CardFooter className="flex flex-row items-center justify-between p-4 border-t">
+        <GoogleDrivePicker onFileSelect={handleFileAdd} />
+      </CardFooter>
     </Card>
   )
 }

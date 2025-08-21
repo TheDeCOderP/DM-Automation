@@ -5,7 +5,7 @@ import FacebookPreview from "../cards/FacebookPreview";
 import LinkedInPreview from "../cards/LinkedInPreview";
 import InstagramPreview from "../cards/InstagramPreview";
 
-type Platform = "LINKEDIN" | "FACEBOOK" | "TWITTER" | "INSTAGRAM" | "ALL"
+import { Platform } from "@prisma/client";
 
 interface PostData {
   content: string

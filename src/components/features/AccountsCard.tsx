@@ -115,7 +115,7 @@ export default function AccountsCard({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
-              {accounts.map((account: SocialAccountWithPageTokens) => {
+              {accounts.filter((account) => account.platform !== "GOOGLE").map((account: SocialAccountWithPageTokens) => {
                 return (
                   <div key={account.id} className="flex items-center gap-2">
                     <Checkbox

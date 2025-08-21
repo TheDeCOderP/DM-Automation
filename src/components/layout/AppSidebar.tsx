@@ -69,6 +69,17 @@ export default function AppSidebar() {
             DM <span className="group-data-[collapsible=icon]:hidden"> Automation v2.0 </span>
           </h1>
         </div>
+        <span className="text-sm group-data-[collapsible=icon]:hidden"> 
+          powered by 
+          <Link 
+            href="https://prabisha.com/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-blue-400 ml-1"
+          > 
+            Prabisha Consulting 
+          </Link>
+        </span>
         {/* SidebarTrigger for collapsing the sidebar */}
         <SidebarTrigger className="h-7 w-7 rounded-full absolute z-50 top-6 -right-4 bg-primary text-primary-foreground hover:bg-primary/90" />
       </SidebarHeader>

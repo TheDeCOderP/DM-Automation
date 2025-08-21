@@ -20,6 +20,11 @@ enum Role {
 
 enum Platform {
   ALL
+  GOOGLE
+  MEDUIM
+  PINTEREST
+  QUORA
+  REDDIT
   LINKEDIN
   TWITTER
   FACEBOOK
