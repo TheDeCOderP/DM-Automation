@@ -8,6 +8,7 @@ import InstagramPreview from "../cards/InstagramPreview";
 import { Platform } from "@prisma/client";
 
 interface PostData {
+  url: string | undefined
   content: string
   author: {
     name: string

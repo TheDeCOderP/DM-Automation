@@ -75,7 +75,8 @@ export default function AccountsCard({
   const facebookAccounts = accounts.filter((account) => account.platform === "FACEBOOK")
 
   return (
-    <div className="space-y-4">
+    <>
+      <Label className="block text-sm font-medium mb-2"> <strong className="mr-2 text-xl">Step 2:</strong>Select Accounts</Label>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="flex items-center gap-2">
@@ -182,6 +183,6 @@ export default function AccountsCard({
           </CardContent>
         </Card>
       )}
-    </div>
+    </>
   )
 }

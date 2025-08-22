@@ -24,6 +24,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface HoveredPost {
   post: {
+    url: string | undefined
     content: string
     author: {
       name: string
@@ -122,6 +123,7 @@ export default function CalendarUI() {
 
     setHoveredPost({
       post: {
+        url: info.event.url,
         content,
         author: {
           name: author?.name || "Unknown User",
@@ -196,6 +198,7 @@ export default function CalendarUI() {
 
                   return {
                     id: post.id,
+                    url: post.url,
                     title: post.content?.substring(0, 20) + (post.content?.length > 20 ? "..." : ""),
                     platform: post.platform,
                     start: post.scheduledAt,

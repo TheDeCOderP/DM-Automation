@@ -243,6 +243,7 @@ async function recordSuccessfulPost(
             where: { id: post.id },
             data: { 
                 status: 'PUBLISHED',
+                url: `https://twitter.com/i/status/${tweetId}`,
                 publishedAt: new Date(),
                 updatedAt: new Date()
             }

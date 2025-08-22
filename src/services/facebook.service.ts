@@ -276,6 +276,7 @@ async function recordSuccessfulFacebookPost(
       where: { id: post.id },
       data: { 
         status: 'PUBLISHED',
+        url: `https://facebook.com/${postId}`,
         publishedAt: new Date(),
         updatedAt: new Date()
       }

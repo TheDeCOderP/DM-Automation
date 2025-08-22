@@ -70,7 +70,7 @@ export default function AppSidebar() {
           </h1>
         </div>
         <span className="text-sm group-data-[collapsible=icon]:hidden"> 
-          powered by 
+          Powered by 
           <Link 
             href="https://prabisha.com/" 
             target="_blank" 

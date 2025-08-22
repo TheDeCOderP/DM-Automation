@@ -203,6 +203,7 @@ model Post {
   publishedAt  DateTime?
   scheduledAt  DateTime?
   frequency    Frequency?
+  url          String?  @db.Text
   status       Status   @default(DRAFTED)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

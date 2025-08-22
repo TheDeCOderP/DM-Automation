@@ -242,6 +242,7 @@ async function recordSuccessfulLinkedInPost(
       where: { id: post.id },
       data: { 
         status: 'PUBLISHED',
+        url: `https://www.linkedin.com/feed/update/${postId}`,
         publishedAt: new Date(),
         updatedAt: new Date()
       }
