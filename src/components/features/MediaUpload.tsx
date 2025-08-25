@@ -167,21 +167,55 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to generate captions")
+        throw new Error("Failed to generate image")
       }
 
       const data = await response.json()
-console.log(data);
-      toast.success("Captions generated successfully")
+      
+      if (data.imageBase64) {
+        // Convert base64 to File object
+        const byteCharacters = atob(data.imageBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+        
+        const file = new File([blob], `ai-generated-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        handleFileAdd(file);
+        toast.success("AI image generated and added successfully!");
+      } else {
+        throw new Error("No image data returned from API");
+      }
+      
       setIsPromptDialogOpen(false)
       setAiPrompt("")
     } catch (error) {
-      console.error("Error generating captions:", error)
-      toast.error("Failed to generate captions")
+      console.error("Error generating image:", error)
+      toast.error("Failed to generate image")
     } finally {
       setIsGenerating(false)
     }
   }
+
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => {
+      const newZoom = Math.min(prev + 0.1, 4); // Increased max zoom to 4x
+      return Math.round(newZoom * 10) / 10; // Round to 1 decimal place
+    })
+  }
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => {
+      const newZoom = Math.max(prev - 0.1, 0.1); // Minimum zoom 0.1x
+      return Math.round(newZoom * 10) / 10; // Round to 1 decimal place
+    })
+  }
+
+  // Convert zoom level to slider value (1-200 range)
+  const zoomSliderValue = zoomLevel * 50;
 
   return (
     <>
@@ -212,17 +246,28 @@ console.log(data);
           </div>
           {uploadedFiles.length > 0 && (
             <div className="flex items-center gap-4">
-              <ZoomOut className="w-4 h-4 text-gray-500" />
+              <button 
+                onClick={handleZoomOut} 
+                className="cursor-pointer p-1 hover:bg-gray-100 rounded transition-colors" 
+                disabled={zoomLevel <= 0.1}
+              > 
+                <ZoomOut className="w-4 h-4 text-gray-500" />
+              </button>
               <Slider
-                defaultValue={[50]}
-                max={200}
-                min={50}
-                step={1}
+                max={200} // 200 = 4x zoom (200/50 = 4)
+                min={5}   // 5 = 0.1x zoom (5/50 = 0.1)
+                step={5}  // Step of 5 = 0.1x zoom increments
                 className="w-[100px]"
-                onValueChange={handleZoomSliderChange}
-                value={[zoomLevel * 50]} // Convert zoom level back to slider value
+                onValueChange={(value) => setZoomLevel(value[0] / 50)}
+                value={[zoomSliderValue]}
               />
-              <ZoomIn className="w-4 h-4 text-gray-500" />
+              <button 
+                onClick={handleZoomIn}
+                className="cursor-pointer p-1 hover:bg-gray-100 rounded transition-colors"
+                disabled={zoomLevel >= 4}
+              >
+                <ZoomIn className="w-4 h-4 text-gray-500" />
+              </button>
             </div>
           )}
           {uploadedFiles.length === 0 && (
@@ -314,7 +359,7 @@ console.log(data);
                       alt="Selected media preview"
                       style={{
                         objectFit: isHoveringImage && zoomLevel > 1 ? "none" : "contain",
-                        transform: isHoveringImage && zoomLevel > 1 ? `scale(${zoomLevel})` : "scale(1)",
+                        transform: `scale(${zoomLevel})`,
                         transformOrigin:
                           isHoveringImage && zoomLevel > 1 ? `${mousePosition.x}% ${mousePosition.y}%` : "center center",
                         transition: "transform 0.1s ease-out",
@@ -344,7 +389,7 @@ console.log(data);
         </CardFooter>
       </Card>
 
-            {/* AI Prompt Dialog */}
+      {/* AI Prompt Dialog */}
       <Dialog open={isPromptDialogOpen} onOpenChange={setIsPromptDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -377,7 +422,7 @@ console.log(data);
               disabled={isGenerating || !aiPrompt.trim()}
               className="bg-purple-600 hover:bg-purple-700"
             >
-              {isGenerating ? "Generating..." : "Generate Captions"}
+              {isGenerating ? "Generating..." : "Generate Image"}
             </Button>
           </DialogFooter>
         </DialogContent>

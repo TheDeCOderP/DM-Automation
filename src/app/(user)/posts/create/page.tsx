@@ -265,8 +265,9 @@ export default function CreatePostPage() {
             <p className="text-muted-foreground text-lg">Create a new post</p>
           </div>
         </div>
-        <div className="fixed right-0 bottom-0 p-6">
+        <div className="fixed right-0 bottom-0 p-6 z-[100]">
           <Button
+            className="z-50"
             disabled={isPublishing || !allSelectedItemsCount}
             onClick={() => handleSubmit({ isScheduled: false })}
             variant={"default"}

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-export async function generateImage(prompt: string) {
+async function generateImage(prompt: string) {
     try {
         const response = await togetherai.images.create({
             prompt,
