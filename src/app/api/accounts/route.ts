@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-
 import { Platform } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
@@ -20,7 +19,11 @@ export async function GET(req: NextRequest) {
           include: {
             socialAccounts: {
               include: {
-                pageTokens: true,
+                socialAccount: {
+                  include: {
+                    pageTokens: true, // pageTokens is on SocialAccount, not SocialAccountBrand
+                  }
+                }
               },
             },
           },
@@ -28,10 +31,22 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    // Transform the data to make it more usable
+    const socialAccounts = userBrands.flatMap(ub => 
+      ub.brand.socialAccounts.map(sa => ({
+        ...sa.socialAccount,
+        // You can include any additional fields from the junction table if needed
+        brandId: ub.brand.id,
+        brandName: ub.brand.name,
+      }))
+    );
+
+    const brands = userBrands.map(ub => ub.brand);
+
     return NextResponse.json(
       {
-        data: userBrands.flatMap((ub) => ub.brand.socialAccounts),
-        brands: userBrands.map((ub) => ub.brand),
+        data: socialAccounts,
+        brands: brands,
       },
       { status: 200 },
     )
@@ -41,6 +56,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ... rest of your PUT and DELETE methods remain the same
 export async function PUT(req: NextRequest) {
   try {
     const token = await getToken({ req });

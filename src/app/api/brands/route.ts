@@ -21,13 +21,33 @@ export async function GET(req: NextRequest) {
             include: {
                 brand: {
                     include: {
-                        socialAccounts: true
+                        // Correct way to include social accounts through the junction table
+                        socialAccounts: {
+                            include: {
+                                socialAccount: {
+                                    include: {
+                                        // Include page tokens if needed
+                                        pageTokens: true
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
         });
 
-        return NextResponse.json({ data: userBrands.map(ub => ub.brand) }, { status: 200 });
+        // Transform the data to make it more usable
+        const brands = userBrands.map(ub => ({
+            ...ub.brand,
+            // Flatten the socialAccounts structure
+            socialAccounts: ub.brand.socialAccounts.map(sa => ({
+                ...sa.socialAccount,
+                // You can add any additional fields from the junction table here
+            }))
+        }));
+
+        return NextResponse.json({ data: brands }, { status: 200 });
     } catch (error) {
         console.error("Error fetching brands:", error);
         return NextResponse.json(

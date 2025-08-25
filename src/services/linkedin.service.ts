@@ -49,17 +49,26 @@ export async function publishToLinkedin(
     if (!post) throw new Error('Invalid input');
 
     // 1. Get LinkedIn account with user relation for notifications
-    const socialAccount = await prisma.socialAccount.findUnique({
+    // Use the correct query based on your schema - SocialAccount doesn't have userId_platform_brandId unique constraint
+    const socialAccount = await prisma.socialAccount.findFirst({
       where: {
-        userId_platform_brandId: {
-          userId: post.userId,
-          platform: 'LINKEDIN',
-          brandId: post.brandId
-        },
-        isConnected: true
+        userId: post.userId,
+        platform: 'LINKEDIN',
+        isConnected: true,
+        // Check if the social account is associated with the post's brand
+        brands: {
+          some: {
+            brandId: post.brandId
+          }
+        }
       },
       include: {
-        user: true
+        user: true,
+        brands: {
+          include: {
+            brand: true
+          }
+        }
       }
     });
 
@@ -87,7 +96,7 @@ export async function publishToLinkedin(
         }
       });
 
-      throw new Error('User has no connected LinkedIn account');
+      throw new Error('User has no connected LinkedIn account for this brand');
     }
   
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {

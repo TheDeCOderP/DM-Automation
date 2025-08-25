@@ -51,50 +51,53 @@ export async function GET(request: NextRequest) {
     
     const profile = await profileRes.json();
 
-    // 3. Save to database if you have a user ID in state
+    // 3. Save to database and link to brand
     if (userId && brandId) {
       try {
-        // Check if social account already exists
-        const existingAccount = await prisma.socialAccount.findFirst({
+        // Upsert social account keyed by platform + platformUserId
+        const account = await prisma.socialAccount.upsert({
           where: {
-            userId: userId,
-            platform: 'LINKEDIN'
+            platform_platformUserId: {
+              platform: 'LINKEDIN',
+              platformUserId: profile.sub
+            }
+          },
+          update: {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token || null,
+            tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+            platformUsername: profile.name || profile.given_name || '',
+            userId,
+            isConnected: true
+          },
+          create: {
+            platform: 'LINKEDIN',
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token || null,
+            tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+            platformUserId: profile.sub,
+            platformUsername: profile.name || profile.given_name || '',
+            userId,
+            isConnected: true
           }
         });
 
-        // Update or create the social account
-        if (existingAccount) {
-          await prisma.socialAccount.update({
-            where: {
-              id: existingAccount.id
-            },
-            data: {
-              accessToken: tokenData.access_token,
-              refreshToken: tokenData.refresh_token || null,
-              tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-              platformUserId: profile.sub,
-              platformUsername: profile.name || profile.given_name,
-              isConnected: true,
-              brandId: brandId
+        // Ensure brand association exists via join table
+        await prisma.socialAccountBrand.upsert({
+          where: {
+            brandId_socialAccountId: {
+              brandId,
+              socialAccountId: account.id
             }
-          });
-        } else {
-          await prisma.socialAccount.create({
-            data: {
-              platform: 'LINKEDIN',
-              accessToken: tokenData.access_token,
-              refreshToken: tokenData.refresh_token || null,
-              tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-              platformUserId: profile.sub,
-              platformUsername: profile.name || profile.given_name,
-              userId: userId,
-              isConnected: true,
-              brandId: brandId
-            }
-          });
-        }
-      } catch (dbError) {
-        console.error('Database error:', dbError);
+          },
+          update: {},
+          create: {
+            brandId,
+            socialAccountId: account.id
+          }
+        });
+      } catch (error) {
+        console.error('Database error:', error);
         // Continue to redirect even if DB save fails
       }
     }

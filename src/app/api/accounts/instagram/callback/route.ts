@@ -91,32 +91,74 @@ export async function GET(request: NextRequest) {
 
     // 5. Save to database
     if (userId) {
-      await prisma.socialAccount.upsert({
-        where: {
-          userId_platform_brandId: {
-            userId: userId,
+      try {
+        const account = await prisma.socialAccount.upsert({
+          where: {
+            platform_platformUserId: {
+              platform: 'INSTAGRAM',
+              platformUserId: instagramAccount.id
+            }
+          },
+          update: {
+            accessToken: accessToken, // Using the long-lived token
+            platformUserId: instagramAccount.id,
+            platformUsername: instagramAccount.username,
+            isConnected: true,
+            tokenExpiresAt: tokenExpiresAt,
+          },
+          create: {
             platform: 'INSTAGRAM',
-            brandId: brandId
+            accessToken: accessToken,
+            platformUserId: instagramAccount.id,
+            platformUsername: instagramAccount.username,
+            userId: userId,
+            isConnected: true,
+            tokenExpiresAt: tokenExpiresAt
           }
-        },
-        update: {
-          accessToken: accessToken, // Using the long-lived token
-          platformUserId: instagramAccount.id,
-          platformUsername: instagramAccount.username,
-          isConnected: true,
-          tokenExpiresAt: tokenExpiresAt,
-        },
-        create: {
-          platform: 'INSTAGRAM',
-          accessToken: accessToken,
-          platformUserId: instagramAccount.id,
-          platformUsername: instagramAccount.username,
-          userId: userId,
-          isConnected: true,
-          tokenExpiresAt: tokenExpiresAt,
-          brandId: brandId
-        }
-      });
+        });
+
+        await prisma.socialAccountBrand.upsert({
+          where: {
+            brandId_socialAccountId: {
+              brandId,
+              socialAccountId: account.id
+            }
+          },
+          update: {},
+          create: {
+            brandId,
+            socialAccountId: account.id
+          }
+        });
+      } catch (error) {
+        console.error('Database error:', error);
+      }
+      // await prisma.socialAccount.upsert({
+      //   where: {
+      //     userId_platform_brandId: {
+      //       userId: userId,
+      //       platform: 'INSTAGRAM',
+      //       brandId: brandId
+      //     }
+      //   },
+      //   update: {
+      //     accessToken: accessToken, // Using the long-lived token
+      //     platformUserId: instagramAccount.id,
+      //     platformUsername: instagramAccount.username,
+      //     isConnected: true,
+      //     tokenExpiresAt: tokenExpiresAt,
+      //   },
+      //   create: {
+      //     platform: 'INSTAGRAM',
+      //     accessToken: accessToken,
+      //     platformUserId: instagramAccount.id,
+      //     platformUsername: instagramAccount.username,
+      //     userId: userId,
+      //     isConnected: true,
+      //     tokenExpiresAt: tokenExpiresAt,
+      //     brandId: brandId
+      //   }
+      // });
     }
 
     // Redirect to success page

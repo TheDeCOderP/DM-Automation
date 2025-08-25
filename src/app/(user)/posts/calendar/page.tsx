@@ -19,6 +19,7 @@ import { getPlatformIcon } from "@/utils/ui/icons";
 import type { VariantProps } from "class-variance-authority";
 import type { DateClickArg } from "@fullcalendar/interaction";
 import type { EventClickArg, EventContentArg } from "@fullcalendar/core/index.js"
+import { Calendar } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -170,6 +171,18 @@ export default function CalendarUI() {
 
   return (
     <div className="relative">
+      <div className="flex items-center gap-4 mb-2">
+        <div className="relative">
+          <Calendar className="h-8 w-8 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+            Calendar
+          </h1>
+          <p className="text-muted-foreground text-lg">View your posts on the calendar</p>
+        </div>
+      </div>
+
       <TooltipProvider>
         <Card className="h-full border-0 shadow-none">
           <CardContent className="p-0">
@@ -248,7 +261,7 @@ function getEventColor(platform: Platform): string {
     [Platform.LINKEDIN]: "#0A66C2",
     [Platform.ALL]: "#6B7280",
     [Platform.GOOGLE]: "#4285F4",
-    [Platform.MEDUIM]: "#000000",
+    [Platform.MEDIUM]: "#000000",
     [Platform.PINTEREST]: "#E60023",
     [Platform.QUORA]: "#B92B27",
     [Platform.REDDIT]: "#FF4500",

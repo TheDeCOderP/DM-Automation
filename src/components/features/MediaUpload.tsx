@@ -1,15 +1,18 @@
 "use client";
 
-import Image from "next/image"
-import Tessaract from "tesseract.js"
+import Image from "next/image";
+import { toast } from "sonner";
+import Tessaract from "tesseract.js";
 import { useRef, useEffect, useState, useCallback } from "react"
 import { useDropzone } from "react-dropzone";
-import { CloudUpload, FileVideo, ZoomIn, ZoomOut, X, Plus, Equal, Info, ImageIcon } from "lucide-react";
+import { CloudUpload, FileVideo, ZoomIn, ZoomOut, X, Plus, Equal, Info, ImageIcon, Sparkles } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import GoogleDrivePicker from "./GoogleDrivePicker";
 
 interface MediaFile {
@@ -23,12 +26,15 @@ interface MediaUploadProps {
 }
 
 export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<MediaFile[]>([])
-  const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null)
-  const [zoomLevel, setZoomLevel] = useState<number>(1)
-  const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false)
-  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-  const imagePreviewRef = useRef<HTMLDivElement>(null)
+  const imagePreviewRef = useRef<HTMLDivElement>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [isPromptDialogOpen, setIsPromptDialogOpen] = useState<boolean>(false);
+  const [aiPrompt, setAiPrompt] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [uploadedFiles, setUploadedFiles] = useState<MediaFile[]>([]);
+  const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const handleFileAdd = useCallback((file: File) => {
     const mediaFile: MediaFile = {
@@ -136,6 +142,45 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
 
   const handleZoomSliderChange = (value: number[]) => {
     setZoomLevel(value[0] / 50)
+  }
+
+  const handleGenerateClick = () => {
+    setIsPromptDialogOpen(true)
+  }
+
+  const handleGenerateImage = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("Please enter a prompt")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const response = await fetch("/api/ai-agent/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          prompt: aiPrompt,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate captions")
+      }
+
+      const data = await response.json()
+console.log(data);
+      toast.success("Captions generated successfully")
+      setIsPromptDialogOpen(false)
+      setAiPrompt("")
+    } catch (error) {
+      console.error("Error generating captions:", error)
+      toast.error("Failed to generate captions")
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -289,8 +334,54 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
         </CardContent>
         <CardFooter className="flex flex-row items-center justify-between p-4 border-t">
           <GoogleDrivePicker onFileSelect={handleFileAdd} />
+          <Button 
+            onClick={handleGenerateClick}
+            className="bg-purple-600 text-white hover:bg-purple-700"
+          >
+            <Sparkles className="size-4 mr-2" />
+            Generate AI Image
+          </Button>
         </CardFooter>
       </Card>
+
+            {/* AI Prompt Dialog */}
+      <Dialog open={isPromptDialogOpen} onOpenChange={setIsPromptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate AI Image</DialogTitle>
+            <DialogDescription>
+              Enter a prompt to generate image.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="ai-prompt">Your Prompt</Label>
+              <Textarea
+                id="ai-prompt"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="E.g., a photo of a happy person with a smile on their face"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPromptDialogOpen(false)}
+              disabled={isGenerating}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerateImage}
+              disabled={isGenerating || !aiPrompt.trim()}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isGenerating ? "Generating..." : "Generate Captions"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

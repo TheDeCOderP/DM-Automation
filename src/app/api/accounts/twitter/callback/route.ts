@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-  const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/twitter/callback`;
+const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/twitter/callback`;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     });
 
     const tokenData = await tokenRes.json();
+
     if (!tokenRes.ok) {
       throw new Error(`Token exchange failed: ${tokenData.error_description || tokenData.error}`);
     }
@@ -54,47 +55,49 @@ export async function GET(request: NextRequest) {
     // 3. Save to database if you have a user ID in state
     if (userId && brandId) {
       try {
-        // Check if social account already exists
-        const existingAccount = await prisma.socialAccount.findFirst({
+        const account = await prisma.socialAccount.upsert({
           where: {
-            userId: userId,
-            platform: 'TWITTER'
+            platform_platformUserId: {
+              platform: 'TWITTER',
+              platformUserId: profile.data.id
+            }
+          },
+          update: {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token || null,
+            tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+            platformUserId: profile.data.id,
+            platformUsername: profile.data.username,
+            isConnected: true,
+            userId
+          }, 
+          create: {
+            platform: 'TWITTER',
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token || null,
+            tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+            platformUserId: profile.data.id,
+            platformUsername: profile.data.username,
+            userId,
+            isConnected: true,
           }
         });
 
-        // Update or create the social account
-        if (existingAccount) {
-          await prisma.socialAccount.update({
-            where: {
-              id: existingAccount.id
-            },
-            data: {
-              accessToken: tokenData.access_token,
-              refreshToken: tokenData.refresh_token || null,
-              tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-              platformUserId: profile.data.id,
-              platformUsername: profile.data.username,
-              isConnected: true,
-              brandId: brandId
+        await prisma.socialAccountBrand.upsert({
+          where: {
+            brandId_socialAccountId: {
+              brandId,
+              socialAccountId: account.id
             }
-          });
-        } else {
-          await prisma.socialAccount.create({
-            data: {
-              platform: 'TWITTER',
-              accessToken: tokenData.access_token,
-              refreshToken: tokenData.refresh_token || null,
-              tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-              platformUserId: profile.data.id,
-              platformUsername: profile.data.username,
-              userId: userId,
-              brandId: brandId,
-              isConnected: true
-            }
-          });
-        }
-      } catch (dbError) {
-        console.error('Database error:', dbError);
+          },
+          update: {},
+          create: {
+            brandId,
+            socialAccountId: account.id
+          }
+        });
+      } catch (error) {
+        console.error('Database error:', error);
         // Continue to redirect even if DB save fails
       }
     }

@@ -28,17 +28,25 @@ export async function publishToFacebook(
     if (!post) throw new Error('Invalid input');
 
     // 1. Get Facebook account with user relation for notifications
-    const socialAccount = await prisma.socialAccount.findUnique({
+    const socialAccount = await prisma.socialAccount.findFirst({
       where: {
-        userId_platform_brandId: {
-          userId: post.userId,
-          platform: 'FACEBOOK',
-          brandId: post.brandId
-        },
-        isConnected: true
+        userId: post.userId,
+        platform: 'FACEBOOK',
+        isConnected: true,
+
+        brands: {
+          some: {
+            brandId: post.brandId,
+          }
+        }
       },
       include: {
-        user: true
+        user: true,
+        brands: {
+          include: {
+            brand: true
+          }
+        }
       }
     });
 

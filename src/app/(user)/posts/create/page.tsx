@@ -3,7 +3,7 @@
 import useSwr from "swr";
 import { toast } from "sonner";
 import { useState, useEffect, useMemo } from "react";
-import { Facebook, Instagram, Linkedin, Share2, Twitter } from "lucide-react";
+import { Facebook, Globe, Instagram, Linkedin, Share2, Twitter } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 import MediaUpload from "@/components/features/MediaUpload"
@@ -33,12 +33,15 @@ const socialMediaPlatforms: SocialPlatform[] = [
   { id: "TWITTER", name: "Twitter", icon: Twitter, wordLimit: 280 },
 ]
 
+// Update the type to match the actual data structure from API
 type SocialAccountWithPageTokens = SocialAccount & {
   pageTokens: PageToken[]
+  brandId: string
+  brandName: string
 }
 
 export default function CreatePostPage() {
-  const { data } = useSwr("/api/accounts", fetcher)
+  const { data, isLoading } = useSwr("/api/accounts", fetcher)
   const accounts: SocialAccountWithPageTokens[] = data?.data || []
   const brands: Brand[] = data?.brands || []
 
@@ -251,20 +254,32 @@ export default function CreatePostPage() {
   return (
     <>
       <div className="flex items-center justify-between mb-4 relative">
-        <h1 className="text-3xl font-bold">Create New Post</h1>
+        <div className="flex items-center gap-4 mb-2">
+          <div className="relative">
+            <Globe className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+              Create Post
+            </h1>
+            <p className="text-muted-foreground text-lg">Create a new post</p>
+          </div>
+        </div>
         <div className="fixed right-0 bottom-0 p-6">
           <Button
+            disabled={isPublishing || !allSelectedItemsCount}
             onClick={() => handleSubmit({ isScheduled: false })}
             variant={"default"}
             size="lg"
           >
-            <Share2 className="mr-2 w-4 h-4" /> Publish
+            <Share2 className="mr-2 w-4 h-4" /> {isPublishing ? "Publishing..." : "Publish"}
           </Button>
         </div>
       </div>
 
       <div className="flex flex-col gap-6">
         <BrandsCard
+          isLoading={isLoading}
           brands={brands}
           selectedBrandId={selectedBrandId}
           setSelectedBrandId={setSelectedBrandId}

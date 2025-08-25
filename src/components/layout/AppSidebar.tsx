@@ -2,13 +2,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import * as React from "react";
-import { Calendar, Users, Bell, Plus, LogOut, ChartNoAxesCombined } from 'lucide-react';
+import { Calendar, Users, Bell, Plus, ChartNoAxesCombined } from 'lucide-react';
 
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -19,7 +18,6 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { signOut } from "next-auth/react";
 
 // Sample data for navigation
 const navigation = {
@@ -178,20 +176,6 @@ export default function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter>
-        {/* Sign Out */}
-        <div className="p-2 group-data-[collapsible=icon]:hidden">
-          <Button 
-            onClick={() => signOut()} 
-            variant="ghost" 
-            className="w-full justify-start text-destructive hover:bg-destructive/10"
-          >
-            <LogOut className="size-4" />
-            <span className="ml-2">Sign Out</span>
-          </Button>
-        </div>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

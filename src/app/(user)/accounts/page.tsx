@@ -3,7 +3,7 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { useState } from "react";
 import { format } from "date-fns";
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, CircleUserRound } from "lucide-react"
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -123,11 +123,16 @@ export default function BrandsPage() {
     <>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Brands</h1>
-          <p className="text-muted-foreground">
-            Create separate business profiles for each of your brands. Used for grouping your social accounts.
-          </p>
+        <div className="flex items-center gap-4 mb-2">
+          <div className="relative">
+            <CircleUserRound className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+              Brands
+            </h1>
+            <p className="text-muted-foreground text-lg">Create separate business profiles for each of your brands.</p>
+          </div>
         </div>
         <Button
           onClick={() => setIsCreateModalOpen(true)}

@@ -84,78 +84,243 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true)
-      const result = await signIn("google", {
+      await signIn("google", {
         callbackUrl: "/accounts",
         redirect: false,
       })
-
-      if (result?.error) {
-        toast.error("Failed to sign in with Google. Please try again.")
-      } else if (result?.url) {
-        toast.success("Signing in with Google...")
-        window.location.href = result.url
-      }
     } catch (error) {
       console.error("Google login error:", error)
-      toast.error("An error occurred while signing in with Google.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleFacebookLogin = async () => {
-    try {
-      setIsLoading(true)
-      const result = await signIn("facebook", {
-        callbackUrl: "/accounts",
-        redirect: false,
-      })
-
-      if (result?.error) {
-        toast.error("Failed to sign in with Facebook. Please try again.")
-      } else if (result?.url) {
-        toast.success("Signing in with Facebook...")
-        window.location.href = result.url
-      }
-    } catch (error) {
-      console.error("Facebook login error:", error)
-      toast.error("An error occurred while signing in with Facebook.")
+      toast.error("Failed to sign in with Google. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center px-4 py-8">
-      <div className="max-w-4xl w-full grid md:grid-cols-2 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
-        <div className="bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white p-8 flex flex-col relative">
-          {/* Header */}
-          <div className="text-white p-8 text-center relative">
-            <div className="absolute inset-0 opacity-10 pointer-events-none">
-              <div className="absolute top-4 left-4 w-20 h-20 bg-white rounded-full blur-xl"></div>
-              <div className="absolute bottom-4 right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-white/5 rounded-full blur-3xl"></div>
-            </div>
-            <div className="z-10 relative space-y-3">
-              <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
-                <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized unselectable="on" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold mb-1">Create Account</h1>
-                <p className="text-white/90 text-sm">Join us and start your journey</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center px-4">
+      <div className="max-w-4xl w-full rounded-2xl shadow-xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden grid lg:grid-cols-2 bg-white dark:bg-slate-900 backdrop-blur-sm">
+        {/* Left Pane */}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white p-8 flex flex-col items-center justify-center relative">
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="absolute top-8 left-8 w-20 h-20 bg-white rounded-full blur-xl"></div>
+            <div className="absolute bottom-8 right-8 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
           </div>
+          <div className="z-10 text-center space-y-3">
+            <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
+              <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized />
+            </div>
+            <h2 className="text-2xl font-bold">Create Account</h2>
+            <p className="text-white/90 max-w-xs mx-auto text-sm">Join us to manage your account securely.</p>
+          </div>
+        </div>
 
-          {/* Social Login Options */}
-          <div className="p-6 pb-4">
+        {/* Right Pane */}
+        <div className="p-8 flex flex-col justify-center">
+          <div className="space-y-2">
+            <div className="space-y-1 text-center">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Sign Up</h1>
+              <p className="text-xs text-muted-foreground">Enter your details to create an account</p>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {/* Full Name */}
+              <div>
+                <label htmlFor="fullName" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
+                    <User className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    placeholder="Enter your full name"
+                    className="pl-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-600 dark:bg-slate-800 dark:text-slate-100"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Email
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
+                    <Mail className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Enter your email"
+                    className="pl-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-600 dark:bg-slate-800 dark:text-slate-100"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password Fields Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Password */}
+                <div>
+                  <label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
+                      <Key className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Password"
+                      className="pl-10 pr-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-600 dark:bg-slate-800 dark:text-slate-100"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label htmlFor="confirmPassword" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
+                      <Key className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="Confirm password"
+                      className="pl-10 pr-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-600 dark:bg-slate-800 dark:text-slate-100"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Captcha */}
+              <div className="space-y-1">
+                <label htmlFor="captcha" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Security Code
+                </label>
+                <div className="flex gap-2 items-center">
+                  <div className="bg-secondary dark:bg-slate-700 px-3 py-2 rounded-lg font-mono text-sm tracking-widest min-w-0 flex-shrink-0 select-none dark:text-slate-200">
+                    {captcha}
+                  </div>
+                  <Input
+                    id="captcha"
+                    name="captcha"
+                    value={formData.captcha}
+                    onChange={handleInputChange}
+                    placeholder="Enter code"
+                    className="flex-1 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-primary dark:bg-slate-800 dark:text-slate-100"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={generateCaptcha}
+                    disabled={isLoading}
+                    className="p-2 h-10 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 bg-transparent"
+                  >
+                    <RefreshCcw className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 h-10 rounded-lg shadow-sm hover:shadow-md transition-all text-sm"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Creating Account...
+                  </div>
+                ) : (
+                  "Create Account"
+                )}
+              </Button>
+            </form>
+
+            {/* Footer Links */}
+            <div className="pt-4 text-xs text-center">
+              <div className="text-muted-foreground">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="text-blue-600 dark:text-blue-400 font-medium hover:underline transition-colors"
+                >
+                  Sign In
+                </Link>
+              </div>
+            </div>
+
+            {/* Social Login Buttons */}
             <div className="space-y-3">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-slate-300 dark:border-slate-600" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white dark:bg-slate-900 px-2 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleGoogleLogin}
+                className="w-full flex items-center justify-center gap-2 py-2.5 h-10 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm"
                 disabled={isLoading}
-                className="w-full text-slate-900 dark:text-white flex items-center justify-center gap-2 py-2.5 h-10 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 bg-white dark:bg-slate-800 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -177,184 +342,16 @@ export default function RegisterPage() {
                 </svg>
                 Continue with Google
               </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleFacebookLogin}
-                disabled={isLoading}
-                className="w-full text-slate-900 dark:text-white flex items-center justify-center gap-2 py-2.5 h-10 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 bg-white dark:bg-slate-800 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#1877F2">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-                Continue with Facebook
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-2">
-            {/* Full Name */}
-            <div className="space-y-2">
-              <label htmlFor="fullName" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 dark:bg-blue-500 rounded-full p-1.5">
-                  <User className="w-3.5 h-3.5 text-white" />
-                </div>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  placeholder="Enter your full name"
-                  className="pl-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
-                  required
-                />
-              </div>
             </div>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 dark:bg-blue-500 rounded-full p-1.5">
-                  <Mail className="w-3.5 h-3.5 text-white" />
-                </div>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Enter your email"
-                  className="pl-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
-                  required
-                />
-              </div>
+            {/* Terms and Privacy */}
+            <div className="pt-2 text-center">
+              <p className="text-xs text-muted-foreground">
+                By creating an account, you agree to our{" "}
+                <Link href="/terms-of-service" className="text-blue-600 dark:text-blue-400 hover:underline">Terms of Service</Link> and{" "}
+                <Link href="/privacy-policy" className="text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</Link>
+              </p>
             </div>
-
-            {/* Password Fields Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Password */}
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 dark:bg-blue-500 rounded-full p-1.5">
-                    <Key className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Password"
-                    className="pl-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Confirm
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 dark:bg-blue-500 rounded-full p-1.5">
-                    <Key className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    placeholder="Confirm"
-                    className="pl-10 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Captcha */}
-            <div className="space-y-1">
-              <label htmlFor="captcha" className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Security Code
-              </label>
-              <div className="flex gap-2 items-center">
-                <div className="bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg font-mono text-sm tracking-widest min-w-0 flex-shrink-0 select-none text-slate-900 dark:text-white">
-                  {captcha}
-                </div>
-                <Input
-                  name="captcha"
-                  value={formData.captcha}
-                  onChange={handleInputChange}
-                  placeholder="Enter code"
-                  className="flex-1 h-10 text-sm border-slate-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={generateCaptcha}
-                  disabled={isLoading}
-                  className="p-2 h-10 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RefreshCcw className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 dark:from-blue-500 dark:to-blue-600 dark:hover:from-blue-600 dark:hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Creating Account..." : "Create Account"}
-            </Button>
-          </form>
-
-          {/* Footer */}
-          <div className="pt-6 text-center">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-blue-600 dark:text-blue-400 font-semibold hover:underline transition-colors cursor-pointer"
-              >
-                Sign In
-              </Link>
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 leading-relaxed">
-              By creating an account, you agree to our{" "}
-              <button className="text-blue-600 dark:text-blue-400 hover:underline">Terms of Service</button> and{" "}
-              <button className="text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</button>
-            </p>
           </div>
         </div>
       </div>

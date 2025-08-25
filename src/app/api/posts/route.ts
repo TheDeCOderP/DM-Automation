@@ -211,13 +211,30 @@ export async function POST(req: NextRequest) {
     const createdPosts = []
 
     for (const accountId of accounts) {
+      // Get social account with its brands to check if it belongs to the current brand
       const socialAccount = await prisma.socialAccount.findUnique({
         where: { id: accountId },
-        include: { brand: true },
+        include: {
+          brands: {
+            include: {
+              brand: true
+            }
+          }
+        },
       })
 
-      if (!socialAccount || socialAccount.brandId !== brandId) {
-        console.error(`Social account with ID ${accountId} not found or doesn't belong to brand.`)
+      if (!socialAccount) {
+        console.error(`Social account with ID ${accountId} not found.`)
+        continue
+      }
+
+      // Check if the social account belongs to the current brand
+      const belongsToBrand = socialAccount.brands.some(
+        (socialAccountBrand) => socialAccountBrand.brandId === brandId
+      )
+
+      if (!belongsToBrand) {
+        console.error(`Social account with ID ${accountId} doesn't belong to brand ${brandId}.`)
         continue
       }
 
@@ -264,13 +281,29 @@ export async function POST(req: NextRequest) {
         where: { id: pageTokenId },
         include: {
           socialAccount: {
-            include: { brand: true },
+            include: {
+              brands: {
+                include: {
+                  brand: true
+                }
+              }
+            },
           },
         },
       })
 
-      if (!pageToken || pageToken.socialAccount.brandId !== brandId) {
-        console.error(`Page token with ID ${pageTokenId} not found or doesn't belong to brand.`)
+      if (!pageToken) {
+        console.error(`Page token with ID ${pageTokenId} not found.`)
+        continue
+      }
+
+      // Check if the social account (which owns the page token) belongs to the current brand
+      const belongsToBrand = pageToken.socialAccount.brands.some(
+        (socialAccountBrand) => socialAccountBrand.brandId === brandId
+      )
+
+      if (!belongsToBrand) {
+        console.error(`Page token with ID ${pageTokenId} doesn't belong to brand ${brandId}.`)
         continue
       }
 

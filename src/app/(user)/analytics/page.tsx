@@ -17,7 +17,8 @@ import {
   Calendar,
   Users,
   Target,
-  AlertCircle
+  AlertCircle,
+  ChartNoAxesCombined
 } from 'lucide-react';
 
 interface PlatformStats {
@@ -188,14 +189,19 @@ export default function AnalyticsPage() {
   }));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of your social media posting performance
-          </p>
+        <div className="flex items-center gap-4 mb-2">
+          <div className="relative">
+            <ChartNoAxesCombined className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+              Analytics
+            </h1>
+            <p className="text-muted-foreground text-lg">Overview of your social media posting performance</p>
+          </div>
         </div>
         <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
           <SelectTrigger className="w-40">

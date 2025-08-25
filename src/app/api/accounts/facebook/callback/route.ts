@@ -62,33 +62,49 @@ export async function GET(request: NextRequest) {
 
     /** 5️⃣ Store tokens in DB */
     if (userId) {
-      await prisma.socialAccount.upsert({
-        where: {
-          userId_platform_brandId: {
+      try {
+        const account = await prisma.socialAccount.upsert({
+          where: {
+            platform_platformUserId: {
+              platform: 'FACEBOOK',
+              platformUserId: profile.id
+            }
+          },
+          update: {
+            accessToken: userAccessToken, // store USER token
+            platformUserId: profile.id,
+            platformUsername: profile.name, // store USER name
+            isConnected: true,
+            tokenExpiresAt,
             userId: userId,
+          },
+          create: {
             platform: 'FACEBOOK',
-            brandId: brandId
+            accessToken: userAccessToken,
+            platformUserId: profile.id,
+            platformUsername: profile.name, // store USER name
+            userId: userId,
+            isConnected: true,
+            tokenExpiresAt
           }
-        },
-        update: {
-          accessToken: userAccessToken, // store USER token
-          platformUserId: profile.id,
-          platformUsername: profile.name,
-          isConnected: true,
-          tokenExpiresAt,
-          brandId: brandId
-        },
-        create: {
-          platform: 'FACEBOOK',
-          accessToken: userAccessToken,
-          platformUserId: profile.id,
-          platformUsername: profile.name,
-          userId: userId,
-          isConnected: true,
-          tokenExpiresAt,
-          brandId: brandId
-        }
-      });
+        });
+
+        await prisma.socialAccountBrand.upsert({
+          where: {
+            brandId_socialAccountId: {
+              brandId,
+              socialAccountId: account.id
+            }
+          },
+          update: {},
+          create: {
+            brandId,
+            socialAccountId: account.id
+          }
+        });
+      } catch (error) {
+        console.error('Database error:', error);
+      }
     }
 
     /** 6️⃣ Redirect back to dashboard */

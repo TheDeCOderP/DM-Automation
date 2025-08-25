@@ -52,47 +52,48 @@ export async function GET(request: NextRequest) {
     // 3. Save to DB
     if (userId && brandId) {
       try {
-        const existingAccount = await prisma.socialAccount.findFirst({
+        const account = await prisma.socialAccount.upsert({
           where: {
-            userId: userId,
-            platform: 'GOOGLE',
+            platform_platformUserId: {
+              platform: 'GOOGLE',
+              platformUserId: profile.sub,
+            }
           },
+          update: {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token || null,
+            tokenExpiresAt: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+            platformUsername: profile.email,
+            isConnected: true,
+            userId: userId,
+          },
+          create: {
+            platform: 'GOOGLE',
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token || null,
+            tokenExpiresAt: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+            platformUserId: profile.sub,
+            platformUsername: profile.email,
+            isConnected: true,
+            userId: userId,
+          }
         });
 
-        if (existingAccount) {
-          await prisma.socialAccount.update({
-            where: { id: existingAccount.id },
-            data: {
-              accessToken: tokenData.access_token,
-              refreshToken: tokenData.refresh_token || null,
-              tokenExpiresAt: tokenData.expires_in
-                ? new Date(Date.now() + tokenData.expires_in * 1000)
-                : null,
-              platformUserId: profile.sub, // Google unique user id
-              platformUsername: profile.email, // Or profile.name if you prefer
-              isConnected: true,
-              brandId: brandId,
-            },
-          });
-        } else {
-          await prisma.socialAccount.create({
-            data: {
-              platform: 'GOOGLE',
-              accessToken: tokenData.access_token,
-              refreshToken: tokenData.refresh_token || null,
-              tokenExpiresAt: tokenData.expires_in
-                ? new Date(Date.now() + tokenData.expires_in * 1000)
-                : null,
-              platformUserId: profile.sub,
-              platformUsername: profile.email,
-              userId: userId,
-              brandId: brandId,
-              isConnected: true,
-            },
-          });
-        }
-      } catch (dbError) {
-        console.error('Database error:', dbError);
+        await prisma.socialAccountBrand.upsert({
+          where: {
+            brandId_socialAccountId: {
+              brandId,
+              socialAccountId: account.id
+            }
+          },
+          update: {},
+          create: {
+            brandId,
+            socialAccountId: account.id
+          }
+        });
+      } catch (error) {
+        console.error('Database error:', error);
       }
     }
 
