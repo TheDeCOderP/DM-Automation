@@ -214,33 +214,44 @@ export async function publishToTwitter(post: Post & { media?: Media[] }): Promis
 }
 
 async function uploadMediaToTwitter(media: Media, accessToken: string): Promise<string> {
-    // 1. Get the media file from URL
-    const response = await fetch(media.url);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch media from URL: ${media.url}`);
-    }
+  // 1. Fetch the media file from Cloudinary (or any external URL).
+  const response = await fetch(media.url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch media from URL: ${media.url}`);
+  }
 
-    const blob = await response.blob();
-    const formData = new FormData();
-    formData.append('media', blob);
+  // 2. Convert the media to a base64 string.
+  const buffer = await response.arrayBuffer();
+  const base64Media = Buffer.from(buffer).toString("base64");
 
-    // 2. Upload to Twitter
-    const uploadResponse = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-        },
-        body: formData
-    });
+  // 3. Build the request payload for X v2 media upload API.
+  const payload = {
+    shared: false, // optional: whether media is shared
+    media: base64Media, // base64-encoded media
+    media_category: media.type.startsWith("video") ? "tweet_video" : "tweet_image"
+  };
 
-    const uploadData: TwitterMediaUploadResponse = await uploadResponse.json();
+  // 4. Call the X v2 media upload API.
+  const uploadResponse = await fetch("https://api.x.com/2/media/upload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`, // use your OAuth2.0 Bearer token
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-    if (!uploadResponse.ok || !uploadData.media_id_string) {
-        throw new Error(`Failed to upload media to Twitter: ${JSON.stringify(uploadData)}`);
-    }
+  const uploadData = await uploadResponse.json();
+  console.log("uploadData", uploadData);
 
-    return uploadData.media_id_string;
+  if (!uploadResponse.ok || !uploadData.data?.id) {
+    throw new Error(`Failed to upload media to Twitter: ${JSON.stringify(uploadData)}`);
+  }
+
+  // 5. Return the uploaded media ID (used to attach media in a tweet).
+  return uploadData.data.id;
 }
+
 
 async function recordSuccessfulPost(
     post: Post,
