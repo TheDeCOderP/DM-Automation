@@ -1,4 +1,5 @@
 "use client"
+import { FacebookEmbed, XEmbed } from 'react-social-media-embed';
 
 import TwitterPreview from "../cards/TwitterPreview";
 import FacebookPreview from "../cards/FacebookPreview";
@@ -38,9 +39,17 @@ export function PostPreviewModal({ post, platform }: PostPreviewHoverProps) {
       case "LINKEDIN":
         return <LinkedInPreview post={post} />
       case "FACEBOOK":
-        return <FacebookPreview post={post} />
+        if(post.url) {
+          return <FacebookEmbed url={post.url} />
+        } else {
+          return <FacebookPreview post={post} />
+        }
       case "TWITTER":
-        return <TwitterPreview  post={post} />
+        if(post.url) {
+          return <XEmbed url={post.url} />
+        } else {
+          return <TwitterPreview  post={post} />
+        }
       case "INSTAGRAM":
         return <InstagramPreview post={post}/>
       default:

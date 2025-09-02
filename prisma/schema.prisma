@@ -182,11 +182,13 @@ model SocialAccountBrand {
 
 model PageToken {
   id                String         @id @default(cuid())
+  name              String
   pageId            String
   pageName          String
   accessToken       String         @db.LongText
   tokenExpiresAt    DateTime?
   isActive          Boolean        @default(true)
+  platform          Platform       @default(FACEBOOK)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   
@@ -195,7 +197,6 @@ model PageToken {
 
   posts             Post[]
 
-  @@unique([pageId])
   @@unique([pageId, socialAccountId])
   @@index([socialAccountId])
 }

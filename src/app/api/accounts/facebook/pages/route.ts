@@ -1,3 +1,4 @@
+//api/accounts/facebook/pages/route.ts
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
         category?: string;
       }) => {
         // Upsert the page token
-        await prisma.pageToken.upsert({
+        const pageToken = await prisma.pageToken.upsert({
           where: {
             pageId_socialAccountId: {
               pageId: page.id,
@@ -61,8 +62,10 @@ export async function GET(req: Request) {
             isActive: true
           },
           create: {
+            name: page.name,
             pageId: page.id,
             pageName: page.name,
+            platform: 'FACEBOOK',
             accessToken: page.access_token,
             tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
             isActive: true,
@@ -71,9 +74,10 @@ export async function GET(req: Request) {
         });
 
         return {
-          id: page.id,
-          name: page.name,
-          access_token: page.access_token,
+          id: pageToken.id,
+          name: pageToken.name,
+          pageId: pageToken.pageId,
+          access_token: pageToken.accessToken,
           platform: 'FACEBOOK',
           category: page.category,
           isStored: true

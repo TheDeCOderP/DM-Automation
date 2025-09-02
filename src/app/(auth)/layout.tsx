@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Loader from '@/components/layout/Loader';
+import RecaptchaProvider from '@/providers/recaptcha-provider';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();  
@@ -22,5 +23,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return null; 
   }
 
-  return children;
+  return (
+    <RecaptchaProvider>
+      {children}
+    </RecaptchaProvider>
+  );
 }

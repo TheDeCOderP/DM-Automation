@@ -1,26 +1,28 @@
 "use client"
-import type React from "react"
-import { useState } from "react"
-import { Facebook, Info } from "lucide-react"
-import { Button } from "../ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
-import { Checkbox } from "../ui/checkbox"
-import { Label } from "../ui/label"
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
-import type { SocialAccount, PageToken } from "@prisma/client"
-import { getPlatformIcon } from "@/utils/ui/icons"
 
-type SocialAccountWithPageTokens = SocialAccount & {
-  pageTokens: PageToken[]
-}
+import useSWR from "swr";
+import { useState } from "react";
+import { Facebook, Info } from "lucide-react";
+
+import { Label } from "../ui/label";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import { Skeleton } from "../ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+
+import { getPlatformIcon } from "@/utils/ui/icons";
+import type { PageToken, SocialAccount } from "@prisma/client";
 
 interface AccountsCardProps {
-  accounts: SocialAccountWithPageTokens[]
+  accounts: SocialAccount[]
   selectedAccounts: string[]
   setSelectedAccounts: React.Dispatch<React.SetStateAction<string[]>>
   selectedPageTokenIds: string[]
   setSelectedPageTokenIds: React.Dispatch<React.SetStateAction<string[]>>
 }
+
+const fetcher = (url: string) => fetch(url).then((res: Response) => res.json())
 
 export default function AccountsCard({
   accounts,
@@ -29,41 +31,39 @@ export default function AccountsCard({
   selectedPageTokenIds,
   setSelectedPageTokenIds,
 }: AccountsCardProps) {
+  const { data, isLoading } = useSWR(
+    `/api/accounts/facebook/pages?platformUserId=${
+      accounts.find((acc) => acc.platform === "FACEBOOK")?.platformUserId || ""
+    }`,
+    fetcher
+  )
+
+  const facebookPages: PageToken[] = data?.pages || []
   const [rememberAccounts, setRememberAccounts] = useState(false)
 
   const handleAccountChange = (accountId: string, checked: boolean) => {
-    setSelectedAccounts((prev) => {
-      if (checked) {
-        return [...prev, accountId]
-      } else {
-        return prev.filter((id) => id !== accountId)
-      }
-    })
+    setSelectedAccounts((prev) =>
+      checked ? [...prev, accountId] : prev.filter((id) => id !== accountId)
+    )
   }
 
-  const handlePageTokenChange = (pageTokenId: string, checked: boolean) => {
-    setSelectedPageTokenIds((prev) => {
-      if (checked) {
-        return [...prev, pageTokenId]
-      } else {
-        return prev.filter((id) => id !== pageTokenId)
-      }
-    })
+  const handlePageTokenChange = (pageId: string, checked: boolean) => {
+    setSelectedPageTokenIds((prev) =>
+      checked ? [...prev, pageId] : prev.filter((id) => id !== pageId)
+    )
   }
 
-  const isAccountSelected = (accountId: string) => {
-    return selectedAccounts.includes(accountId)
-  }
+  const isAccountSelected = (accountId: string) =>
+    selectedAccounts.includes(accountId)
 
-  const isPageTokenSelected = (pageTokenId: string) => {
-    return selectedPageTokenIds.includes(pageTokenId)
-  }
+  const isPageTokenSelected = (pageId: string) =>
+    selectedPageTokenIds.includes(pageId)
 
   const handleSelectAll = () => {
     const allAccountIds = accounts.map((account) => account.id)
-    const allPageTokenIds = accounts.flatMap((account) => account.pageTokens.map((token) => token.id))
+    const allPageIds = facebookPages.map((page) => page.id)
     setSelectedAccounts(allAccountIds)
-    setSelectedPageTokenIds(allPageTokenIds)
+    setSelectedPageTokenIds(allPageIds)
   }
 
   const handleDeselectAll = () => {
@@ -72,11 +72,15 @@ export default function AccountsCard({
   }
 
   const allSelectedCount = selectedAccounts.length + selectedPageTokenIds.length
-  const facebookAccounts = accounts.filter((account) => account.platform === "FACEBOOK")
 
   return (
     <>
-      <Label className="block text-sm font-medium mb-2"> <strong className="mr-2 text-xl">Step 2:</strong>Select Accounts</Label>
+      <Label className="block text-sm font-medium mb-2">
+        <strong className="mr-2 text-xl">Step 2:</strong>
+        Select Accounts
+      </Label>
+
+      {/* Accounts Card */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="flex items-center gap-2">
@@ -97,14 +101,25 @@ export default function AccountsCard({
             <Info className="size-3 text-gray-500" />
           </div>
         </CardHeader>
+
         <CardContent>
           <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
             <span>{allSelectedCount} selected</span>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={handleSelectAll} disabled={accounts.length === 0}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAll}
+                disabled={accounts.length === 0 && facebookPages.length === 0}
+              >
                 Select All
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleDeselectAll} disabled={allSelectedCount === 0}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeselectAll}
+                disabled={allSelectedCount === 0}
+              >
                 Deselect All
               </Button>
             </div>
@@ -116,69 +131,100 @@ export default function AccountsCard({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
-              {accounts.filter((account) => account.platform !== "GOOGLE").map((account: SocialAccountWithPageTokens) => {
-                return (
+              {accounts
+                .filter((account) => account.platform !== "GOOGLE")
+                .map((account) => (
                   <div key={account.id} className="flex items-center gap-2">
                     <Checkbox
                       id={account.id}
                       checked={isAccountSelected(account.id)}
-                      onCheckedChange={(checked) => handleAccountChange(account.id, checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        handleAccountChange(account.id, checked as boolean)
+                      }
                     />
                     <Avatar className="size-8">
-                      <AvatarImage src={account.platformUserImage || undefined} alt={account.platformUsername} />
+                      <AvatarImage
+                        src={account.platformUserImage || undefined}
+                        alt={account.platformUsername}
+                      />
                       <AvatarFallback>
                         {getPlatformIcon(account.platform, "w-6 h-6")}
                       </AvatarFallback>
                     </Avatar>
                     <Label
                       htmlFor={account.id}
-                      className={`text-sm font-normal cursor-pointer ${isAccountSelected(account.id) ? "font-bold" : ""}`}
+                      className={`text-sm font-normal cursor-pointer ${
+                        isAccountSelected(account.id) ? "font-bold" : ""
+                      }`}
                     >
                       {account.platformUsername}
                     </Label>
                   </div>
-                )
-              })}
+                ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {facebookAccounts.length > 0 && facebookAccounts.some((account) => account.pageTokens.length > 0) && (
-        <Card>
+      {/* Facebook Pages Section */}
+      {isLoading ? (
+        <Card className="mt-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="h-5 w-32" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : facebookPages.length > 0 && (
+        <Card className="mt-4">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
               <span className="flex items-center justify-center size-6 rounded-full bg-blue-600 text-white text-xs font-bold">
-                {facebookAccounts.reduce((sum, account) => sum + account.pageTokens.length, 0)}
+                {facebookPages.length}
               </span>
               <h2 className="text-lg font-semibold">Facebook Pages</h2>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              {facebookAccounts.map((account) =>
-                account.pageTokens.map((pageToken: PageToken) => (
-                  <div key={pageToken.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={pageToken.id}
-                      checked={isPageTokenSelected(pageToken.id)}
-                      onCheckedChange={(checked) => handlePageTokenChange(pageToken.id, checked as boolean)}
+              {facebookPages.map((page: PageToken) => (
+                <div key={page.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={page.id}
+                    checked={isPageTokenSelected(page.id)}
+                    onCheckedChange={(checked) =>
+                      handlePageTokenChange(page.id, checked as boolean)
+                    }
+                  />
+                  <Avatar className="size-12 bg-blue-100">
+                    <AvatarImage
+                      src={`https://graph.facebook.com/${page.pageId}/picture?type=large`}
+                      alt={page.name}
                     />
-                    <Avatar className="size-12 bg-blue-100">
-                      <AvatarImage
-                        src={`https://graph.facebook.com/${pageToken.pageId}/picture?type=large`}
-                        alt={pageToken.pageName}
-                      />
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        <Facebook className="size-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <Label htmlFor={pageToken.id} className="text-sm font-bold cursor-pointer">
-                      {pageToken.pageName}
-                    </Label>
-                  </div>
-                )),
-              )}
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                      <Facebook className="size-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <Label
+                    htmlFor={page.id}
+                    className="text-sm font-bold cursor-pointer"
+                  >
+                    {page.name}
+                  </Label>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
