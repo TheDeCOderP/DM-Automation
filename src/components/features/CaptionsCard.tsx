@@ -164,7 +164,7 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
   return (
     <>
       <Label className="block text-sm font-medium mb-2"> <strong className="mr-2 text-xl">Step 3:</strong>Enter/Generate Captions</Label>
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center size-6 rounded-full bg-black text-white text-xs font-bold">

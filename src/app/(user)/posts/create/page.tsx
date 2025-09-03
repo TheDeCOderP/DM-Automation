@@ -350,7 +350,7 @@ export default function CreatePostPage() {
             />
 
             <DragDropContext onDragEnd={onDragEnd}>
-              <ResizablePanelGroup direction="horizontal" className="min-h-[400px] rounded-lg border">
+              <ResizablePanelGroup direction="horizontal" className="min-h-[400px]">
                 {/* Left Column */}
                 <ResizablePanel defaultSize={50} minSize={30}>
                   <Droppable droppableId="left-column">
@@ -415,8 +415,8 @@ export default function CreatePostPage() {
       </Tabs>
 
       {/* Sticky action bar (shared) */}
-      <div className="sticky bottom-0 left-0 -right-5 bg-background/80 backdrop-blur border-t">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div className="sticky bottom-0 left-0 right-0 bg-background/80 backdrop-blur border-t">
+        <div className="max-w-6xl mx-auto px-12 py-3 flex items-center justify-between gap-3">
           <div className="text-sm text-muted-foreground">
             {selectedBrandId ? `Brand selected` : `No brand selected`} • {allSelectedItemsCount} account/page selected • {uploadedFiles.length} file(s)
           </div>
