@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import type React from "react"
 import { toast } from "sonner"
 import Image from "next/image"
 import { signIn } from "next-auth/react"
@@ -18,22 +17,15 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const { executeRecaptcha } = useGoogleReCaptcha()
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  })
+  const [formData, setFormData] = useState({ email: "", password: "" })
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     const error = searchParams.get("error")
-    if (error === "CredentialsSignin") {
-      toast.error("Invalid email or password")
-    } else if (error === "Callback") {
-      toast.error("Login failed. Please try again.")
-    } else if (error) {
-      toast.error(`Login error: ${error}`)
-    }
+    if (error === "CredentialsSignin") toast.error("Invalid email or password")
+    else if (error === "Callback") toast.error("Login failed. Please try again.")
+    else if (error) toast.error(`Login error: ${error}`)
   }, [searchParams])
 
   const togglePasswordVisibility = () => setShowPassword((prev) => !prev)
@@ -41,10 +33,7 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true)
-      await signIn("google", {
-        callbackUrl: "/accounts",
-        redirect: false,
-      })
+      await signIn("google", { callbackUrl: "/accounts", redirect: false })
     } catch (error) {
       console.error("Google login error:", error)
       toast.error("Failed to sign in with Google. Please try again.")
@@ -61,28 +50,22 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
     try {
       if (!executeRecaptcha) throw new Error("Recaptcha not ready")
-
-      // Run invisible reCAPTCHA
       const token = await executeRecaptcha("login")
 
-      // Verify captcha with backend
       const res = await fetch("/api/verify-captcha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       })
       const { success } = await res.json()
-
       if (!success) {
         toast.error("Captcha verification failed")
         setIsLoading(false)
         return
       }
 
-      // Proceed with login
       const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
@@ -91,7 +74,6 @@ export default function LoginPage() {
       })
 
       if (result?.error) throw new Error(result.error)
-
       if (result?.ok) {
         toast.success("Login successful!")
         router.push("/accounts")
@@ -105,24 +87,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center px-4">
-      <div className="max-w-3xl w-full rounded-2xl shadow-xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden grid lg:grid-cols-2 bg-white dark:bg-slate-900 backdrop-blur-sm">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="max-w-3xl w-full rounded-2xl shadow-xl border border-border overflow-hidden grid lg:grid-cols-2 bg-card backdrop-blur-sm">
         <div className="absolute top-4 right-4">
           <ThemeToggle />
         </div>
 
         {/* Left Pane */}
-        <div className="bg-primary text-white p-8 flex flex-col items-center justify-center relative">
+        <div className="bg-primary text-primary-foreground p-8 flex flex-col items-center justify-center relative">
           <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute top-8 left-8 w-20 h-20 bg-white rounded-full blur-xl"></div>
-            <div className="absolute bottom-8 right-8 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
+            <div className="absolute top-8 left-8 w-20 h-20 bg-primary-foreground rounded-full blur-xl"></div>
+            <div className="absolute bottom-8 right-8 w-24 h-24 bg-primary-foreground/20 rounded-full blur-2xl"></div>
           </div>
           <div className="z-10 text-center space-y-3">
             <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
               <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized />
             </div>
             <h2 className="text-2xl font-bold">Welcome Back</h2>
-            <p className="text-white/90 max-w-xs mx-auto text-sm">
+            <p className="text-primary-foreground/80 max-w-xs mx-auto text-sm">
               Sign in to manage your account securely.
             </p>
           </div>
@@ -132,19 +114,19 @@ export default function LoginPage() {
         <div className="p-8 flex flex-col justify-center">
           <div className="space-y-2">
             <div className="space-y-1 text-center">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Sign In</h1>
+              <h1 className="text-xl font-bold text-foreground">Sign In</h1>
               <p className="text-xs text-muted-foreground">Enter your credentials</p>
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               {/* Email */}
               <div>
-                <label htmlFor="email" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                <label htmlFor="email" className="text-xs font-medium text-foreground">
                   Email
                 </label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
-                    <User className="w-3.5 h-3.5 text-white" />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-primary rounded-lg p-1.5">
+                    <User className="w-3.5 h-3.5 text-primary-foreground" />
                   </div>
                   <Input
                     id="email"
@@ -161,12 +143,12 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                <label htmlFor="password" className="text-xs font-medium text-foreground">
                   Password
                 </label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
-                    <Key className="w-3.5 h-3.5 text-white" />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-primary rounded-lg p-1.5">
+                    <Key className="w-3.5 h-3.5 text-primary-foreground" />
                   </div>
                   <Input
                     id="password"
@@ -195,7 +177,7 @@ export default function LoginPage() {
 
             {/* Footer Links */}
             <div className="pt-4 text-xs text-center space-y-2">
-              <div className="flex justify-between text-blue-600 dark:text-blue-400 font-medium">
+              <div className="flex justify-between text-primary font-medium">
                 <Link href="/forgot-password" className="hover:underline transition-colors">
                   Forgot Password?
                 </Link>
@@ -207,7 +189,7 @@ export default function LoginPage() {
                 {"Don't have an account? "}
                 <Link
                   href="/register"
-                  className="text-blue-600 dark:text-blue-400 font-medium hover:underline transition-colors"
+                  className="text-primary font-medium hover:underline transition-colors"
                 >
                   Create Account
                 </Link>
@@ -217,19 +199,20 @@ export default function LoginPage() {
             <div className="space-y-3">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                  <span className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-slate-900 px-2">Or continue with</span>
+                  <span className="bg-card px-2">Or continue with</span>
                 </div>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center gap-2 py-2.5 h-10 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm"
+                className="w-full flex items-center justify-center gap-2 py-2.5 h-10 hover:bg-accent hover:text-accent-foreground transition-colors text-sm"
                 disabled={isLoading}
               >
+                {/* Google Icon */}
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"

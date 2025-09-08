@@ -28,13 +28,24 @@ export default function LandingPage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="relative p-4 overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0 bg-accent/30"></div>
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl"></div>
-
-        <div className="container mx-auto text-center max-w-5xl relative z-10 min-h-screen flex flex-col justify-center items-center">
+      <div className="min-h-screen w-full relative">
+        {/* Top Fade Grid Background */}
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)
+            `,
+            backgroundSize: "20px 30px",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
+            maskImage:
+              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
+          }}
+        />
+          <SectionWrapper>
+        <div className="container mx-auto text-center max-w-5xl min-h-screen flex flex-col justify-center items-center">
           <Badge className="mb-6 border-0 px-4 py-2 text-sm font-medium backdrop-blur-sm">
             <Sparkles className="w-4 h-4 mr-2" />
             AI-Powered Marketing Automation
@@ -74,11 +85,12 @@ export default function LandingPage() {
             </Button>
           </div>
         </div>
-      </section>
+      </SectionWrapper>
+      </div>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4">
-        <div className="container mx-auto">
+      <SectionWrapper>
+        <div id="features" className="container mx-auto py-24 px-4">
           <div className="text-center mb-20">
             <Badge className="mb-4 bg-primary/10 text-primary border-0">
               <Rocket className="w-4 h-4 mr-1" />
@@ -150,11 +162,11 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </SectionWrapper>
 
       {/* How It Works Section */}
-      <section id="how-it-works" className="py-24 px-4">
-        <div className="container mx-auto">
+      <SectionWrapper>
+        <div id="how-it-works" className="container mx-auto py-24 px-4">
           <div className="text-center mb-20">
             <Badge className="mb-4 border-0">
               <TrendingUp className="w-4 h-4 mr-1" />
@@ -268,11 +280,11 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </SectionWrapper>
 
       {/* CTA Section */}
-      <section className="relative p-4 overflow-hidden">
-        <div className="container mx-auto text-center max-w-5xl relative z-10 min-h-screen flex flex-col justify-center items-center">
+      <SectionWrapper>
+        <div className="container mx-auto text-center max-w-5xl min-h-screen flex flex-col justify-center items-center">
           <Badge className="mb-6 border-0 px-4 py-2 text-sm font-medium backdrop-blur-sm">
             <Shield className="w-4 h-4 mr-2" />
             Trusted & Secure
@@ -310,9 +322,24 @@ export default function LandingPage() {
             </Button>
           </div>
         </div>
-      </section>
+      </SectionWrapper>
 
+      {/* Footer */}
       <Footer />
     </div>
+  )
+}
+
+function SectionWrapper({ children } : { children: React.ReactNode }) {
+  return (
+    <section className="relative p-4 overflow-hidden">
+      {/* Background Elements (same everywhere) */}
+      <div className="absolute inset-0 bg-accent/30"></div>
+      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl"></div>
+
+      {/* Content */}
+      <div className="relative z-10">{children}</div>
+    </section>
   )
 }

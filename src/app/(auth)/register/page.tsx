@@ -14,7 +14,7 @@ import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { executeRecaptcha } = useGoogleReCaptcha();
+  const { executeRecaptcha } = useGoogleReCaptcha()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -39,22 +39,17 @@ export default function RegisterPage() {
         throw new Error("Passwords don't match")
       }
 
-      // Run reCAPTCHA v3 (invisible)
       if (!executeRecaptcha) throw new Error("Recaptcha not ready")
       const token = await executeRecaptcha("register")
 
-      // Call your backend API to verify captcha before allowing signup
       const verifyRes = await fetch("/api/verify-captcha", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       })
       const verifyData = await verifyRes.json()
-      if (!verifyData.success) {
-        throw new Error("Captcha verification failed")
-      }
+      if (!verifyData.success) throw new Error("Captcha verification failed")
 
-      // Now continue with registration
       const result = await signIn("credentials", {
         name: formData.fullName,
         email: formData.email,
@@ -88,24 +83,26 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center px-4">
-      <div className="max-w-4xl w-full rounded-2xl shadow-xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden grid lg:grid-cols-2 bg-white dark:bg-slate-900 backdrop-blur-sm">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center px-4">
+      <div className="max-w-4xl w-full rounded-2xl shadow-xl border overflow-hidden grid lg:grid-cols-2 bg-background">
         <div className="absolute top-4 right-4">
           <ThemeToggle />
         </div>
 
         {/* Left Pane */}
-        <div className="bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white p-8 flex flex-col items-center justify-center relative">
+        <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-8 flex flex-col items-center justify-center relative">
           <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute top-8 left-8 w-20 h-20 bg-white rounded-full blur-xl"></div>
-            <div className="absolute bottom-8 right-8 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
+            <div className="absolute top-8 left-8 w-20 h-20 bg-primary-foreground rounded-full blur-xl"></div>
+            <div className="absolute bottom-8 right-8 w-24 h-24 bg-primary-foreground/20 rounded-full blur-2xl"></div>
           </div>
           <div className="z-10 text-center space-y-3">
             <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
               <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized />
             </div>
             <h2 className="text-2xl font-bold">Create Account</h2>
-            <p className="text-white/90 max-w-xs mx-auto text-sm">Join us to manage your account securely.</p>
+            <p className="opacity-90 max-w-xs mx-auto text-sm">
+              Join us to manage your account securely.
+            </p>
           </div>
         </div>
 
@@ -113,19 +110,21 @@ export default function RegisterPage() {
         <div className="p-8 flex flex-col justify-center">
           <div className="space-y-2">
             <div className="space-y-1 text-center">
-              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Sign Up</h1>
-              <p className="text-xs text-muted-foreground">Enter your details to create an account</p>
+              <h1 className="text-xl font-bold">Sign Up</h1>
+              <p className="text-xs text-muted-foreground">
+                Enter your details to create an account
+              </p>
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               {/* Full Name */}
               <div>
-                <label htmlFor="fullName" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                <label htmlFor="fullName" className="text-xs font-medium">
                   Full Name
                 </label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
-                    <User className="w-3.5 h-3.5 text-white" />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-primary rounded-lg p-1.5">
+                    <User className="w-3.5 h-3.5 text-primary-foreground" />
                   </div>
                   <Input
                     id="fullName"
@@ -141,12 +140,12 @@ export default function RegisterPage() {
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                <label htmlFor="email" className="text-xs font-medium">
                   Email
                 </label>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
-                    <Mail className="w-3.5 h-3.5 text-white" />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-primary rounded-lg p-1.5">
+                    <Mail className="w-3.5 h-3.5 text-primary-foreground" />
                   </div>
                   <Input
                     id="email"
@@ -164,12 +163,12 @@ export default function RegisterPage() {
               {/* Passwords */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <label htmlFor="password" className="text-xs font-medium">
                     Password
                   </label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
-                      <Key className="w-3.5 h-3.5 text-white" />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-primary rounded-lg p-1.5">
+                      <Key className="w-3.5 h-3.5 text-primary-foreground" />
                     </div>
                     <Input
                       id="password"
@@ -192,12 +191,12 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="confirmPassword" className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <label htmlFor="confirmPassword" className="text-xs font-medium">
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-blue-600 rounded-lg p-1.5">
-                      <Key className="w-3.5 h-3.5 text-white" />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-primary rounded-lg p-1.5">
+                      <Key className="w-3.5 h-3.5 text-primary-foreground" />
                     </div>
                     <Input
                       id="confirmPassword"
@@ -220,8 +219,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* No manual captcha anymore */}
-
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
@@ -231,7 +228,7 @@ export default function RegisterPage() {
             <div className="pt-4 text-xs text-center">
               <div className="text-muted-foreground">
                 Already have an account?{" "}
-                <Link href="/login" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                <Link href="/login" className="text-primary font-medium hover:underline">
                   Sign In
                 </Link>
               </div>
@@ -243,16 +240,17 @@ export default function RegisterPage() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-slate-900 px-2">Or continue with</span>
+                  <span className="bg-background px-2">Or continue with</span>
                 </div>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center gap-2 py-2.5 h-10 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm"
+                className="w-full flex items-center justify-center gap-2 py-2.5 h-10 hover:bg-accent hover:text-accent-foreground transition-colors text-sm"
                 disabled={isLoading}
               >
+                {/* Google Icon */}
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
