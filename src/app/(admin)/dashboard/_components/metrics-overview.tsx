@@ -51,9 +51,9 @@ export function MetricsOverview() {
         const pageTokenCount = accJson.data.reduce((sum, sa) => sum + (sa.pageTokens?.length || 0), 0)
         setConnections(socialCount + pageTokenCount)
         setError(null)
-      } catch (e: any) {
+      } catch (error) {
         if (!mounted) return
-        setError(e?.message || "Failed to load")
+        setError(error as string || "Failed to load")
       } finally {
         if (mounted) setLoading(false)
       }
