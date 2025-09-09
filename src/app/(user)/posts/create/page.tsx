@@ -18,6 +18,7 @@ import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-p
 
 import type { Platform, SocialAccount, Brand, PageToken } from "@prisma/client";
 import type { ScheduleData } from "@/types/scheduled-data";
+import SchedulePostModal from "@/components/modals/SchedulePostModal";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -421,6 +422,7 @@ export default function CreatePostPage() {
             {selectedBrandId ? `Brand selected` : `No brand selected`} • {allSelectedItemsCount} account/page selected • {uploadedFiles.length} file(s)
           </div>
           <div className="flex items-center gap-2">
+            <SchedulePostModal onSubmit={() => handleSubmit({ isScheduled: true })} schedule={schedule} setSchedule={setSchedule} />
             <Button
               className="min-w-[120px]"
               disabled={isPublishing || !allSelectedItemsCount}

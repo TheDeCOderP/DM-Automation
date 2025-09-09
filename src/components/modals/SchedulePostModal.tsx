@@ -101,7 +101,7 @@ export default function SchedulePostModal({ onSubmit, schedule, setSchedule }: S
 
   return (
     <>
-      <Button disabled variant="outline" size="lg" onClick={() => setOpen(true)}>
+      <Button variant="outline" size="lg" onClick={() => setOpen(true)}>
         Schedule Post
       </Button>
 
