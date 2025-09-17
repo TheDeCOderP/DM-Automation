@@ -85,6 +85,40 @@ function generateCronExpression(schedule: ScheduleData) {
   }
 }
 
+// Helper function to convert cron expression to cron-job.org format
+function convertCronToScheduleFormat(cronExpression: string, expiresAt: number) {
+  const parts = cronExpression.split(' ')
+  
+  if (parts.length === 5) {
+    const [minute, hour, dayOfMonth, month, dayOfWeek] = parts
+    
+    return {
+      timezone: 'UTC',
+      expiresAt: expiresAt,
+      // Convert minute part
+      minutes: minute === '*' ? [-1] : minute.startsWith('*/') ? 
+        Array.from({length: Math.floor(60 / parseInt(minute.substring(2)))}, (_, i) => i * parseInt(minute.substring(2))) :
+        minute.split(',').map(m => parseInt(m)),
+      // Convert hour part  
+      hours: hour === '*' ? [-1] : hour.startsWith('*/') ?
+        Array.from({length: Math.floor(24 / parseInt(hour.substring(2)))}, (_, i) => i * parseInt(hour.substring(2))) :
+        hour.split(',').map(h => parseInt(h)),
+      // Convert day of month part
+      mdays: dayOfMonth === '*' ? [-1] : dayOfMonth.split(',').map(d => parseInt(d)),
+      // Convert month part
+      months: month === '*' ? [-1] : month.split(',').map(m => parseInt(m)),
+      // Convert day of week part (cron uses 0-7, cron-job.org uses 0-6)
+      wdays: dayOfWeek === '*' ? [-1] : dayOfWeek.split(',').map(w => {
+        const day = parseInt(w)
+        return day === 7 ? 0 : day // Convert Sunday from 7 to 0
+      })
+    }
+  }
+  
+  // Fallback for invalid cron format
+  throw new Error(`Invalid cron expression format: ${cronExpression}`)
+}
+
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
   if (!token?.id) {
@@ -207,8 +241,6 @@ export async function POST(req: NextRequest) {
     }
 
     let scheduledAt, status, frequency, cronExpression, expiresAt;
-console.log("User input:", schedule.startDate, schedule.startTime, schedule.timezoneOffset);
-console.log("UTC stored scheduledAt:", scheduledAt);
     if (schedule) {
       const startDate = new Date(schedule.startDate) // "2025-09-17"
       const [hours, minutes] = schedule.startTime.split(":").map(Number)
@@ -228,12 +260,10 @@ console.log("UTC stored scheduledAt:", scheduledAt);
       utcDate.setMinutes(utcDate.getMinutes() + userOffsetMinutes)
       scheduledAt = utcDate.toISOString()
 
-      console.log("User input:", schedule.startDate, schedule.startTime, userOffsetMinutes)
-      console.log("Final UTC stored scheduledAt:", scheduledAt)
-
       status = Status.SCHEDULED
       frequency = schedule.frequency.toUpperCase() as Frequency
       ;({ cron: cronExpression, expiresAt } = generateCronExpression(schedule))
+      console.log("Generated cron:", cronExpression, "timezone:", "UTC", "scheduledAt:", scheduledAt)
     } else {
       scheduledAt = new Date().toISOString();
       status = Status.PUBLISHED;
@@ -376,47 +406,62 @@ console.log("UTC stored scheduledAt:", scheduledAt);
     }
 
     // Only create a cron job if the post is scheduled
-    if (schedule) {
+    if (schedule && cronExpression) {
       const callbackUrl = `${process.env.NEXTAUTH_URL}/api/cron-jobs/publish-post`
-      const scheduleData = {
-        job: {
-          url: callbackUrl,
-          enabled: true,
-          saveResponse: true,
-          schedule: {
-            timezone: "UTC",
-            expiresAt: expiresAt,
-            hours: [-1],
-            mdays: [-1],
-            minutes: [-1],
-            months: [-1],
-            wdays: [-1],
-            cronExpression: cronExpression,
+      
+      try {
+        // Convert cron expression to cron-job.org schedule format
+        const scheduleFormat = convertCronToScheduleFormat(cronExpression, expiresAt || 0)
+        
+        const scheduleData = {
+          job: {
+            title: `Post Schedule - User: ${token.id} - ${new Date().toISOString()}`,
+            url: callbackUrl,
+            enabled: true,
+            saveResponses: true,
+            schedule: scheduleFormat,
+            requestMethod: 1, // POST method
+            // You might want to include post IDs or other metadata in the request body
+            extendedData: {
+              body: JSON.stringify({
+                postIds: createdPosts.map(p => p.id),
+                userId: token.id,
+                brandId: brandId
+              })
+            }
           },
-        },
-      }
+        };
 
-      const response = await fetch("https://api.cron-job.org/jobs", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.CRON_JOB_API_KEY}`,
-        },
-        body: JSON.stringify(scheduleData),
-      })
+        console.log("Creating cron job with schedule:", JSON.stringify(scheduleFormat, null, 2))
 
-      const responseData = await response.json()
-      if (!response.ok) {
-        console.error("Cron job creation failed:", {
-          status: response.status,
-          statusText: response.statusText,
-          error: responseData,
+        const response = await fetch("https://api.cron-job.org/jobs", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer RDnkbD0orjf+MLPMfmeix/ZgqW49Bv0nFmGCijETocY=`,
+          },
+          body: JSON.stringify(scheduleData),
         })
-        throw new Error(`Failed to create cron job: ${response.statusText} - ${JSON.stringify(responseData)}`)
-      }
 
-      console.log("Cron job created:", responseData)
+        const responseData = await response.json()
+        if (!response.ok) {
+          console.error("Cron job creation failed:", {
+            status: response.status,
+            statusText: response.statusText,
+            error: responseData,
+            sentData: scheduleData
+          })
+          throw new Error(`Failed to create cron job: ${response.statusText} - ${JSON.stringify(responseData)}`)
+        }
+
+        console.log("Cron job created successfully:", responseData)
+      } catch (cronError) {
+        console.error("Error creating cron job:", cronError)
+        // You might want to handle this error differently - maybe still save the posts but mark them as failed to schedule
+        throw new Error(`Failed to schedule posts: ${cronError}`)
+      }
     } else {
+      // Immediate publishing
       const now = new Date()
 
       for (const post of createdPosts) {

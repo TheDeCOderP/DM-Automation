@@ -140,14 +140,17 @@ export default function CreatePostPage() {
       if (isScheduled) {
         // Compute timezone offset at the selected local date/time (handles DST correctly)
         const [hh, mm] = schedule.startTime.split(":").map(Number);
-        const startDateStr = schedule.startDate.toISOString().split("T")[0];
-        const [y, m, d] = startDateStr.split("-").map(Number);
+        // Build YYYY-MM-DD from local date parts to avoid UTC shifting
+        const y = schedule.startDate.getFullYear();
+        const m = schedule.startDate.getMonth() + 1;
+        const d = schedule.startDate.getDate();
+        const startDateStr = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const localSelected = new Date(y, m - 1, d, hh, mm, 0, 0); // local time
         const tzOffsetAtSelected = localSelected.getTimezoneOffset(); // minutes to add to local to get UTC
 
         const plainSchedule = {
           ...schedule,
-          startDate: startDateStr, // only date
+          startDate: startDateStr, // only date in local calendar
           timezoneOffset: tzOffsetAtSelected,
         };
         formData.append("schedule", JSON.stringify(plainSchedule));
