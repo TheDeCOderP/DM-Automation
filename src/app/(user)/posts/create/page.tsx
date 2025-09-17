@@ -49,6 +49,7 @@ export default function CreatePostPage() {
     startTime: "12:00",
     frequency: "daily",
     customExpression: "",
+    timezoneOffset: new Date().getTimezoneOffset()
   });
 
   const [platformCaptions, setPlatformCaptions] = useState<{ [key: string]: string }>({});
@@ -137,7 +138,12 @@ export default function CreatePostPage() {
       formData.append("captions", JSON.stringify(platformCaptions));
 
       if (isScheduled) {
-        formData.append("schedule", JSON.stringify(schedule));
+        const plainSchedule = {
+          ...schedule,
+          startDate: schedule.startDate.toISOString().split("T")[0], // only date
+          timezoneOffset: new Date().getTimezoneOffset()
+        }
+        formData.append("schedule", JSON.stringify(plainSchedule));
       }
 
       const response = await fetch("/api/posts", {

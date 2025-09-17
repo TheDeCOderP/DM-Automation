@@ -6,4 +6,5 @@ export interface ScheduleData {
   dayOfMonth?: number
   month?: number
   customExpression?: string
+  timezoneOffset?: number
 }

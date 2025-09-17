@@ -186,29 +186,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let scheduledAt, status, frequency, cronExpression, expiresAt
-
+    let scheduledAt, status, frequency, cronExpression, expiresAt;
+console.log("User input:", schedule.startDate, schedule.startTime, schedule.timezoneOffset);
+console.log("UTC stored scheduledAt:", scheduledAt);
     if (schedule) {
-      const startDate = new Date(schedule.startDate)
+      const startDate = new Date(schedule.startDate) // "2025-09-17"
       const [hours, minutes] = schedule.startTime.split(":").map(Number)
-      scheduledAt = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
+      const userOffsetMinutes = schedule.timezoneOffset ?? 0
+
+      const utcDate = new Date(Date.UTC(
+        startDate.getUTCFullYear(),
+        startDate.getUTCMonth(),
+        startDate.getUTCDate(),
         hours,
         minutes,
         0,
-        0,
-      ).toISOString()
+        0
+      ));
+
+      utcDate.setMinutes(utcDate.getMinutes() - userOffsetMinutes)
+      scheduledAt = utcDate.toISOString()
+
+      console.log("User input:", schedule.startDate, schedule.startTime, userOffsetMinutes)
+      console.log("Final UTC stored scheduledAt:", scheduledAt)
+
       status = Status.SCHEDULED
       frequency = schedule.frequency.toUpperCase() as Frequency
       ;({ cron: cronExpression, expiresAt } = generateCronExpression(schedule))
     } else {
-      scheduledAt = new Date().toISOString()
-      status = Status.PUBLISHED
-      frequency = Frequency.ONCE
-      cronExpression = null
-      expiresAt = null
+      scheduledAt = new Date().toISOString();
+      status = Status.PUBLISHED;
+      frequency = Frequency.ONCE;
+      cronExpression = null;
+      expiresAt = null;
     }
 
     const createdPosts = []

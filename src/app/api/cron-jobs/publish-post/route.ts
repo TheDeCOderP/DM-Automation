@@ -8,7 +8,8 @@ export async function GET() {
   try {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    
+   console.log("Current time:", now.toISOString());
+    console.log("One hour ago:", oneHourAgo.toISOString());
     // Add 5 minute buffer to catch edge cases
     const bufferMs = 5 * 60 * 1000;
     const windowStart = new Date(oneHourAgo.getTime() - bufferMs);
@@ -22,7 +23,6 @@ export async function GET() {
         AND: [
           {
             scheduledAt: {
-              gte: windowStart,
               lte: windowEnd
             }
           },
