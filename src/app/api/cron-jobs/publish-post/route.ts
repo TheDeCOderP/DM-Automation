@@ -4,7 +4,7 @@ import { publishToLinkedin } from "@/services/linkedin.service";
 import { publishToTwitter } from "@/services/twitter.service";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function POST() {
   try {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
