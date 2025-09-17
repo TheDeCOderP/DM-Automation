@@ -55,16 +55,24 @@ export function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, a
     }
   };
 
-  const handleDisconnect = async (accountId: string) => {
+  const handleDisconnect = async (accountId: string, platform: Platform) => {
     setDisconnectingId(accountId);
     try {
-      const response = await fetch(`/api/accounts/${accountId}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to disconnect account");
+      const response = await fetch(`/api/accounts?platform=${platform}&socialAccountId=${accountId}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to disconnect account");
+      }
+      
+      const result = await response.json();
       mutate();
-      toast.success("Account disconnected successfully");
+      toast.success(result.message || "Account disconnected successfully");
     } catch (error) {
       console.error("Disconnect failed:", error);
-      toast.error("Failed to disconnect account");
+      toast.error(error instanceof Error ? error.message : "Failed to disconnect account");
     } finally {
       setDisconnectingId(null);
     }
@@ -140,7 +148,7 @@ export function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, a
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleDisconnect(connectedAccount.id)}
+                          onClick={() => handleDisconnect(connectedAccount.id, connectedAccount.platform)}
                           disabled={disconnectingId === connectedAccount.id}
                         >
                           {disconnectingId === connectedAccount.id ? (

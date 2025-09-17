@@ -64,7 +64,6 @@ export async function GET(req: NextRequest) {
       // Search brands the user has access to
       prisma.brand.findMany({
         where: {
-          deleted: false,
           members: {
             some: { userId }
           },

@@ -68,8 +68,6 @@ export async function GET(request: NextRequest) {
             tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
             platformUserId: profile.data.id,
             platformUsername: profile.data.username,
-            isConnected: true,
-            userId
           }, 
           create: {
             platform: 'TWITTER',
@@ -78,8 +76,6 @@ export async function GET(request: NextRequest) {
             tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
             platformUserId: profile.data.id,
             platformUsername: profile.data.username,
-            userId,
-            isConnected: true,
           }
         });
 
@@ -93,6 +89,20 @@ export async function GET(request: NextRequest) {
           update: {},
           create: {
             brandId,
+            socialAccountId: account.id
+          }
+        });
+
+        await prisma.userSocialAccount.upsert({
+          where: {
+            userId_socialAccountId: {
+              userId,
+              socialAccountId: account.id
+            },
+          },
+          update: {},
+          create: {
+            userId,
             socialAccountId: account.id
           }
         });

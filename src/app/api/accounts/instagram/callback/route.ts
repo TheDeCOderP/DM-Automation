@@ -103,7 +103,6 @@ export async function GET(request: NextRequest) {
             accessToken: accessToken, // Using the long-lived token
             platformUserId: instagramAccount.id,
             platformUsername: instagramAccount.username,
-            isConnected: true,
             tokenExpiresAt: tokenExpiresAt,
           },
           create: {
@@ -111,8 +110,6 @@ export async function GET(request: NextRequest) {
             accessToken: accessToken,
             platformUserId: instagramAccount.id,
             platformUsername: instagramAccount.username,
-            userId: userId,
-            isConnected: true,
             tokenExpiresAt: tokenExpiresAt
           }
         });

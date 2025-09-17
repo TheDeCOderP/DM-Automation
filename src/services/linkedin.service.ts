@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Post, Media } from "@prisma/client";
+import { Post, Media, Platform } from "@prisma/client";
 
 interface LinkedInMedia {
   status: string;
@@ -48,31 +48,26 @@ export async function publishToLinkedin(
   try {
     if (!post) throw new Error('Invalid input');
 
-    // 1. Get LinkedIn account with user relation for notifications
-    // Use the correct query based on your schema - SocialAccount doesn't have userId_platform_brandId unique constraint
-    const socialAccount = await prisma.socialAccount.findFirst({
+    // 1. Get LinkedIn account through user junction table
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
       where: {
         userId: post.userId,
-        platform: 'LINKEDIN',
-        isConnected: true,
-        // Check if the social account is associated with the post's brand
-        brands: {
-          some: {
-            brandId: post.brandId
+        socialAccount: {
+          platform: 'LINKEDIN',
+          brands: {
+            some: {
+              brandId: post.brandId
+            }
           }
         }
       },
       include: {
-        user: true,
-        brands: {
-          include: {
-            brand: true
-          }
-        }
+        socialAccount: true,
+        user: true
       }
     });
 
-    if (!socialAccount) {
+    if (!userSocialAccount) {
       // Update post status to failed if no connected account
       await prisma.post.update({
         where: { id: post.id },
@@ -88,7 +83,7 @@ export async function publishToLinkedin(
           userId: post.userId,
           type: "POST_FAILED",
           title: "Post Failed",
-          message: "Failed to publish your post on LinkedIn - no connected account",
+          message: "Failed to publish your post on LinkedIn - no connected account for this brand",
           metadata: {
             postId: post.id,
             platform: "LINKEDIN"
@@ -98,6 +93,8 @@ export async function publishToLinkedin(
 
       throw new Error('User has no connected LinkedIn account for this brand');
     }
+
+    const socialAccount = userSocialAccount.socialAccount;
   
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
       throw new Error('LinkedIn token is expired');
@@ -169,7 +166,7 @@ export async function publishToLinkedin(
     }
 
     // 6. Record successful post
-    await recordSuccessfulLinkedInPost(post, socialAccount, data.id);
+    await recordSuccessfulLinkedInPost(post, socialAccount.id, data.id);
     return data;
   } catch (error) {
     console.error("Error in publishing to LinkedIn:", error);
@@ -243,7 +240,7 @@ async function uploadMediaToLinkedin(
 
 async function recordSuccessfulLinkedInPost(
   post: Post,
-  socialAccount: { id: string },
+  socialAccountId: string,
   postId: string
 ) {
   await prisma.$transaction([
@@ -303,4 +300,89 @@ async function handleLinkedInPostFailure(
 function isTokenExpired(expiresAt: Date | null): boolean {
   if (!expiresAt) return true;
   return new Date(expiresAt) < new Date(Date.now() + 300000); // 5 minute buffer
+}
+
+export async function fetchLinkedInPostAnalytics(post: Post) {
+  if (!post?.userId || !post?.url) {
+    throw new Error("Missing userId or post URL");
+  }
+
+  // 1. Extract the 'share' URN from the URL
+  const shareUrnMatch = post.url.match(/urn:li:share:\d+/);
+  if (!shareUrnMatch) {
+    throw new Error("Invalid LinkedIn post URL format. 'share' URN not found.");
+  }
+  const shareUrn = shareUrnMatch[0];
+
+  // 2. Fetch the user's LinkedIn account and access token
+  const userSocialAccount = await prisma.userSocialAccount.findFirst({
+    where: {
+      userId: post.userId,
+      socialAccount: {
+        platform: "LINKEDIN",
+      },
+    },
+    include: {
+      socialAccount: true,
+    },
+  });
+
+  const socialAccount = userSocialAccount?.socialAccount;
+  if (!socialAccount?.accessToken || !socialAccount?.platformUserId) {
+    throw new Error("Missing LinkedIn access token or user ID");
+  }
+
+  // 3. Convert the 'share' URN to a 'ugcPost' URN
+  const sharesUrl = `https://api.linkedin.com/v2/shares/${encodeURIComponent(shareUrn)}?projection=(owner,ugcPost)`;
+  
+  const sharesRes = await fetch(sharesUrl, {
+    headers: {
+      Authorization: `Bearer ${socialAccount.accessToken}`,
+      "X-Restli-Protocol-Version": "2.0.0",
+    },
+  });
+
+  if (!sharesRes.ok) {
+    const err = await sharesRes.text();
+    throw new Error(`LinkedIn Shares API failed: ${err}`);
+  }
+
+  const sharesData = await sharesRes.json();
+  const ugcPostUrn = sharesData.ugcPost;
+
+  if (!ugcPostUrn) {
+    throw new Error("Could not find ugcPost URN for this share.");
+  }
+
+  // 4. Use the new ugcPost URN to fetch analytics
+  const organizationalUrn = `urn:li:person:${socialAccount.platformUserId}`;
+  const analyticsUrl = `https://api.linkedin.com/v2/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationalUrn)}&shares=${encodeURIComponent(ugcPostUrn)}`;
+
+  const analyticsRes = await fetch(analyticsUrl, {
+    headers: {
+      Authorization: `Bearer ${socialAccount.accessToken}`,
+      "X-Restli-Protocol-Version": "2.0.0",
+      "LinkedIn-Version": "202402",
+    },
+  });
+
+  if (!analyticsRes.ok) {
+    const err = await analyticsRes.text();
+    throw new Error(`LinkedIn Analytics API failed: ${err}`);
+  }
+
+  const analyticsData = await analyticsRes.json();
+  const totalShareStatistics = analyticsData?.elements?.[0]?.totalShareStatistics;
+
+  if (!totalShareStatistics) {
+    throw new Error("No analytics data found for this post.");
+  }
+
+  return {
+    likes: totalShareStatistics.likeCount,
+    comments: totalShareStatistics.commentCount,
+    shares: totalShareStatistics.shareCount,
+    impressions: totalShareStatistics.impressionCount,
+    clicks: totalShareStatistics.clickCount,
+  };
 }

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useRef, useMemo } from "react"
-import useSWR from "swr"
+import useSWR from "swr";
+import { useRouter } from "next/navigation";
+import { useState, useRef, useMemo } from "react";
 import {
   CalendarProvider,
   CalendarHeader,
@@ -74,6 +75,7 @@ interface PostFeature extends Feature {
 }
 
 export default function CalendarUI() {
+  const router = useRouter();
   const { data, isLoading } = useSWR("/api/posts?limit=1000", fetcher)
   const [hoveredPost, setHoveredPost] = useState<HoveredPost | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout>(null)
@@ -166,10 +168,11 @@ export default function CalendarUI() {
                     const post = postFeature.post as PostWithUser
                     const PlatformIcon = getPlatformIcon(post.platform)
                     return (
-                      <div
+                      <button
                         key={feature.id}
                         onMouseEnter={(e) => handleEventMouseEnter(post, e)}
                         onMouseLeave={handleEventMouseLeave}
+                        onClick={() => router.push(`/posts/${post.id}`)}
                         className={cn(
                           "flex items-center gap-2 p-1 cursor-pointer rounded-sm",
                           "hover:bg-accent transition-colors",
@@ -185,7 +188,7 @@ export default function CalendarUI() {
                             minute: "2-digit",
                           })}
                         </span>
-                      </div>
+                      </button>
                     )
                   }}
                 </CalendarBody>

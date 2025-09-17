@@ -1,6 +1,6 @@
 // lib/social/facebook.ts
 import { prisma } from "@/lib/prisma";
-import { Post, Media } from "@prisma/client";
+import { Post, Media, Platform } from "@prisma/client";
 
 interface FacebookPostResponse {
   id: string;
@@ -14,43 +14,41 @@ interface FacebookPostResponse {
   };
 }
 
-// interface FacebookMediaResponse {
-//   id: string;
-//   error?: {
-//     message: string;
-//   };
-// }
-
 export async function publishToFacebook(
   post: Post & { media?: Media[] }
 ): Promise<FacebookPostResponse> {
   try {
     if (!post) throw new Error('Invalid input');
 
-    // 1. Get Facebook account with user relation for notifications
-    const socialAccount = await prisma.socialAccount.findFirst({
+    // 1. Get Facebook account through user relation
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
       where: {
         userId: post.userId,
-        platform: 'FACEBOOK',
-        isConnected: true,
-
-        brands: {
-          some: {
-            brandId: post.brandId,
+        socialAccount: {
+          platform: 'FACEBOOK',
+          brands: {
+            some: {
+              brandId: post.brandId,
+            }
           }
         }
       },
       include: {
         user: true,
-        brands: {
+        socialAccount: {
           include: {
-            brand: true
+            brands: {
+              include: {
+                brand: true
+              }
+            },
+            pageTokens: true
           }
         }
       }
     });
 
-    if (!socialAccount) {
+    if (!userSocialAccount) {
       // Update post status to failed if no connected account
       await prisma.post.update({
         where: { id: post.id },
@@ -74,8 +72,10 @@ export async function publishToFacebook(
         }
       });
 
-      throw new Error('User has no connected Facebook account');
+      throw new Error('User has no connected Facebook account for this brand');
     }
+
+    const socialAccount = userSocialAccount.socialAccount;
 
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
       throw new Error('Facebook token is expired');
@@ -87,26 +87,24 @@ export async function publishToFacebook(
     });
 
     // 3. Determine the target (page or user profile)
-    if(!post.pageTokenId) {
+    if (!post.pageTokenId) {
       throw new Error('Page ID is required');
     }
     
     const pageToken = await prisma.pageToken.findFirst({
       where: {
         id: post.pageTokenId,
-        socialAccount: {
-          platform: 'FACEBOOK',
-        }
+        socialAccountId: socialAccount.id,
       },
-    })
+    });
 
     const targetId = pageToken?.pageId;
-    if(targetId == undefined) {
+    if (targetId == undefined) {
       throw new Error('Page ID is missing');
     }
 
     const page_access_token = pageToken?.accessToken;
-    if(page_access_token == undefined) {
+    if (page_access_token == undefined) {
       throw new Error('Page access token is missing');
     }
 
@@ -128,7 +126,7 @@ export async function publishToFacebook(
 
     // 5. Record successful post
     if (responseData.id && !responseData.error) {
-      await recordSuccessfulFacebookPost(post, socialAccount, responseData.id);
+      await recordSuccessfulFacebookPost(post, socialAccount.id, responseData.id);
     } else {
       throw new Error(responseData.error?.message || 'Facebook API returned an error');
     }
@@ -276,7 +274,7 @@ async function createVideoPost(
 
 async function recordSuccessfulFacebookPost(
   post: Post,
-  socialAccount: { id: string },
+  socialAccountId: string,
   postId: string
 ) {
   await prisma.$transaction([
@@ -304,8 +302,6 @@ async function recordSuccessfulFacebookPost(
     })
   ]);
 }
-
-
 
 function isTokenExpired(expiresAt: Date | null): boolean {
   if (!expiresAt) return true;

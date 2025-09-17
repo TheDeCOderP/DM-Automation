@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Post, Media, SocialAccount } from "@prisma/client";
+import { Post, Media, SocialAccount, MediaType, Platform } from "@prisma/client";
 
 interface TwitterTokenResponse {
     access_token: string;
@@ -56,41 +56,47 @@ interface TweetBody {
 
 async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string> {
     if (!socialAccount.refreshToken) {
-        throw new Error('Twitter refresh token is missing. User needs to re-authenticate.');
+        throw new Error("Twitter refresh token is missing. User needs to re-authenticate.");
     }
 
     if (!process.env.TWITTER_CLIENT_ID || !process.env.TWITTER_CLIENT_SECRET) {
-        throw new Error('Twitter client credentials are not configured.');
+        throw new Error("Twitter client credentials are not configured.");
     }
 
-    const basicAuth = Buffer.from(`${process.env.TWITTER_CLIENT_ID}:${process.env.TWITTER_CLIENT_SECRET}`).toString('base64');
+    const basicAuth = Buffer.from(
+        `${process.env.TWITTER_CLIENT_ID}:${process.env.TWITTER_CLIENT_SECRET}`
+    ).toString("base64");
 
-    const response = await fetch('https://api.twitter.com/2/oauth2/token', {
-        method: 'POST',
+    const response = await fetch("https://api.twitter.com/2/oauth2/token", {
+        method: "POST",
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${basicAuth}`
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `Basic ${basicAuth}`,
         },
         body: new URLSearchParams({
-            'refresh_token': socialAccount.refreshToken,
-            'grant_type': 'refresh_token',
-            'client_id': process.env.TWITTER_CLIENT_ID,
-        })
+            refresh_token: socialAccount.refreshToken,
+            grant_type: "refresh_token",
+            client_id: process.env.TWITTER_CLIENT_ID!,
+        }),
     });
 
     const data: TwitterTokenResponse | TwitterErrorResponse = await response.json();
 
     if (!response.ok) {
-        console.error('Failed to refresh Twitter token:', data);
-        await prisma.socialAccount.update({
-            where: { id: socialAccount.id },
-            data: { isConnected: false }
-        });
+        console.error("Failed to refresh Twitter token:", data);
         const errorData = data as TwitterErrorResponse;
-        throw new Error(`Could not refresh Twitter token. Reason: ${errorData.error_description || errorData.error || 'Unknown error'}`);
+        throw new Error(
+            `Could not refresh Twitter token. Reason: ${
+                errorData.error_description || errorData.error || "Unknown error"
+            }`
+        );
     }
 
-    const { access_token: newAccessToken, refresh_token: newRefreshToken, expires_in: expiresIn } = data as TwitterTokenResponse;
+    const {
+        access_token: newAccessToken,
+        refresh_token: newRefreshToken,
+        expires_in: expiresIn,
+    } = data as TwitterTokenResponse;
 
     const newExpiresAt = new Date(Date.now() + expiresIn * 1000);
     await prisma.socialAccount.update({
@@ -102,49 +108,47 @@ async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string
         },
     });
 
-    console.log('Successfully refreshed and updated Twitter token');
+    console.log("Successfully refreshed and updated Twitter token");
     return newAccessToken;
 }
 
-export async function publishToTwitter(post: Post & { media?: Media[] }): Promise<TwitterTweetResponse['data']> {
+function isTokenExpired(expiresAt: Date | null): boolean {
+    if (!expiresAt) return true;
+    return new Date(expiresAt) < new Date(Date.now() + 60000); // 1 minute buffer
+}
+
+export async function publishToTwitter(
+    post: Post & { media?: Media[] }
+): Promise<TwitterTweetResponse["data"]> {
     if (!post) {
-        throw new Error('Invalid input for publishToTwitter');
+        throw new Error("Invalid input for publishToTwitter");
     }
 
-    // 1. Get Twitter account with user relation for notifications
-    const socialAccount = await prisma.socialAccount.findFirst({
+    // Find Twitter account through user junction table
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
         where: {
             userId: post.userId,
-            platform: 'TWITTER',
-            isConnected: true,
-
-            brands: {
-                some: {
-                    brandId: post.brandId,
-                }
-            }
+            socialAccount: {
+                platform: "TWITTER",
+                brands: {
+                    some: {
+                        brandId: post.brandId,
+                    },
+                },
+            },
         },
         include: {
-            user: true,
-            brands: {
-                include: {
-                    brand: true
-                }
-            }
-        }
+            socialAccount: true,
+            user: true
+        },
     });
 
-    if (!socialAccount) {
-        // Update post status to failed if no connected account
+    if (!userSocialAccount) {
         await prisma.post.update({
             where: { id: post.id },
-            data: { 
-                status: "FAILED",
-                updatedAt: new Date()
-            }
+            data: { status: "FAILED", updatedAt: new Date() },
         });
 
-        // Create notification for the user
         await prisma.notification.create({
             data: {
                 userId: post.userId,
@@ -153,109 +157,178 @@ export async function publishToTwitter(post: Post & { media?: Media[] }): Promis
                 message: `Failed to publish your post on Twitter - no connected account`,
                 metadata: {
                     postId: post.id,
-                    platform: "TWITTER"
-                }
-            }
+                    platform: "TWITTER",
+                },
+            },
         });
 
-        throw new Error('User has no connected Twitter account');
+        throw new Error("User has no connected Twitter account for this brand");
     }
 
-    // 2. Handle token refresh if needed
+    const socialAccount = userSocialAccount.socialAccount;
+
+    // Token refresh
     let { accessToken } = socialAccount;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
         accessToken = await refreshTwitterToken(socialAccount);
     }
 
-    // 3. Get media for the post if not already included
-    const media = post.media || await prisma.media.findMany({
-        where: { postId: post.id }
-    });
+    // Get media if not provided
+    const media = post.media || (await prisma.media.findMany({ where: { postId: post.id } }));
 
-    // 4. Prepare tweet body
-    const tweetBody: TweetBody = {
-        text: post.content,
-    };
+    const tweetBody: TweetBody = { text: post.content };
 
-    // 5. Handle media upload if provided
     if (media.length > 0) {
         try {
             const mediaIds = await Promise.all(
-                media.map(m => uploadMediaToTwitter(m, accessToken))
+                media.map((m) => uploadMediaToTwitter(m, accessToken))
             );
             tweetBody.media = { media_ids: mediaIds };
         } catch (error) {
-            console.error('Media upload failed:', error);
-            // Optionally proceed with text-only tweet if media fails
-            // throw error; // Uncomment to fail the entire post if media upload fails
+            console.error("Media upload failed:", error);
+            // Continue without media if upload fails
         }
     }
 
-    // 6. Post the tweet
-    const tweetResponse = await fetch('https://api.twitter.com/2/tweets', {
-        method: 'POST',
+    const tweetResponse = await fetch("https://api.twitter.com/2/tweets", {
+        method: "POST",
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
         },
-        body: JSON.stringify(tweetBody)
+        body: JSON.stringify(tweetBody),
     });
 
     const data: TwitterTweetResponse = await tweetResponse.json();
 
     if (!tweetResponse.ok) {
         await handleTwitterPostFailure(post, socialAccount, data);
-        throw new Error(`Twitter API error: ${data.errors?.[0]?.detail || 'Unknown error'}`);
+        throw new Error(`Twitter API error: ${data.errors?.[0]?.detail || "Unknown error"}`);
     }
 
-    // 7. Record successful post
     await recordSuccessfulPost(post, socialAccount, data.data.id);
     return data.data;
 }
 
 async function uploadMediaToTwitter(media: Media, accessToken: string): Promise<string> {
-  // 1. Fetch the media file from Cloudinary (or any external URL).
-  const response = await fetch(media.url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch media from URL: ${media.url}`);
-  }
+    // Twitter media upload requires a different approach
+    // First, we need to initialize the upload
+    const mediaType = getTwitterMediaType(media.type);
+    
+    // Initialize media upload
+    const initResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+            command: "INIT",
+            total_bytes: "0", // We'll set this properly after fetching the file
+            media_type: mediaType,
+            media_category: media.type === MediaType.VIDEO ? "tweet_video" : "tweet_image"
+        }),
+    });
 
-  // 2. Convert the media to a base64 string.
-  const buffer = await response.arrayBuffer();
-  const base64Media = Buffer.from(buffer).toString("base64");
+    if (!initResponse.ok) {
+        throw new Error(`Failed to initialize media upload: ${await initResponse.text()}`);
+    }
 
-  // 3. Build the request payload for X v2 media upload API.
-  const payload = {
-    shared: false, // optional: whether media is shared
-    media: base64Media, // base64-encoded media
-    media_category: media.type.startsWith("video") ? "tweet_video" : "tweet_image"
-  };
+    const initData = await initResponse.json();
+    const mediaId = initData.media_id_string;
 
-  // 4. Call the X v2 media upload API.
-  const uploadResponse = await fetch("https://api.x.com/2/media/upload", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`, // use your OAuth2.0 Bearer token
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+    // Fetch the media file
+    const mediaResponse = await fetch(media.url);
+    if (!mediaResponse.ok) {
+        throw new Error(`Failed to fetch media from URL: ${media.url}`);
+    }
 
-  const uploadData = await uploadResponse.json();
-  console.log("uploadData", uploadData);
+    const mediaBuffer = await mediaResponse.arrayBuffer();
+    const mediaData = Buffer.from(mediaBuffer);
 
-  if (!uploadResponse.ok || !uploadData.data?.id) {
-    throw new Error(`Failed to upload media to Twitter: ${JSON.stringify(uploadData)}`);
-  }
+    // Append media data
+    const appendResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "multipart/form-data",
+        },
+        body: new URLSearchParams({
+            command: "APPEND",
+            media_id: mediaId,
+            media_data: mediaData.toString('base64'),
+            segment_index: "0"
+        }),
+    });
 
-  // 5. Return the uploaded media ID (used to attach media in a tweet).
-  return uploadData.data.id;
+    if (!appendResponse.ok) {
+        throw new Error(`Failed to append media data: ${await appendResponse.text()}`);
+    }
+
+    // Finalize media upload
+    const finalizeResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+            command: "FINALIZE",
+            media_id: mediaId
+        }),
+    });
+
+    if (!finalizeResponse.ok) {
+        throw new Error(`Failed to finalize media upload: ${await finalizeResponse.text()}`);
+    }
+
+    const finalizeData = await finalizeResponse.json();
+    
+    // Wait for processing if it's a video
+    if (media.type === MediaType.VIDEO) {
+        let processingInfo = finalizeData.processing_info;
+        while (processingInfo && processingInfo.state === 'processing') {
+            await new Promise(resolve => setTimeout(resolve, processingInfo.check_after_secs * 1000));
+            
+            const statusResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                    command: "STATUS",
+                    media_id: mediaId
+                }),
+            });
+
+            processingInfo = (await statusResponse.json()).processing_info;
+        }
+
+        if (processingInfo && processingInfo.state === 'failed') {
+            throw new Error(`Media processing failed: ${processingInfo.error?.message}`);
+        }
+    }
+
+    return mediaId;
 }
 
+function getTwitterMediaType(mediaType: MediaType): string {
+    switch (mediaType) {
+        case MediaType.IMAGE:
+            return "image/jpeg";
+        case MediaType.VIDEO:
+            return "video/mp4";
+        case MediaType.CAROUSEL:
+            return "image/jpeg"; // Twitter doesn't support carousels natively
+        default:
+            return "image/jpeg";
+    }
+}
 
 async function recordSuccessfulPost(
     post: Post,
-    socialAccount: { id: string },
+    socialAccount: SocialAccount,
     tweetId: string
 ) {
     await prisma.$transaction([
@@ -286,7 +359,7 @@ async function recordSuccessfulPost(
 
 async function handleTwitterPostFailure(
     post: Post,
-    socialAccount: { id: string, user: { id: string } },
+    socialAccount: SocialAccount,
     errorData: TwitterTweetResponse
 ) {
     await prisma.$transaction([
@@ -315,7 +388,52 @@ async function handleTwitterPostFailure(
     console.error('Twitter post failed:', errorData);
 }
 
-function isTokenExpired(expiresAt: Date | null): boolean {
-    if (!expiresAt) return true;
-    return new Date(expiresAt) < new Date(Date.now() + 60000); // 1 minute buffer
+export async function fetchTwitterPostAnalytics(post: Post) {
+    if (!post?.userId) throw new Error("Missing userId");
+
+    let tweetId: string | null = null;
+
+    if (post.url) {
+        // Extract URN from LinkedIn URL
+        tweetId =  post.url.split("/").pop() || null;
+    }
+
+    if (!tweetId) throw new Error("Missing Twitter post ID");
+
+    // Find Twitter account through user junction table
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
+        where: { 
+            userId: post.userId, 
+            socialAccount: {
+                platform: "TWITTER"
+            }
+        },
+        include: {
+            socialAccount: true
+        }
+    });
+
+    if (!userSocialAccount) {
+        throw new Error("No connected Twitter account found");
+    }
+
+    const socialAccount = userSocialAccount.socialAccount;
+
+    let { accessToken } = socialAccount;
+    if (isTokenExpired(socialAccount.tokenExpiresAt)) {
+        accessToken = await refreshTwitterToken(socialAccount);
+    }
+
+    const res = await fetch(
+        `https://api.x.com/2/tweets?ids=${tweetId}&tweet.fields=public_metrics&expansions=attachments.media_keys&media.fields=public_metrics`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Twitter API failed: ${err}`);
+    }
+
+    const data = await res.json();
+    return data?.data?.[0]?.public_metrics || null;
 }

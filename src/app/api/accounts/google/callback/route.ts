@@ -57,38 +57,53 @@ export async function GET(request: NextRequest) {
             platform_platformUserId: {
               platform: 'GOOGLE',
               platformUserId: profile.sub,
-            }
+            },
           },
           update: {
             accessToken: tokenData.access_token,
             refreshToken: tokenData.refresh_token || null,
-            tokenExpiresAt: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+            tokenExpiresAt: tokenData.expires_in
+              ? new Date(Date.now() + tokenData.expires_in * 1000)
+              : null,
             platformUsername: profile.email,
-            isConnected: true,
-            userId: userId,
           },
           create: {
             platform: 'GOOGLE',
             accessToken: tokenData.access_token,
             refreshToken: tokenData.refresh_token || null,
-            tokenExpiresAt: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null,
+            tokenExpiresAt: tokenData.expires_in
+              ? new Date(Date.now() + tokenData.expires_in * 1000)
+              : null,
             platformUserId: profile.sub,
             platformUsername: profile.email,
-            isConnected: true,
-            userId: userId,
-          }
+          },
         });
 
+        // Link Google account with the brand
         await prisma.socialAccountBrand.upsert({
           where: {
             brandId_socialAccountId: {
               brandId,
-              socialAccountId: account.id
-            }
+              socialAccountId: account.id,
+            },
           },
           update: {},
           create: {
             brandId,
+            socialAccountId: account.id,
+          },
+        });
+
+        await prisma.userSocialAccount.upsert({
+          where: {
+            userId_socialAccountId: {
+              userId,
+              socialAccountId: account.id
+            },
+          },
+          update: {},
+          create: {
+            userId,
             socialAccountId: account.id
           }
         });

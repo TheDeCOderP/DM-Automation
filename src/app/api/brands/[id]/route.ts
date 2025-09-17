@@ -101,13 +101,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
             return NextResponse.json({ error: "Brand not found" }, { status: 404 });
         }
 
-        await prisma.brand.update({
+        await prisma.brand.delete({
             where: {
                 id: id as string,
-            },
-            data: {
-                deleted: true,
-            },
+            }
         });
 
         return NextResponse.json({ message: "Brand deleted successfully" }, { status: 200 });

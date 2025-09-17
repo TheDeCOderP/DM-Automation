@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
-import { SocialAccount } from "@prisma/client";
+import { SocialAccount, Platform } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 function isTokenExpired(expiresAt: Date | null): boolean {
@@ -31,11 +31,6 @@ async function refreshGoogleToken(socialAccount: SocialAccount): Promise<string>
   const data = await response.json();
 
   if (!response.ok) {
-    console.error("Failed to refresh Google token:", data);
-    await prisma.socialAccount.update({
-      where: { id: socialAccount.id },
-      data: { isConnected: false },
-    });
     throw new Error(`Could not refresh Google token. Reason: ${data.error_description || data.error || "Unknown error"}`);
   }
 
@@ -61,25 +56,45 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const account = await prisma.socialAccount.findFirst({
+    // Get user's Google accounts through the junction table
+    const userSocialAccounts = await prisma.userSocialAccount.findMany({
       where: {
         userId: token.id,
-        platform: "GOOGLE",
+        socialAccount: {
+          platform: Platform.GOOGLE
+        }
       },
+      include: {
+        socialAccount: true
+      }
     });
 
-    if (!account) {
+    if (!userSocialAccounts.length) {
       throw new Error("No Google Account found");
     }
 
-    // Check expiry
-    if (isTokenExpired(account.tokenExpiresAt)) {
-      account.accessToken = await refreshGoogleToken(account);
-    }
+    const accounts = await Promise.all(
+      userSocialAccounts.map(async (userSocialAccount) => {
+        let socialAccount = userSocialAccount.socialAccount;
+        
+        // Check expiry and refresh if needed
+        if (isTokenExpired(socialAccount.tokenExpiresAt)) {
+          const newAccessToken = await refreshGoogleToken(socialAccount);
+          socialAccount = {
+            ...socialAccount,
+            accessToken: newAccessToken
+          };
+        }
 
-    return NextResponse.json({ account }, { status: 200 });
+        return socialAccount;
+      })
+    );
+
+    return NextResponse.json({ accounts }, { status: 200 });
   } catch (error) {
     console.error("GET /api/google-account error:", error);
-    return NextResponse.json({ error: error }, { status: 500 });
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : "Unknown error" 
+    }, { status: 500 });
   }
 }

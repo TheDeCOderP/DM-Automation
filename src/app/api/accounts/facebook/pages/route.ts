@@ -16,7 +16,6 @@ export async function GET(req: Request) {
       where: {
         platformUserId: platformUserId,
         platform: "FACEBOOK",
-        isConnected: true
       },
       include: {
         pageTokens: true

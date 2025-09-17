@@ -87,6 +87,9 @@ export async function GET(req: NextRequest) {
     const posts = await prisma.post.findMany({
       where: {
         userId: token.id,
+        status: {
+          in: ["SCHEDULED", "PUBLISHED"],
+        },
       },
       include: {
         media: true,

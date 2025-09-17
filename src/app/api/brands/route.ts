@@ -13,10 +13,7 @@ export async function GET(req: NextRequest) {
     try {
         const userBrands = await prisma.userBrand.findMany({
             where: {
-                userId: token.id,
-                brand: {
-                    deleted: false
-                }
+                userId: token.id
             },
             include: {
                 brand: {

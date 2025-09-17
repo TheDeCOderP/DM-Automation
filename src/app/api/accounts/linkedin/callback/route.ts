@@ -67,8 +67,6 @@ export async function GET(request: NextRequest) {
             refreshToken: tokenData.refresh_token || null,
             tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
             platformUsername: profile.name || profile.given_name || '',
-            userId,
-            isConnected: true
           },
           create: {
             platform: 'LINKEDIN',
@@ -77,8 +75,6 @@ export async function GET(request: NextRequest) {
             tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
             platformUserId: profile.sub,
             platformUsername: profile.name || profile.given_name || '',
-            userId,
-            isConnected: true
           }
         });
 
@@ -93,6 +89,21 @@ export async function GET(request: NextRequest) {
           update: {},
           create: {
             brandId,
+            socialAccountId: account.id
+          }
+        });
+
+        // Ensure user association exists via join table
+        await prisma.userSocialAccount.upsert({
+          where: {
+            userId_socialAccountId: {
+              userId,
+              socialAccountId: account.id
+            },
+          },
+          update: {},
+          create: {
+            userId,
             socialAccountId: account.id
           }
         });
