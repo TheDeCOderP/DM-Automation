@@ -138,11 +138,18 @@ export default function CreatePostPage() {
       formData.append("captions", JSON.stringify(platformCaptions));
 
       if (isScheduled) {
+        // Compute timezone offset at the selected local date/time (handles DST correctly)
+        const [hh, mm] = schedule.startTime.split(":").map(Number);
+        const startDateStr = schedule.startDate.toISOString().split("T")[0];
+        const [y, m, d] = startDateStr.split("-").map(Number);
+        const localSelected = new Date(y, m - 1, d, hh, mm, 0, 0); // local time
+        const tzOffsetAtSelected = localSelected.getTimezoneOffset(); // minutes to add to local to get UTC
+
         const plainSchedule = {
           ...schedule,
-          startDate: schedule.startDate.toISOString().split("T")[0], // only date
-          timezoneOffset: new Date().getTimezoneOffset()
-        }
+          startDate: startDateStr, // only date
+          timezoneOffset: tzOffsetAtSelected,
+        };
         formData.append("schedule", JSON.stringify(plainSchedule));
       }
 

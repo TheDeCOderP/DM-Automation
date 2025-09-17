@@ -13,16 +13,35 @@ import { publishToLinkedin } from "@/services/linkedin.service"
 import { publishToTwitter } from "@/services/twitter.service"
 
 function generateCronExpression(schedule: ScheduleData) {
-  const startDate = new Date(schedule.startDate)
+  // Convert the user's local date/time + offset to UTC components for cron
   const [hours, minutes] = schedule.startTime.split(":").map(Number)
 
-  startDate.setHours(hours, minutes, 0, 0)
+  // Normalize startDate to string YYYY-MM-DD
+  const startDateStr = typeof schedule.startDate === "string"
+    ? schedule.startDate
+    : new Date(schedule.startDate).toISOString().split("T")[0]
+
+  const [y, m, d] = startDateStr.split("-").map(Number)
+  const offset = schedule.timezoneOffset ?? 0 // minutes to add to local to get UTC
+
+  let totalMins = hours * 60 + minutes + offset // UTC = local + offset
+  let dayAdjust = 0
+  if (totalMins < 0) { totalMins += 1440; dayAdjust = -1 }
+  if (totalMins >= 1440) { totalMins -= 1440; dayAdjust = 1 }
+
+  const utcHours = Math.floor(totalMins / 60)
+  const utcMinutes = totalMins % 60
+  const baseDateUtc = new Date(Date.UTC(y, m - 1, d + dayAdjust, 0, 0, 0, 0))
+  const utcDay = baseDateUtc.getUTCDate()
+  const utcMonth = baseDateUtc.getUTCMonth() + 1
 
   switch (schedule.frequency) {
     case "once":
       return {
-        cron: `${minutes} ${hours} ${startDate.getDate()} ${startDate.getMonth() + 1} *`,
-        expiresAt: Math.floor(startDate.getTime() / 1000) + 3600,
+        // Run once at the exact UTC H:M on the (possibly adjusted) day/month
+        cron: `${utcMinutes} ${utcHours} ${utcDay} ${utcMonth} *`,
+        // expire one hour after trigger time
+        expiresAt: Math.floor(Date.UTC(baseDateUtc.getUTCFullYear(), baseDateUtc.getUTCMonth(), baseDateUtc.getUTCDate(), utcHours, utcMinutes, 0) / 1000) + 3600,
       }
 
     case "minutes":
@@ -33,19 +52,20 @@ function generateCronExpression(schedule: ScheduleData) {
 
     case "daily":
       return {
-        cron: `${minutes} ${hours} * * *`,
+        // At the UTC time every day
+        cron: `${utcMinutes} ${utcHours} * * *`,
         expiresAt: 0,
       }
 
     case "monthly":
       return {
-        cron: `${minutes} ${hours} ${schedule.dayOfMonth || startDate.getDate()} * *`,
+        cron: `${utcMinutes} ${utcHours} ${schedule.dayOfMonth || utcDay} * *`,
         expiresAt: 0,
       }
 
     case "yearly":
       return {
-        cron: `${minutes} ${hours} ${schedule.dayOfMonth || startDate.getDate()} ${schedule.month || startDate.getMonth() + 1} *`,
+        cron: `${utcMinutes} ${utcHours} ${schedule.dayOfMonth || utcDay} ${schedule.month || utcMonth} *`,
         expiresAt: 0,
       }
 
@@ -204,7 +224,8 @@ console.log("UTC stored scheduledAt:", scheduledAt);
         0
       ));
 
-      utcDate.setMinutes(utcDate.getMinutes() - userOffsetMinutes)
+      // Convert local time to UTC: UTC = local + offset (getTimezoneOffset minutes)
+      utcDate.setMinutes(utcDate.getMinutes() + userOffsetMinutes)
       scheduledAt = utcDate.toISOString()
 
       console.log("User input:", schedule.startDate, schedule.startTime, userOffsetMinutes)
@@ -363,7 +384,7 @@ console.log("UTC stored scheduledAt:", scheduledAt);
           enabled: true,
           saveResponse: true,
           schedule: {
-            timezone: "IST",
+            timezone: "UTC",
             expiresAt: expiresAt,
             hours: [-1],
             mdays: [-1],
