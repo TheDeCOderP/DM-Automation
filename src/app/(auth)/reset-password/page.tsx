@@ -15,7 +15,7 @@ export default function ResetPassword() {
   const token = params.get("token") || "";
   const email = params.get("email") || "";
 
-  const router = useRouter();
+  const router = await useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
