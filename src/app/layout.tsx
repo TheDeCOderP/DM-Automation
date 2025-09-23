@@ -1,20 +1,30 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
+import Script from "next/script";
+import { redirect } from 'next/navigation';
+import { getServerSession } from "next-auth";
+
+import { authOptions } from "@/lib/auth";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { SessionProvider } from "@/providers/session-provider";
-import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "Prabisha Digital Marketing Automation",
   description: "Automate your digital marketing with Prabisha's powerful content planning, scheduling, and publishing tools.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession(authOptions);
+
+  if (session) {
+    redirect('/posts/calendar');
+  }
+
   return (
     <html lang="en">
       <head>
