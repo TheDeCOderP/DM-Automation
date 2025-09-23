@@ -27,7 +27,7 @@ export function RealtimeNotifications() {
       const json = await res.json()
       setNotifications(json.data as NotificationItem[])
     } catch (e) {
-      // swallow for UI
+      console.error("Error fetching notifications:", e)
     } finally {
       setLoading(false)
     }

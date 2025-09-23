@@ -168,6 +168,11 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                <div className="flex justify-end text-primary font-medium text-xs mt-2">
+                  <Link href="/forgot-password" className="hover:underline transition-colors">
+                    Forgot Password?
+                  </Link>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
@@ -177,23 +182,13 @@ export default function LoginPage() {
 
             {/* Footer Links */}
             <div className="pt-4 text-xs text-center space-y-2">
-              <div className="flex justify-between text-primary font-medium">
-                <Link href="/forgot-password" className="hover:underline transition-colors">
-                  Forgot Password?
-                </Link>
-                <Link href="/forgot-email" className="hover:underline transition-colors">
-                  Forgot Email?
-                </Link>
-              </div>
-              <div className="text-muted-foreground">
-                {"Don't have an account? "}
-                <Link
-                  href="/register"
-                  className="text-primary font-medium hover:underline transition-colors"
-                >
-                  Create Account
-                </Link>
-              </div>
+              {"Don't have an account? "}
+              <Link
+                href="/register"
+                className="text-primary font-medium hover:underline transition-colors"
+              >
+                Create Account
+              </Link>
             </div>
 
             <div className="space-y-3">

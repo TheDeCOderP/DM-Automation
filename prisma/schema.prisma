@@ -105,6 +105,9 @@ model User {
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
+  resetToken        String?  // Optional, stores token
+  resetTokenExpiry  DateTime? // Expiry timestamp
+
   notifications Notification[]
   media         Media[]
   posts         Post[]

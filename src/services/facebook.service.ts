@@ -25,7 +25,7 @@ export async function publishToFacebook(
       where: {
         userId: post.userId,
         socialAccount: {
-          platform: 'FACEBOOK',
+          platform: Platform.FACEBOOK,
           brands: {
             some: {
               brandId: post.brandId,

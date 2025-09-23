@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/navigation-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import ThemeToggle from "../features/ThemeToggle";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,6 +53,18 @@ export default function Header() {
       ],
     },
     {
+      title: "Products",
+      items: [
+        { title: "SEO Solutions", href: "https://seo.prabisha.com/" },
+        { title: "Intranet", href: "https://intranet.prabisha.com/" },
+        { title: "Project Management", href: "https://projects.prabisha.com/" },
+        { title: "HR Management", href: "https://hrms.prabisha.com/" },
+        { title: "LMS Portal", href: "https://lms.prabisha.com/" },
+        { title: "UKBiz Network", href: "https://ukbiznetwork.com/" },
+        { title: "EcoKartUK", href: "https://www.ecokartuk.com/" },
+      ]
+    },
+    {
       title: "Legal",
       items: [
         { title: "Privacy Policy", href: "/privacy-policy" },
@@ -83,6 +96,8 @@ export default function Header() {
         <NavigationMenuLink asChild>
           <Link
             href={href}
+            target="_blank"
+            rel="noopener noreferrer"
             className={cn(
               "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
               className
@@ -122,7 +137,15 @@ export default function Header() {
             <div className="hidden h-5 w-px bg-border lg:block" />
 
             <div className="hidden text-sm font-medium text-muted-foreground lg:block">
-              Powered by <Link className="underline" href="https://prabisha.com/"> Prabisha Consulting </Link>
+              Powered by&nbsp;
+              <Link 
+                target="_blank"
+                rel="noopener noreferrer" 
+                className="underline" 
+                href="https://prabisha.com/"
+              > 
+                Prabisha Consulting 
+              </Link>
             </div>
           </div>
 
@@ -154,6 +177,7 @@ export default function Header() {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden lg:flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="ghost" asChild>
               <Link href="/login">Login</Link>
             </Button>
