@@ -126,7 +126,7 @@ model User {
   name          String?
   image         String?
   password      String?
-  roleId        String             @default("user") // Reference to Role model
+  roleId        String             @default("PCR-0002")
   emailVerified DateTime?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -165,13 +165,11 @@ model UserBrand {
   id        String   @id @default(cuid())
   userId    String
   brandId   String
-  roleId    String   @default("brand_user") // Reference to Role model for brand-specific roles
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
   @@unique([userId, brandId])
   @@index([userId])
@@ -305,7 +303,6 @@ model Role {
   description        String?
   isDefault          Boolean              @default(false)
   users              User[]
-  userBrands         UserBrand[]
   permissions        RolePermission[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
