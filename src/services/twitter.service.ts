@@ -211,106 +211,42 @@ export async function publishToTwitter(
 }
 
 async function uploadMediaToTwitter(media: Media, accessToken: string): Promise<string> {
-    // Twitter media upload requires a different approach
-    // First, we need to initialize the upload
-    const mediaType = getTwitterMediaType(media.type);
-    
-    // Initialize media upload
-    const initResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-            command: "INIT",
-            total_bytes: "0", // We'll set this properly after fetching the file
-            media_type: mediaType,
-            media_category: media.type === MediaType.VIDEO ? "tweet_video" : "tweet_image"
-        }),
-    });
+  // 1. Fetch the media file from Cloudinary (or any external URL).
+  const response = await fetch(media.url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch media from URL: ${media.url}`);
+  }
 
-    if (!initResponse.ok) {
-        throw new Error(`Failed to initialize media upload: ${await initResponse.text()}`);
-    }
+  // 2. Convert the media to a base64 string.
+  const buffer = await response.arrayBuffer();
+  const base64Media = Buffer.from(buffer).toString("base64");
 
-    const initData = await initResponse.json();
-    const mediaId = initData.media_id_string;
+  // 3. Build the request payload for X v2 media upload API.
+  const payload = {
+    shared: false, // optional: whether media is shared
+    media: base64Media, // base64-encoded media
+    media_category: media.type.startsWith("video") ? "tweet_video" : "tweet_image"
+  };
 
-    // Fetch the media file
-    const mediaResponse = await fetch(media.url);
-    if (!mediaResponse.ok) {
-        throw new Error(`Failed to fetch media from URL: ${media.url}`);
-    }
+  // 4. Call the X v2 media upload API.
+  const uploadResponse = await fetch("https://api.x.com/2/media/upload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`, // use your OAuth2.0 Bearer token
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-    const mediaBuffer = await mediaResponse.arrayBuffer();
-    const mediaData = Buffer.from(mediaBuffer);
+  const uploadData = await uploadResponse.json();
+  console.log("uploadData", uploadData);
 
-    // Append media data
-    const appendResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "multipart/form-data",
-        },
-        body: new URLSearchParams({
-            command: "APPEND",
-            media_id: mediaId,
-            media_data: mediaData.toString('base64'),
-            segment_index: "0"
-        }),
-    });
+  if (!uploadResponse.ok || !uploadData.data?.id) {
+    throw new Error(`Failed to upload media to Twitter: ${JSON.stringify(uploadData)}`);
+  }
 
-    if (!appendResponse.ok) {
-        throw new Error(`Failed to append media data: ${await appendResponse.text()}`);
-    }
-
-    // Finalize media upload
-    const finalizeResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-            command: "FINALIZE",
-            media_id: mediaId
-        }),
-    });
-
-    if (!finalizeResponse.ok) {
-        throw new Error(`Failed to finalize media upload: ${await finalizeResponse.text()}`);
-    }
-
-    const finalizeData = await finalizeResponse.json();
-    
-    // Wait for processing if it's a video
-    if (media.type === MediaType.VIDEO) {
-        let processingInfo = finalizeData.processing_info;
-        while (processingInfo && processingInfo.state === 'processing') {
-            await new Promise(resolve => setTimeout(resolve, processingInfo.check_after_secs * 1000));
-            
-            const statusResponse = await fetch("https://upload.twitter.com/1.1/media/upload.json", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: new URLSearchParams({
-                    command: "STATUS",
-                    media_id: mediaId
-                }),
-            });
-
-            processingInfo = (await statusResponse.json()).processing_info;
-        }
-
-        if (processingInfo && processingInfo.state === 'failed') {
-            throw new Error(`Media processing failed: ${processingInfo.error?.message}`);
-        }
-    }
-
-    return mediaId;
+  // 5. Return the uploaded media ID (used to attach media in a tweet).
+  return uploadData.data.id;
 }
 
 function getTwitterMediaType(mediaType: MediaType): string {
