@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Post, Media, SocialAccount, MediaType, Platform } from "@prisma/client";
+import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
 
 interface TwitterTokenResponse {
     access_token: string;

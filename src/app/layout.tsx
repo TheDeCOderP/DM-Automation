@@ -1,13 +1,20 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import "@fontsource/poppins/400.css";
+import "@fontsource/poppins/500.css";
+import "@fontsource/poppins/600.css";
+import "@fontsource/poppins/700.css";
+import "@fontsource/montserrat/400.css";
+import "@fontsource/montserrat/500.css";
+import "@fontsource/montserrat/600.css";
+import "@fontsource/montserrat/700.css";
+
 import { Toaster } from "sonner";
 import Script from "next/script";
-import { redirect } from 'next/navigation';
-import { getServerSession } from "next-auth";
+import type { Metadata } from "next";
 
-import { authOptions } from "@/lib/auth";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { SessionProvider } from "@/providers/session-provider";
+import { DynamicThemeProvider } from "@/providers/dynamic-theme-provider";  
 
 export const metadata: Metadata = {
   title: "Prabisha Digital Marketing Automation",
@@ -19,12 +26,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession(authOptions);
-
-  if (session) {
-    //redirect('/posts/calendar');
-  }
-
   return (
     <html lang="en">
       <head>
@@ -36,8 +37,10 @@ export default async function RootLayout({
        suppressHydrationWarning={true}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <SessionProvider>
-            <Toaster richColors position="top-right" closeButton />
-            {children}
+            <DynamicThemeProvider>
+              <Toaster richColors position="top-right" closeButton />
+              {children}
+            </DynamicThemeProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

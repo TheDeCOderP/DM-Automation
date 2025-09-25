@@ -10,11 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 enum Platform {
   ALL
   GOOGLE
@@ -59,6 +54,37 @@ enum NotificationType {
   GENERAL
 }
 
+enum ThemeMode {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum Language {
+  EN
+  HI
+  FR
+  ES
+}
+
+enum SidebarSpacingPreset {
+  NONE
+  SM
+  MD
+  LG
+}
+
+enum SidebarIconSize {
+  SM
+  MD
+  LG
+}
+
+enum AccordionMode {
+  NONE
+  SINGLE
+  MULTI
+}
 
 model Account {
   id                       String   @id @default(cuid())
@@ -100,7 +126,7 @@ model User {
   name          String?
   image         String?
   password      String?
-  role          Role               @default(USER)
+  roleId        String             @default("user") // Reference to Role model
   emailVerified DateTime?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -114,7 +140,9 @@ model User {
   brands        UserBrand[]
   accounts      Account[]
   sessions      Session[]
-
+  role          Role               @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  AuditLog      AuditLog[]
+  blogs         Blog[]
   socialAccounts UserSocialAccount[]
 }
 
@@ -137,12 +165,13 @@ model UserBrand {
   id        String   @id @default(cuid())
   userId    String
   brandId   String
-  role      Role     @default(USER)
+  roleId    String   @default("brand_user") // Reference to Role model for brand-specific roles
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
   @@unique([userId, brandId])
   @@index([userId])
@@ -268,4 +297,259 @@ model Notification {
   updatedAt DateTime         @updatedAt
 
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id                 String               @id @default(cuid())
+  name               String               @unique
+  description        String?
+  isDefault          Boolean              @default(false)
+  users              User[]
+  userBrands         UserBrand[]
+  permissions        RolePermission[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  SidebarGroupAccess SidebarGroupAccess[]
+  SidebarItemAccess  SidebarItemAccess[]
+  RolePageAccess     RolePageAccess[]
+
+  @@unique([id])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model Pages {
+  id          String           @id @default(cuid())
+  name        String
+  path        String           @unique
+  slug        String
+  displayName String
+  isProtected Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roleAccess  RolePageAccess[]
+}
+
+model RolePageAccess {
+  roleId    String
+  pageId    String
+  hasAccess Boolean @default(true)
+  page      Pages   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  role      Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, pageId]) // composite primary key
+  @@index([pageId])
+  @@index([roleId])
+}
+
+model Theme {
+  id              String    @id @default(cuid())
+  themeName       String    @unique
+  primaryColor    String
+  secondaryColor  String
+  tertiaryColor   String
+  font            String    @default("montserrat")
+  logoUrl         String?
+  faviconUrl      String?
+  backgroundColor String?
+  textColor       String?
+  mode            ThemeMode @default(LIGHT)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model HeaderItem {
+  id             String          @id @default(cuid())
+  label          String
+  href           String
+  icon           String?
+  subHeaderItems SubHeaderItem[]
+  position       Int
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model SubHeaderItem {
+  id           String     @id @default(cuid())
+  label        String
+  href         String
+  headerItemId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  headerItem   HeaderItem @relation(fields: [headerItemId], references: [id])
+}
+
+model SidebarGroup {
+  id        String   @id @default(cuid())
+  title     String   @unique
+  position  Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items      SidebarItem[]
+  roleAccess SidebarGroupAccess[]
+}
+
+model SidebarItem {
+  id        String   @id @default(cuid())
+  label     String
+  href      String   @unique
+  icon      String?
+  position  Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sidebarGroupId String
+  sidebarGroup   SidebarGroup @relation(fields: [sidebarGroupId], references: [id], onDelete: Cascade)
+
+  roleAccess SidebarItemAccess[]
+}
+
+model SidebarGroupAccess {
+  roleId         String
+  sidebarGroupId String
+  hasAccess      Boolean      @default(true)
+  sidebarGroup   SidebarGroup @relation(fields: [sidebarGroupId], references: [id], onDelete: Cascade)
+  role           Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, sidebarGroupId])
+  @@index([sidebarGroupId])
+  @@index([roleId])
+}
+
+model SidebarItemAccess {
+  roleId        String
+  sidebarItemId String
+  hasAccess     Boolean     @default(true)
+  sidebarItem   SidebarItem @relation(fields: [sidebarItemId], references: [id], onDelete: Cascade)
+  role          Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, sidebarItemId])
+  @@index([sidebarItemId])
+  @@index([roleId])
+}
+
+model SidebarSettings {
+  id                  String               @id // use "singleton"
+  spacingPreset       SidebarSpacingPreset @default(MD)
+  spacingPx           Int?
+  accordionMode       AccordionMode        @default(SINGLE)
+  defaultOpenGroupIds Json?
+  compact             Boolean              @default(false)
+  showGroupTitles     Boolean              @default(true)
+  iconSize            SidebarIconSize      @default(MD)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+
+model CarouselItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String
+  buttonLabel String
+  buttonHref  String
+  position    Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FooterItem {
+  id        String   @id @default(cuid())
+  label     String
+  href      String
+  icon      String?
+  position  Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteConfig {
+  id                         String   @id @default(cuid())
+  siteName                   String   @unique
+  siteDescription            String?
+  domain                     String
+  supportEmail               String?
+  whatsappNumber             String?
+  googleAnalyticsId          String?
+  metaPixelId                String?
+  gaPropertyId               String?
+  googleCredentialsBase64    String?  @db.LongText
+  // SEO fields
+  metaTitle                  String?
+  metaDescription            String?
+  siteImageUrl               String?
+  twitterHandle              String?
+  ogType                     String? // e.g., website, article
+  // Crawling/Indexing
+  robotsEnabled              Boolean  @default(true)
+  robotsDisallow             String?  @db.LongText
+  robotsAllow                String?  @db.LongText
+  sitemapEnabled             Boolean  @default(true)
+  sitemapExtraUrls           Json?
+  // Header Configuration
+  headerSearchEnabled        Boolean  @default(true)
+  headerNotificationsEnabled Boolean  @default(true)
+  headerThemeToggleEnabled   Boolean  @default(true)
+  headerLanguageEnabled      Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+model IdSequence {
+  prefix     String   @id @unique
+  lastNumber Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("id_sequences")
+}
+
+model Blog {
+  id        Int      @id @default(autoincrement())
+  banner    String
+  title     String
+  slug      String   @unique
+  content   String   @db.LongText
+  tags      Json
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  action    String // e.g., LOGIN_SUCCESS, LOGIN_FAILED, PASSWORD_CHANGED
+  resource  String? // e.g., "/admin/settings"
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, action, createdAt])
 }

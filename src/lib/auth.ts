@@ -4,6 +4,7 @@ import { AuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import type { User } from 'next-auth';
 
 import { prisma } from '@/lib/prisma';
 
@@ -21,7 +22,7 @@ export const authOptions: AuthOptions = {
         email: { label: 'Email', type: 'email', placeholder: 'your@email.com' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         // Handle registration if name is provided
         if (credentials?.name) {
           return handleRegistration(credentials);
@@ -33,19 +34,18 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Add user info to token on sign in
       if (user) {
         token.id = user.id;
-        token.name = user.name;
         token.role = user.role;
-        token.image = user.image;
-        token.email = user.email;
       }
 
+      // Update token with latest user data from database
       if (token.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email },
-          select: { id: true, name: true, email: true, image: true, role: true },
+          include: { role: true },
         });
 
         if (dbUser) {
@@ -53,8 +53,13 @@ export const authOptions: AuthOptions = {
           token.name = dbUser.name;
           token.email = dbUser.email;
           token.image = dbUser.image;
-          token.role = dbUser.role;
+          token.role = dbUser.role.name;
         }
+      }
+
+      // Handle session update if needed
+      if (trigger === "update" && session) {
+        token = { ...token, ...session };
       }
 
       return token;
@@ -81,8 +86,8 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// Helper functions
-async function handleRegistration(credentials: Record<"name" | "email" | "password", string> | undefined) {
+// Helper functions with proper typing
+async function handleRegistration(credentials: Record<"name" | "email" | "password", string> | undefined): Promise<User | null> {
   if (!credentials) throw new Error('No credentials provided');
   
   const { name, email, password } = credentials;
@@ -104,25 +109,36 @@ async function handleRegistration(credentials: Record<"name" | "email" | "passwo
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 12);
 
+  // Get default role
+  const defaultRole = await prisma.role.findFirst({
+    where: { isDefault: true },
+  });
+
+  if (!defaultRole) {
+    throw new Error('Default role not found');
+  }
+
   // Create user
   const user = await prisma.user.create({
     data: {
       name,
       email,
       password: hashedPassword,
+      roleId: defaultRole.id,
     },
+    include: { role: true },
   });
 
+  // Return in NextAuth User format
   return {
     id: user.id,
     name: user.name,
-    role: user.role,
     email: user.email,
     image: user.image,
   };
 }
 
-async function handleLogin(credentials: Record<"email" | "password", string> | undefined) {
+async function handleLogin(credentials: Record<"email" | "password", string> | undefined): Promise<User | null> {
   if (!credentials) throw new Error('No credentials provided');
   
   const { email, password } = credentials;
@@ -130,6 +146,7 @@ async function handleLogin(credentials: Record<"email" | "password", string> | u
   // Find user
   const user = await prisma.user.findUnique({
     where: { email },
+    include: { role: true },
   });
 
   if (!user) {
@@ -146,11 +163,11 @@ async function handleLogin(credentials: Record<"email" | "password", string> | u
     throw new Error('Incorrect password');
   }
 
+  // Return in NextAuth User format
   return {
     id: user.id,
     name: user.name,
-    role: user.role,
-    image: user.image,
     email: user.email,
+    image: user.image,
   };
 }

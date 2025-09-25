@@ -5,28 +5,6 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 
-import type { google } from "googleapis";
-
-declare global {
-  interface Window {
-    gapi: {
-      load: (api: string, options: { callback: () => void }) => void;
-    };
-    google: typeof google & {
-      picker: {
-        View: new (viewId: string) => GooglePickerView;
-        ViewId: {
-          DOCS: string;
-        };
-        PickerBuilder: new () => GooglePickerBuilder;
-        Action: {
-          PICKED: string;
-        };
-      };
-    };
-  }
-}
-
 interface GooglePickerView {
   setMimeTypes: (mimeTypes: string) => void;
 }

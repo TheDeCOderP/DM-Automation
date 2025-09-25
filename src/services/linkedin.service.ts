@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { Post, Media, Platform } from "@prisma/client";
+import { Post, Media } from "@prisma/client";
 
 interface LinkedInMedia {
   status: string;

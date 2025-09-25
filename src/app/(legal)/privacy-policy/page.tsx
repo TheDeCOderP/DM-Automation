@@ -2,7 +2,6 @@
 
 import Head from "next/head"
 import Image from "next/image";
-import { useState } from "react"
 import { ChevronUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";

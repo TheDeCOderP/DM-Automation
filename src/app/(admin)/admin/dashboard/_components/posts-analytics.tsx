@@ -65,7 +65,7 @@ export function PostsAnalytics() {
 
    g.append("g")
     .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x).tickFormat((date, index) => d3.timeFormat("%m/%d")(date as Date)));
+    .call(d3.axisBottom(x).tickFormat((date) => d3.timeFormat("%m/%d")(date as Date)));
 
     g.append("g").call(d3.axisLeft(y))
 
