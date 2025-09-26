@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
   console.log('Pathname:', pathname);
 
   // Public routes that should redirect to dashboard if authenticated
-  const publicRoutes = ['/', '/login', '/signup', '/landing'];
+  const publicRoutes = ['/', '/login', '/signup'];
   
   if (sessionToken && publicRoutes.includes(pathname)) {
     console.log('Redirecting to /posts/calendar');
