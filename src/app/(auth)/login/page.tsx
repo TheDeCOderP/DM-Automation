@@ -8,13 +8,16 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { User, Key, Eye, EyeOff } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import ThemeToggle from "@/components/features/ThemeToggle"
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
+import { useConfig } from "@/hooks/useConfig"
 
 export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { config, isSiteNameLoading } = useConfig(); 
   const { executeRecaptcha } = useGoogleReCaptcha()
 
   const [formData, setFormData] = useState({ email: "", password: "" })
@@ -94,20 +97,44 @@ export default function LoginPage() {
         </div>
 
         {/* Left Pane */}
-        <div className="bg-primary text-primary-foreground p-8 flex flex-col items-center justify-center relative">
+        <div className="hidden bg-primary dark:bg-secondary dark:to-blue-800 text-white p-8 lg:flex flex-col items-center justify-center relative">
           <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute top-8 left-8 w-20 h-20 bg-primary-foreground rounded-full blur-xl"></div>
-            <div className="absolute bottom-8 right-8 w-24 h-24 bg-primary-foreground/20 rounded-full blur-2xl"></div>
+            <div className="absolute top-8 left-8 w-20 h-20 bg-white rounded-full blur-xl"></div>
+            <div className="absolute bottom-8 right-8 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
           </div>
-          <div className="z-10 text-center space-y-3">
-            <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
-              <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized />
-            </div>
-            <h2 className="text-2xl font-bold">Welcome Back</h2>
-            <p className="text-primary-foreground/80 max-w-xs mx-auto text-sm">
+         <div className="z-10 text-center space-y-3">
+          {/* Logo */}
+          <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Image
+              src="/icons/logo1.png"
+              alt="Logo"
+              width={80}
+              height={80}
+              unoptimized
+            />
+          </div>
+
+          {/* Site Name */}
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
+            {isSiteNameLoading ? <Skeleton className="h-8 w-32 mx-auto" /> : config?.siteName || "Prabisha"}
+          </h1>
+
+          {/* Byline */}
+          <h2 className="text-md">
+            By{" "}
+            <span className="font-semibold text-orange-400">
+              Prabisha Consulting
+            </span>
+          </h2>
+
+          {/* Welcome Text */}
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold text-white">Welcome Back</h3>
+            <p className="text-white/80 max-w-xs mx-auto text-sm">
               Sign in to manage your account securely.
             </p>
           </div>
+        </div>
         </div>
 
         {/* Right Pane */}
@@ -118,7 +145,7 @@ export default function LoginPage() {
               <p className="text-xs text-muted-foreground">Enter your credentials</p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-2" onSubmit={handleSubmit}>
               {/* Email */}
               <div>
                 <label htmlFor="email" className="text-xs font-medium text-foreground">
@@ -181,14 +208,16 @@ export default function LoginPage() {
             </form>
 
             {/* Footer Links */}
-            <div className="pt-4 text-xs text-center space-y-2">
-              {"Don't have an account? "}
-              <Link
-                href="/register"
-                className="text-primary font-medium hover:underline transition-colors"
-              >
-                Create Account
-              </Link>
+            <div className="pt-2 text-xs text-center space-y-2">
+              <span className="text-muted-foreground">
+                Don&apos;t have an account?&nbsp;
+                <Link
+                  href="/register"
+                  className="text-primary font-medium hover:underline transition-colors"
+                >
+                  Create Account
+                </Link>
+              </span>
             </div>
 
             <div className="space-y-3">

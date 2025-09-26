@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
@@ -17,9 +17,118 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "../features/ThemeToggle";
 
+// --- Types for better readability and safety ---
+interface SubItem {
+  title: string;
+  href: string;
+}
+
+interface MenuItem {
+  title: string;
+  items: SubItem[];
+}
+
+const MobileMenuItem = ({ item, onCloseMenu }: { item: MenuItem; onCloseMenu: () => void }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false); // Initially closed
+  
+  // Toggle function for the collapse
+  const toggleCollapse = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent default link behavior
+    setIsCollapsed(!isCollapsed);
+  };
+  
+  // Variant for the Framer Motion animation of the sub-menu
+  const subMenuVariants = {
+    hidden: { opacity: 0, height: 0 },
+    visible: { 
+      opacity: 1, 
+      height: "auto", 
+      transition: { 
+        duration: 0.2, 
+        when: "beforeChildren" 
+      } 
+    },
+  };
+
+  return (
+    <div className="border-b last:border-b-0">
+      <div 
+        className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-accent/50"
+        onClick={toggleCollapse}
+      >
+        <div className="text-base font-semibold text-foreground">
+          {item.title}
+        </div>
+        <ChevronDown 
+          className={cn(
+            "h-4 w-4 transition-transform duration-200",
+            isCollapsed && "rotate-180"
+          )} 
+        />
+      </div>
+      
+      {/* Collapsible Sub-menu Content with Framer Motion */}
+      <AnimatePresence>
+        {isCollapsed && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={subMenuVariants}
+            className="overflow-hidden"
+          >
+            <div className="py-2 pl-6 space-y-2 bg-accent/20">
+              {item.items.map((subItem) => (
+                <Link
+                  key={subItem.title}
+                  href={subItem.href}
+                  target={subItem.href.startsWith('http') ? "_blank" : "_self"} // Open external links in new tab
+                  rel={subItem.href.startsWith('http') ? "noopener noreferrer" : undefined}
+                  className="block text-sm text-muted-foreground hover:text-primary transition-colors duration-150"
+                  onClick={onCloseMenu} // Close the whole mobile menu on sub-item click
+                >
+                  {subItem.title}
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// --- Desktop List Item Component (Kept for desktop navigation) ---
+
+const ListItem = ({ className, title, href, ...props }: { className?: string; title: string; href: string }) => {
+  // Determine if the link is external for target/rel attributes
+  const isExternal = href.startsWith('http');
+  return (
+    <li>
+      <NavigationMenuLink asChild>
+        <Link
+          href={href}
+          target={isExternal ? "_blank" : "_self"}
+          rel={isExternal ? "noopener noreferrer" : undefined}
+          className={cn(
+            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            className
+          )}
+          {...props}
+        >
+          <div className="text-sm font-medium leading-none">{title}</div>
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  );
+};
+
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
+
+  // Function to close the main mobile menu
+  const closeMobileMenu = () => setIsOpen(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,13 +143,15 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Framer Motion variants for the overall mobile menu
   const mobileMenuVariants = {
-    hidden: { opacity: 0, height: 0 },
-    visible: { opacity: 1, height: "auto" },
-    exit: { opacity: 0, height: 0 },
+    hidden: { opacity: 0, height: 0, transition: { duration: 0.2 } },
+    visible: { opacity: 1, height: "auto", transition: { duration: 0.2 } },
+    exit: { opacity: 0, height: 0, transition: { duration: 0.2 } },
   };
 
-  const menuItems = [
+  // Centralized menu data
+  const menuItems: MenuItem[] = [
     {
       title: "Services",
       items: [
@@ -81,70 +192,45 @@ export default function Header() {
       ],
     },
   ];
+  
 
-  const legalItems = [
-    { title: "Privacy Policy", href: "/privacy-policy" },
-    { title: "Terms of Service", href: "/terms-of-service" },
-    { title: "Cookie Policy", href: "/cookie-policy" },
-    { title: "Help Center", href: "/help-center" },
-  ];
-
-  const ListItem = ({ className, title, href, ...props }: { className?: string; title: string; href: string }) => {
-    return (
-      <li>
-        <NavigationMenuLink asChild>
-          <Link
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-              className
-            )}
-            {...props}
-          >
-            <div className="text-sm font-medium leading-none">{title}</div>
-          </Link>
-        </NavigationMenuLink>
-      </li>
-    );
-  };
+  const legalLinks = menuItems.find(item => item.title === "Legal")?.items || [];
 
   return (
     <nav
       className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-300 bg-background border-b"
+        "sticky top-0 z-50 w-full transition-all duration-300 bg-background border-b",
+        hasScrolled ? "shadow-md" : "" // Added a shadow when scrolled for better visual cue
       )}
     >
       <div className="container mx-auto px-4">
         <div className="flex h-20 items-center justify-between">
           {/* Logo Section */}
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2">
+          <div className="flex items-center gap-2 lg:gap-4">
+            <Link href="/" onClick={closeMobileMenu}> {/* Wrap logo in Link to navigate home */}
               <Image
                 src="/icons/logo.png"
                 alt="Logo"
-                width={32}
-                height={32}
-                className="h-8 w-8"
+                width={120}
+                height={40}
+                className="w-auto h-auto"
+                priority // Added priority to logo image for better LCP
               />
-              <span className="text-xl font-semibold text-foreground">
-                DM Automation
-              </span>
             </Link>
-
-            <div className="hidden h-5 w-px bg-border lg:block" />
-
-            <div className="hidden text-sm font-medium text-muted-foreground lg:block">
-              Powered by&nbsp;
-              <Link 
-                target="_blank"
-                rel="noopener noreferrer" 
-                className="underline" 
-                href="https://prabisha.com/"
-              > 
-                Prabisha Consulting 
-              </Link>
+            {/* Site Name - Hidden on mobile, visible on desktop */}
+            <div className="hidden lg:block text-lg lg:text-xl font-semibold text-primary">
+              <span className="font-bold">DM</span>-Automation
+              <span className="hidden text-sm font-medium text-muted-foreground lg:block">
+                Powered by&nbsp;
+                <Link 
+                  target="_blank"
+                  rel="noopener noreferrer" 
+                  className="underline" 
+                  href="https://prabisha.com/"
+                > 
+                  Prabisha Consulting 
+                </Link>
+              </span>
             </div>
           </div>
 
@@ -152,7 +238,8 @@ export default function Header() {
           <div className="hidden lg:flex items-center gap-6">
             <NavigationMenu>
               <NavigationMenuList>
-                {menuItems.map((item) => (
+                {/* Filter out 'Legal' from the main desktop nav bar if it's meant to be in the footer/separate section */}
+                {menuItems.filter(item => item.title !== "Legal").map((item) => (
                   <NavigationMenuItem key={item.title}>
                     <NavigationMenuTrigger className="text-sm font-medium">
                       {item.title}
@@ -170,109 +257,76 @@ export default function Header() {
                     </NavigationMenuContent>
                   </NavigationMenuItem>
                 ))}
+                {/* Adding a simple link item for 'Legal' if it's meant to be a simple dropdown on desktop */}
+                {/* Or, if "Legal" should also be a dropdown, keep it in the main map. I'll keep it simple for now. */}
+                <NavigationMenuItem>
+                    <Link href={legalLinks[0]?.href || "#"} legacyBehavior passHref>
+                        <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50">
+                            Legal
+                        </NavigationMenuLink>
+                    </Link>
+                </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
           </div>
 
-          {/* Desktop CTA Buttons */}
-          <div className="hidden lg:flex items-center gap-2">
+          {/* Desktop CTA Buttons & Theme Toggle */}
+          <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
+              <Button variant="ghost" asChild>
+                <Link href="/login">Login</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Get Started</Link>
+              </Button>
+            </div>
             <ThemeToggle />
-            <Button variant="ghost" asChild>
-              <Link href="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Get Started</Link>
+            
+            {/* Mobile Menu Button - Moved to the far right for better layout */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden ml-2" // Added margin for separation from ThemeToggle
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
-
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Now collapsible (accordion-style) */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              className="lg:hidden border-t bg-background overflow-hidden"
+              className="lg:hidden border-t bg-background absolute left-0 w-full shadow-lg max-h-[80vh] overflow-y-auto" // Added 'absolute left-0 w-full' to span full width and a max-height
               initial="hidden"
               animate="visible"
               exit="exit"
               variants={mobileMenuVariants}
-              transition={{ duration: 0.2 }}
             >
-              <div className="container py-4 space-y-4">
-                {/* Main menu items */}
+              {/* Menu items will now be collapsible inside MobileMenuItem */}
+              <div className="divide-y divide-border">
                 {menuItems.map((item) => (
-                  <div key={item.title} className="space-y-2">
-                    <Link
-                      href={"#"}
-                      className="text-base font-medium text-foreground"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      {item.title}
-                    </Link>
-                    <div className="pl-4 space-y-2">
-                      {item.items.map((subItem) => (
-                        <Link
-                          key={subItem.title}
-                          href={subItem.href}
-                          className="block text-sm text-muted-foreground hover:text-foreground"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          {subItem.title}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
+                  <MobileMenuItem 
+                    key={item.title} 
+                    item={item} 
+                    onCloseMenu={closeMobileMenu} 
+                  />
                 ))}
+              </div>
 
-                <Link
-                  href="/pricing"
-                  className="block text-base font-medium text-foreground"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Pricing
-                </Link>
-
-                {/* Legal links */}
-                <div className="pt-4 border-t">
-                  <div className="text-sm font-medium text-muted-foreground mb-2">
-                    Legal
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {legalItems.map((item) => (
-                      <Link
-                        key={item.title}
-                        href={item.href}
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {item.title}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mobile CTA buttons */}
-                <div className="pt-4 border-t space-y-2">
-                  <Button className="w-full" asChild>
-                    <Link href="/register" onClick={() => setIsOpen(false)}>
-                      Get Started
-                    </Link>
-                  </Button>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href="/login" onClick={() => setIsOpen(false)}>
-                      Login
-                    </Link>
-                  </Button>
-                </div>
+              {/* Mobile CTA buttons */}
+              <div className="container p-4 space-y-2 border-t">
+                <Button className="w-full" asChild>
+                  <Link href="/register" onClick={closeMobileMenu}>
+                    Get Started
+                  </Link>
+                </Button>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/login" onClick={closeMobileMenu}>
+                    Login
+                  </Link>
+                </Button>
               </div>
             </motion.div>
           )}

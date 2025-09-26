@@ -9,12 +9,15 @@ import { User, Mail, Key, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import ThemeToggle from "@/components/features/ThemeToggle"
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3"
+import { useConfig } from "@/hooks/useConfig"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { executeRecaptcha } = useGoogleReCaptcha()
+  const { isSiteNameLoading, config } = useConfig();
+  const { executeRecaptcha } = useGoogleReCaptcha();
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -84,26 +87,48 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center px-4">
-      <div className="max-w-4xl w-full rounded-2xl shadow-xl border overflow-hidden grid lg:grid-cols-2 bg-background">
+      <div className="relative max-w-4xl w-full rounded-2xl shadow-xl border overflow-hidden grid lg:grid-cols-2 bg-background">
         <div className="absolute top-4 right-4">
           <ThemeToggle />
         </div>
 
         {/* Left Pane */}
-        <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-8 flex flex-col items-center justify-center relative">
+        <div className="hidden bg-primary dark:bg-secondary dark:to-blue-800 text-white p-8 lg:flex flex-col items-center justify-center relative">
           <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute top-8 left-8 w-20 h-20 bg-primary-foreground rounded-full blur-xl"></div>
-            <div className="absolute bottom-8 right-8 w-24 h-24 bg-primary-foreground/20 rounded-full blur-2xl"></div>
+            <div className="absolute top-8 left-8 w-20 h-20 bg-white rounded-full blur-xl"></div>
+            <div className="absolute bottom-8 right-8 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
           </div>
-          <div className="z-10 text-center space-y-3">
-            <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto">
-              <Image src="/icons/logo.png" alt="Logo" width={80} height={80} unoptimized />
-            </div>
-            <h2 className="text-2xl font-bold">Create Account</h2>
-            <p className="opacity-90 max-w-xs mx-auto text-sm">
-              Join us to manage your account securely.
-            </p>
+         <div className="z-10 text-center space-y-3">
+          {/* Logo */}
+          <div className="backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Image
+              src="/icons/logo1.png"
+              alt="Logo"
+              width={80}
+              height={80}
+              unoptimized
+            />
           </div>
+
+          {/* Site Name */}
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
+            {isSiteNameLoading ? <Skeleton className="h-8 w-32 mx-auto" /> : config?.siteName || "Prabisha"}
+          </h1>
+
+          {/* Byline */}
+          <h2 className="text-md">
+            By{" "}
+            <span className="font-semibold text-orange-400">
+              Prabisha Consulting
+            </span>
+          </h2>
+
+          {/* Welcome Text */}
+          <h2 className="text-2xl font-bold">Create Account</h2>
+          <p className="opacity-90 max-w-xs mx-auto text-sm">
+            Join us to manage your account securely.
+          </p>
+        </div>
         </div>
 
         {/* Right Pane */}
@@ -116,7 +141,7 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-2" onSubmit={handleSubmit}>
               {/* Full Name */}
               <div>
                 <label htmlFor="fullName" className="text-xs font-medium">
@@ -219,13 +244,13 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full mt-2" disabled={isLoading}>
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
 
             {/* Social login */}
-            <div className="pt-4 text-xs text-center">
+            <div className="pt-2 text-xs text-center">
               <div className="text-muted-foreground">
                 Already have an account?{" "}
                 <Link href="/login" className="text-primary font-medium hover:underline">

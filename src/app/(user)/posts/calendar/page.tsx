@@ -227,14 +227,14 @@ function TitleBar() {
 
   return (
     <CalendarDate>
-      <div className="font-semibold">{monthName} {year}</div>
-      <div className="flex items-center gap-2">
-        <CalendarMonthPicker />
-        <CalendarYearPicker start={2000} end={2100} />
+      <div className="font-semibold hidden md:block">{monthName} {year}</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         <CalendarDatePagination />
         <Button onClick={goToToday} size="sm" variant="outline">
           Today
         </Button>
+        <CalendarMonthPicker />
+        <CalendarYearPicker start={2000} end={2100} />
       </div>
     </CalendarDate>
   )

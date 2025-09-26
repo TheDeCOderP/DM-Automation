@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { toast } from "sonner";
-import Tessaract from "tesseract.js";
 import { useRef, useEffect, useState, useCallback } from "react"
 import { useDropzone } from "react-dropzone";
 import { CloudUpload, FileVideo, ZoomIn, ZoomOut, X, Plus, Equal, Info, ImageIcon, Sparkles } from "lucide-react";
@@ -42,13 +41,6 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
       src: URL.createObjectURL(file),
       type: file.type,
     };
-
-    // Perform OCR for images
-    if (file.type.startsWith("image/")) {
-      Tessaract.recognize(file, 'eng', { logger: console.log }).then(({ data: { text } }) => {
-        console.log(text);
-      });
-    }
 
     setUploadedFiles((prev) => {
       const updatedFiles = [...prev, mediaFile];
@@ -377,7 +369,7 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex flex-row items-center justify-between p-4 border-t">
+        <CardFooter className="flex flex-col gap-2 sm:flex-row items-center justify-between border-t">
           <GoogleDrivePicker onFileSelect={handleFileAdd} />
           <Button 
             onClick={handleGenerateClick}

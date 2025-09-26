@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Users,
@@ -24,21 +24,7 @@ import {
   FileBox as Firefox,
   Award as Safari,
 } from "lucide-react"
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
-import { PieLabelRenderProps } from "recharts"
+import * as d3 from "d3"
 
 interface AnalyticsData {
   main: {
@@ -91,6 +77,29 @@ interface AnalyticsData {
   period: string
 }
 
+interface ChartDataPoint {
+  date: string
+  fullDate: string
+  sessions: number
+  users: number
+  pageViews: number
+  engagementRate: number
+}
+
+interface TrafficSourceData {
+  source: string
+  sessions: number
+  newUsers: number
+  conversions: number
+}
+
+interface HourlyData {
+  hour: number
+  sessions: number
+}
+
+
+
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82ca9d", "#ffc658"]
 
 const PERIOD_OPTIONS = [
@@ -100,6 +109,273 @@ const PERIOD_OPTIONS = [
   { value: "6months", label: "Last 6 Months", icon: Calendar },
   { value: "1year", label: "Last Year", icon: Calendar },
 ]
+
+// D3 Line Chart Component
+const LineChart = ({ data, width = 800, height = 320 } : { 
+  data: ChartDataPoint[], 
+  width?: number, 
+  height?: number 
+}) => {
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  useEffect(() => {
+    if (!data || !data.length) return
+
+    const svg = d3.select(svgRef.current)
+    svg.selectAll("*").remove()
+
+    const margin = { top: 20, right: 80, bottom: 40, left: 60 }
+    const innerWidth = width - margin.left - margin.right
+    const innerHeight = height - margin.top - margin.bottom
+
+    const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`)
+
+    // Scales
+    const xScale = d3.scalePoint()
+      .domain(data.map(d => d.date))
+      .range([0, innerWidth])
+
+    const yScale = d3.scaleLinear()
+      .domain([0, d3.max(data, (d: ChartDataPoint) => Math.max(d.users, d.sessions, d.pageViews)) as number])
+      .nice()
+      .range([innerHeight, 0])
+
+    const yScalePercent = d3.scaleLinear()
+      .domain([0, 100])
+      .range([innerHeight, 0])
+
+    // Line generators
+    const lineUsers = d3.line<ChartDataPoint>()
+      .x((d: ChartDataPoint) => xScale(d.date) as number)
+      .y((d: ChartDataPoint) => yScale(d.users))
+      .curve(d3.curveMonotoneX)
+
+    const lineSessions = d3.line<ChartDataPoint>()
+      .x((d: ChartDataPoint) => xScale(d.date) as number)
+      .y((d: ChartDataPoint) => yScale(d.sessions))
+      .curve(d3.curveMonotoneX)
+
+    const linePageViews = d3.line<ChartDataPoint>()
+      .x((d: ChartDataPoint) => xScale(d.date) as number)
+      .y((d: ChartDataPoint) => yScale(d.pageViews))
+      .curve(d3.curveMonotoneX)
+
+    const lineEngagement = d3.line<ChartDataPoint>()
+      .x((d: ChartDataPoint) => xScale(d.date) as number)
+      .y((d: ChartDataPoint) => yScalePercent(d.engagementRate))
+      .curve(d3.curveMonotoneX)
+
+    // Add grid
+    g.selectAll(".grid-line")
+      .data(yScale.ticks(5))
+      .enter()
+      .append("line")
+      .attr("class", "grid-line")
+      .attr("x1", 0)
+      .attr("x2", innerWidth)
+      .attr("y1", (d: number) => yScale(d))
+      .attr("y2", (d: number) => yScale(d))
+      .attr("stroke", "#e5e7eb")
+      .attr("stroke-dasharray", "3,3")
+
+    // Add axes
+    g.append("g")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(xScale))
+      .selectAll("text")
+      .style("font-size", "12px")
+
+    g.append("g")
+      .call(d3.axisLeft(yScale))
+      .selectAll("text")
+      .style("font-size", "12px")
+
+    // Add lines
+    g.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "#3B82F6")
+      .attr("stroke-width", 2)
+      .attr("d", lineUsers)
+
+    g.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "#10B981")
+      .attr("stroke-width", 2)
+      .attr("d", lineSessions)
+
+    g.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "#8B5CF6")
+      .attr("stroke-width", 2)
+      .attr("d", linePageViews)
+
+    g.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "#F59E0B")
+      .attr("stroke-width", 2)
+      .attr("d", lineEngagement)
+
+    // Add legend
+    const legend = g.append("g")
+      .attr("transform", `translate(${innerWidth - 70}, 20)`)
+
+    const legendData = [
+      { label: "Users", color: "#3B82F6" },
+      { label: "Sessions", color: "#10B981" },
+      { label: "Page Views", color: "#8B5CF6" },
+      { label: "Engagement %", color: "#F59E0B" }
+    ]
+
+    legendData.forEach((d, i) => {
+      const legendItem = legend.append("g")
+        .attr("transform", `translate(0, ${i * 20})`)
+
+      legendItem.append("rect")
+        .attr("width", 12)
+        .attr("height", 2)
+        .attr("fill", d.color)
+
+      legendItem.append("text")
+        .attr("x", 16)
+        .attr("y", 5)
+        .style("font-size", "12px")
+        .style("fill", "#6b7280")
+        .text(d.label)
+    })
+
+  }, [data, width, height])
+
+  return <svg ref={svgRef} width={width} height={height} />
+}
+
+// D3 Pie Chart Component
+const PieChart = ({ data, width = 320, height = 256 }: { data: TrafficSourceData[], width?: number, height?: number }) => {
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  useEffect(() => {
+    if (!data || !data.length) return
+
+    const svg = d3.select(svgRef.current)
+    svg.selectAll("*").remove()
+
+    const radius = Math.min(width, height) / 2 - 10
+    const g = svg.append("g")
+      .attr("transform", `translate(${width/2},${height/2})`)
+
+    const pie = d3.pie<TrafficSourceData>()
+      .value(d => d.sessions)
+      .sort(null)
+
+    const arc = d3.arc<d3.PieArcDatum<TrafficSourceData>>()
+      .innerRadius(0)
+      .outerRadius(radius)
+
+    const arcLabel = d3.arc<d3.PieArcDatum<TrafficSourceData>>()
+      .innerRadius(radius * 0.6)
+      .outerRadius(radius * 0.6)
+
+    const arcs = g.selectAll(".arc")
+      .data(pie(data))
+      .enter()
+      .append("g")
+      .attr("class", "arc")
+
+    arcs.append("path")
+      .attr("d", arc)
+      .attr("fill", (d: d3.PieArcDatum<TrafficSourceData>, i: number) => COLORS[i % COLORS.length])
+      .attr("stroke", "white")
+      .attr("stroke-width", 2)
+
+    arcs.append("text")
+      .attr("transform", (d: d3.PieArcDatum<TrafficSourceData>) => `translate(${arcLabel.centroid(d)})`)
+      .attr("text-anchor", "middle")
+      .style("font-size", "12px")
+      .style("font-weight", "500")
+      .style("fill", "white")
+      .text((d: d3.PieArcDatum<TrafficSourceData>) => {
+        const percent = ((d.endAngle - d.startAngle) / (2 * Math.PI) * 100).toFixed(0)
+        return +percent > 5 ? `${d.data.source} ${percent}%` : ''
+      })
+
+  }, [data, width, height])
+
+  return <svg ref={svgRef} width={width} height={height} />
+}
+
+// D3 Bar Chart Component
+const BarChart = ({ data, width = 800, height = 256 }: { data: HourlyData[], width?: number, height?: number }) => {
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  useEffect(() => {
+    if (!data || !data.length) return
+
+    const svg = d3.select(svgRef.current)
+    svg.selectAll("*").remove()
+
+    const margin = { top: 20, right: 30, bottom: 40, left: 40 }
+    const innerWidth = width - margin.left - margin.right
+    const innerHeight = height - margin.top - margin.bottom
+
+    const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`)
+
+    const xScale = d3.scaleBand()
+      .domain(data.map((d: HourlyData) => `${d.hour}:00`))
+      .range([0, innerWidth])
+      .padding(0.1)
+
+    const yScale = d3.scaleLinear()
+      .domain([0, d3.max(data, (d: HourlyData) => d.sessions) as number])
+      .nice()
+      .range([innerHeight, 0])
+
+    // Add grid
+    g.selectAll(".grid-line")
+      .data(yScale.ticks(5))
+      .enter()
+      .append("line")
+      .attr("class", "grid-line")
+      .attr("x1", 0)
+      .attr("x2", innerWidth)
+      .attr("y1", (d: number) => yScale(d))
+      .attr("y2", (d: number) => yScale(d))
+      .attr("stroke", "#e5e7eb")
+      .attr("stroke-dasharray", "3,3")
+
+    // Add axes
+    g.append("g")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(xScale))
+      .selectAll("text")
+      .style("font-size", "12px")
+
+    g.append("g")
+      .call(d3.axisLeft(yScale))
+      .selectAll("text")
+      .style("font-size", "12px")
+
+    // Add bars
+    g.selectAll(".bar")
+      .data(data)
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", (d: HourlyData) => xScale(`${d.hour}:00`) as number)
+      .attr("y", (d: HourlyData) => yScale(d.sessions))
+      .attr("width", xScale.bandwidth())
+      .attr("height", (d: HourlyData) => innerHeight - yScale(d.sessions))
+      .attr("fill", "#8884d8")
+      .attr("rx", 2)
+
+  }, [data, width, height])
+
+  return <svg ref={svgRef} width={width} height={height} />
+}
 
 const getDeviceIcon = (device: string) => {
   switch (device.toLowerCase()) {
@@ -465,30 +741,8 @@ export default function AnalyticsDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip
-                    labelFormatter={(label, payload) => {
-                      const item = payload?.[0]?.payload
-                      return item ? formatDate(item.fullDate) : label
-                    }}
-                  />
-                  <Line type="monotone" dataKey="users" stroke="#3B82F6" strokeWidth={2} name="Users" />
-                  <Line type="monotone" dataKey="sessions" stroke="#10B981" strokeWidth={2} name="Sessions" />
-                  <Line type="monotone" dataKey="pageViews" stroke="#8B5CF6" strokeWidth={2} name="Page Views" />
-                  <Line
-                    type="monotone"
-                    dataKey="engagementRate"
-                    stroke="#F59E0B"
-                    strokeWidth={2}
-                    name="Engagement Rate (%)"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="overflow-x-auto">
+              <LineChart data={chartData} width={800} height={320} />
             </div>
           </CardContent>
         </Card>
@@ -504,29 +758,8 @@ export default function AnalyticsDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={trafficSourcesData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(props: PieLabelRenderProps) => {
-                      const { source, percent } = props.payload as { source: string; percent: number };
-                      return `${source} ${(percent * 100).toFixed(0)}%`;
-                    }}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="sessions"
-                  >
-                    {trafficSourcesData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex justify-center">
+              <PieChart data={trafficSourcesData} width={320} height={256} />
             </div>
           </CardContent>
         </Card>
@@ -718,19 +951,8 @@ export default function AnalyticsDashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hour" tickFormatter={(hour) => `${hour}:00`} />
-                <YAxis />
-                <Tooltip
-                  labelFormatter={(hour) => `${hour}:00 - ${hour + 1}:00`}
-                  formatter={(value) => [value, "Sessions"]}
-                />
-                <Bar dataKey="sessions" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="overflow-x-auto">
+            <BarChart data={hourlyData} width={800} height={256} />
           </div>
         </CardContent>
       </Card>

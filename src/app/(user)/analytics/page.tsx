@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -84,6 +84,22 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('1m');
 
+  // Refs for each chart container
+  const pieChartRef = useRef<HTMLDivElement>(null);
+  const donutChartRef = useRef<HTMLDivElement>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
+  const successBarChartRef = useRef<HTMLDivElement>(null);
+  const lineChartRef = useRef<HTMLDivElement>(null);
+
+  // State to store chart dimensions
+  const [chartDimensions, setChartDimensions] = useState({
+    pie: { width: 0, height: 0 },
+    donut: { width: 0, height: 0 },
+    bar: { width: 0, height: 0 },
+    successBar: { width: 0, height: 0 },
+    line: { width: 0, height: 0 },
+  });
+
   const fetchAnalytics = async (period: string) => {
     setLoading(true);
     try {
@@ -102,6 +118,30 @@ export default function AnalyticsPage() {
   useEffect(() => {
     fetchAnalytics(selectedPeriod);
   }, [selectedPeriod]);
+
+  // Effect to handle responsive resizing
+  useEffect(() => {
+    const updateDimensions = () => {
+      const pieWidth = pieChartRef.current?.offsetWidth || 0;
+      const donutWidth = donutChartRef.current?.offsetWidth || 0;
+      const barWidth = barChartRef.current?.offsetWidth || 0;
+      const successBarWidth = successBarChartRef.current?.offsetWidth || 0;
+      const lineWidth = lineChartRef.current?.offsetWidth || 0;
+
+      setChartDimensions({
+        pie: { width: pieWidth, height: Math.min(300, pieWidth * 0.75) },
+        donut: { width: donutWidth, height: Math.min(300, donutWidth * 0.75) },
+        bar: { width: barWidth, height: Math.min(300, barWidth * 0.75) },
+        successBar: { width: successBarWidth, height: Math.min(300, successBarWidth * 0.75) },
+        line: { width: lineWidth, height: Math.min(400, lineWidth * 0.5) },
+      });
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, [loading, data]); // Re-run effect when data loads
 
   const handlePeriodChange = (period: string) => {
     setSelectedPeriod(period);
@@ -283,18 +323,20 @@ export default function AnalyticsPage() {
               Posts by Platform
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {platformChartData.length > 0 ? (
-              <PieChart 
-                data={platformChartData} 
-                width={400} 
-                height={300}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No platform data available
-              </div>
-            )}
+          <CardContent ref={pieChartRef}>
+            <div className="flex justify-center">
+              {platformChartData.length > 0 ? (
+                <PieChart 
+                  data={platformChartData} 
+                  width={chartDimensions.pie.width} 
+                  height={chartDimensions.pie.height}
+                />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No platform data available
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -306,19 +348,21 @@ export default function AnalyticsPage() {
               Post Status Distribution
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {statusChartData.length > 0 ? (
-              <DonutChart 
-                data={statusChartData} 
-                width={400} 
-                height={300}
-                centerText={`${data.successRate}%`}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No status data available
-              </div>
-            )}
+          <CardContent ref={donutChartRef}>
+            <div className="flex justify-center">
+              {statusChartData.length > 0 ? (
+                <DonutChart 
+                  data={statusChartData} 
+                  width={chartDimensions.donut.width} 
+                  height={chartDimensions.donut.height}
+                  centerText={`${data.successRate}%`}
+                />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No status data available
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -330,18 +374,20 @@ export default function AnalyticsPage() {
               Posts by Brand
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {brandChartData.length > 0 ? (
-              <BarChart 
-                data={brandChartData} 
-                width={400} 
-                height={300}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No brand data available
-              </div>
-            )}
+          <CardContent ref={barChartRef}>
+            <div className="flex justify-center">
+              {brandChartData.length > 0 ? (
+                <BarChart 
+                  data={brandChartData} 
+                  width={chartDimensions.bar.width} 
+                  height={chartDimensions.bar.height}
+                />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No brand data available
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -353,18 +399,20 @@ export default function AnalyticsPage() {
               Successful Posts by Platform
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {platformSuccessData.length > 0 ? (
-              <BarChart 
-                data={platformSuccessData} 
-                width={400} 
-                height={300}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No success data available
-              </div>
-            )}
+          <CardContent ref={successBarChartRef}>
+            <div className="flex justify-center">
+              {platformSuccessData.length > 0 ? (
+                <BarChart 
+                  data={platformSuccessData} 
+                  width={chartDimensions.successBar.width} 
+                  height={chartDimensions.successBar.height}
+                />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No success data available
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -378,12 +426,14 @@ export default function AnalyticsPage() {
               Posts Timeline
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <LineChart 
-              data={timelineData} 
-              width={800} 
-              height={400}
-            />
+          <CardContent ref={lineChartRef}>
+            <div className="flex justify-center">
+              <LineChart 
+                data={timelineData} 
+                width={chartDimensions.line.width} 
+                height={chartDimensions.line.height}
+              />
+            </div>
           </CardContent>
         </Card>
       )}

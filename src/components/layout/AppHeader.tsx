@@ -5,7 +5,7 @@ import { debounce } from 'lodash';
 import { signOut } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useCallback, useRef, useState } from 'react';
-import { Bell, Search, LogOut, X, Users, Calendar, ChartNoAxesCombined, Plus, User } from 'lucide-react';
+import { Bell, Search, LogOut, X, Users, Calendar, ChartNoAxesCombined, User } from 'lucide-react';
 
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -118,7 +118,8 @@ export default function AppHeader({ user }: AppHeaderProps) {
 
   const clearSearch = () => {
     setSearchQuery('');
-    if (searchInputRef.current) {
+    // For desktop, focus remains on the input
+    if (searchInputRef.current && !searchOpen) {
       searchInputRef.current.focus();
     }
   };
@@ -143,8 +144,12 @@ export default function AppHeader({ user }: AppHeaderProps) {
     if (microphoneTranscript.length > 0) {
       setSearchQuery(microphoneTranscript[microphoneTranscript.length - 1]);
       setMicrophoneTranscript([]);
+      // Trigger search dropdown open on desktop if a transcript comes through
+      if (!searchOpen && window.innerWidth >= 768) { // 768px is the 'md' breakpoint
+          setSearchOpen(true);
+      }
     }
-  }, [microphoneTranscript]);
+  }, [microphoneTranscript, searchOpen]);
 
   React.useEffect(() => {
     if (error) {
@@ -217,409 +222,427 @@ export default function AppHeader({ user }: AppHeaderProps) {
   }
 
   return (
-    <header className="w-full bg-background dark:bg-gray-900 border-b-2 sticky top-0 z-10">
-      <div className="flex items-center justify-between px-4 lg:px-6 py-5">
-        {/* Left Section */}
-        <div className="flex items-center gap-4">
+    <header className="w-full max-w-screen bg-background border-b-2 sticky top-0 z-10">
+      <div className="flex items-center justify-between px-4 lg:px-6 py-3 md:py-4">
+        {/* Left Section - Includes Sidebar Trigger and Page Title */}
+        <div className="flex items-center gap-2 md:gap-4">
           {/* Sidebar trigger on mobile */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <SidebarTrigger />
           </div>
 
-          {/* Page Title */}
-          <h1 className="font-bold text-3xl ml-3 text-foreground dark:text-white">{activePage}</h1>
+          {/* Page Title - Visible on medium to large screens (md:block and lg:block are now combined) */}
+          {/* On smaller screens (e.g., tablet landscape and up), show the title if search isn't open */}
+          <h1 className="hidden md:block font-bold text-xl lg:text-3xl text-foreground dark:text-white truncate max-w-[200px] lg:max-w-none">{activePage}</h1>
+        </div>
 
-          {/* Search */}
-          {config?.headerSearchEnabled !== false && (
-            <div className="hidden md:flex w-[350px] mx-4 relative">
-              <div className="relative w-full max-w-md">
+        {/* Center Section - Search Bar (Desktop only) or Placeholder for spacing */}
+        <div className="flex-1 hidden lg:flex justify-center mx-4">
+            {config?.headerSearchEnabled !== false && (
+                <div className="relative w-full max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground dark:text-white" />
                 <Input
-                  ref={searchInputRef}
-                  placeholder="Search posts, media, brands..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => setSearchOpen(true)}
-                  onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
-                  className="pl-10 pr-20 border border-input bg-background focus-visible:ring-2 focus-visible:ring-primary/40 transition-all"
-                />
-                {searchQuery && (
-                  <X
-                    onClick={clearSearch}
-                    className="absolute right-10 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
-                  />
-                )}
-                <Microphone
-                  setText={setMicrophoneTranscript}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white"
-                />
-              </div>
-
-              {/* Search Results Dropdown */}
-              {searchOpen && searchQuery && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg max-h-[400px] overflow-y-auto">
-                  {!searchResults ? (
-                    <div className="p-4 flex items-center justify-center">
-                      <Skeleton className="w-8 h-8 rounded-full" />
-                      <div className="ml-3 space-y-1">
-                        <Skeleton className="h-4 w-[200px]" />
-                        <Skeleton className="h-3 w-[150px]" />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {searchResults.data.posts.length > 0 && (
-                        <div className="p-2">
-                          <h3 className="text-sm font-medium px-2 py-1">Posts</h3>
-                          {searchResults.data.posts.map(post => (
-                            <div
-                              key={`post-${post.id}`}
-                              className="p-2 hover:bg-accent cursor-pointer rounded-sm"
-                              onMouseDown={() => navigateToResult('post', post.id)}
-                            >
-                              <p className="font-medium truncate">{post.content.substring(0, 50)}...</p>
-                              <p className="text-xs text-muted-foreground">
-                                {post.platform} • {post.status}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {searchResults.data.media.length > 0 && (
-                        <div className="p-2">
-                          <h3 className="text-sm font-medium px-2 py-1">Media</h3>
-                          {searchResults.data.media.map(media => (
-                            <div
-                              key={`media-${media.id}`}
-                              className="p-2 hover:bg-accent cursor-pointer rounded-sm"
-                              onMouseDown={() => navigateToResult('media', media.id)}
-                            >
-                              <p className="font-medium truncate">{media.url.substring(0, 50)}</p>
-                              <p className="text-xs text-muted-foreground">{media.type}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {searchResults.data.brands.length > 0 && (
-                        <div className="p-2">
-                          <h3 className="text-sm font-medium px-2 py-1">Brands</h3>
-                          {searchResults.data.brands.map(brand => (
-                            <div
-                              key={`brand-${brand.id}`}
-                              className="p-2 hover:bg-accent cursor-pointer rounded-sm flex items-center gap-2"
-                              onMouseDown={() => navigateToResult('brand', brand.id)}
-                            >
-                              {brand.logo && (
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={brand.logo} alt={brand.name} />
-                                  <AvatarFallback>{brand.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                              )}
-                              <div>
-                                <p className="font-medium">{brand.name}</p>
-                                {brand.description && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {brand.description.substring(0, 60)}...
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {searchResults.data.posts.length === 0 &&
-                        searchResults.data.media.length === 0 &&
-                        searchResults.data.brands.length === 0 && (
-                          <div className="p-4 text-center text-muted-foreground">
-                            No results found for &quot;{searchQuery}&quot;
-                          </div>
-                        )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Mobile Search Button */}
-          {config?.headerSearchEnabled !== false && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => {
-                setSearchOpen(true);
-                setTimeout(() => searchInputRef.current?.focus(), 0);
-              }}
-            >
-              <Search className="w-5 h-5" />
-            </Button>
-          )}
-
-          {/* Mobile Search Modal */}
-          {searchOpen && (
-            <div className="fixed inset-0 bg-background/90 backdrop-blur-sm md:hidden p-4 z-20">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
                     ref={searchInputRef}
                     placeholder="Search posts, media, brands..."
                     value={searchQuery}
                     onChange={handleSearchChange}
-                    className="rounded-sm pl-10 focus-visible:ring-primary/50"
-                  />
-                  {searchQuery && (
+                    // Added onMouseDown to handle focus outside onBlur on desktop
+                    onFocus={() => setSearchOpen(true)}
+                    onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+                    className="pl-10 pr-20 border border-input bg-background focus-visible:ring-2 focus-visible:ring-primary/40 transition-all"
+                />
+                {searchQuery && (
                     <X
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer"
-                      onClick={clearSearch}
+                    onClick={clearSearch}
+                    className="absolute right-10 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                     />
-                  )}
-                </div>
-                <Button variant="ghost" onClick={() => setSearchOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-
-              {/* Search Results */}
-              {searchQuery && (
-                <div className="bg-background rounded-md border max-h-[70vh] overflow-y-auto">
-                  {!searchResults ? (
-                    <div className="p-4 flex items-center justify-center">
-                      <Skeleton className="w-8 h-8 rounded-full" />
-                      <div className="ml-3 space-y-1">
-                        <Skeleton className="h-4 w-[200px]" />
-                        <Skeleton className="h-3 w-[150px]" />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {searchResults.data.posts.length > 0 && (
-                        <div className="p-2">
-                          <h3 className="text-sm font-medium px-2 py-1">Posts</h3>
-                          {searchResults.data.posts.map(post => (
-                            <div
-                              key={`post-${post.id}`}
-                              className="p-2 hover:bg-accent cursor-pointer rounded-sm"
-                              onClick={() => navigateToResult('post', post.id)}
-                            >
-                              <p className="font-medium truncate">{post.content.substring(0, 50)}...</p>
-                              <p className="text-xs text-muted-foreground">
-                                {post.platform} • {post.status}
-                              </p>
-                            </div>
-                          ))}
+                )}
+                <Microphone
+                    setText={setMicrophoneTranscript}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 dark:text-white"
+                />
+                
+                {/* Search Results Dropdown (Desktop) */}
+                {searchOpen && searchQuery && (
+                    <div 
+                        className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg max-h-[400px] overflow-y-auto z-20"
+                    >
+                    {!searchResults ? (
+                        <div className="p-4 flex items-center justify-center">
+                        <Skeleton className="w-8 h-8 rounded-full" />
+                        <div className="ml-3 space-y-1">
+                            <Skeleton className="h-4 w-[200px]" />
+                            <Skeleton className="h-3 w-[150px]" />
                         </div>
-                      )}
-
-                      {searchResults.data.media.length > 0 && (
-                        <div className="p-2">
-                          <h3 className="text-sm font-medium px-2 py-1">Media</h3>
-                          {searchResults.data.media.map(media => (
-                            <div
-                              key={`media-${media.id}`}
-                              className="p-2 hover:bg-accent cursor-pointer rounded-sm"
-                              onClick={() => navigateToResult('media', media.id)}
-                            >
-                              <p className="font-medium truncate">{media.url.substring(0, 50)}</p>
-                              <p className="text-xs text-muted-foreground">{media.type}</p>
-                            </div>
-                          ))}
                         </div>
-                      )}
-
-                      {searchResults.data.brands.length > 0 && (
-                        <div className="p-2">
-                          <h3 className="text-sm font-medium px-2 py-1">Brands</h3>
-                          {searchResults.data.brands.map(brand => (
-                            <div
-                              key={`brand-${brand.id}`}
-                              className="p-2 hover:bg-accent cursor-pointer rounded-sm flex items-center gap-2"
-                              onClick={() => navigateToResult('brand', brand.id)}
-                            >
-                              {brand.logo && (
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={brand.logo} alt={brand.name} />
-                                  <AvatarFallback>{brand.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                              )}
-                              <div>
-                                <p className="font-medium">{brand.name}</p>
-                                {brand.description && (
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {brand.description.substring(0, 60)}...
-                                  </p>
-                                )}
-                              </div>
+                    ) : (
+                        <>
+                        {searchResults.data.posts.length > 0 && (
+                            <div className="p-2">
+                            <h3 className="text-sm font-medium px-2 py-1">Posts</h3>
+                            {searchResults.data.posts.map(post => (
+                                <div
+                                key={`post-${post.id}`}
+                                className="p-2 hover:bg-accent cursor-pointer rounded-sm"
+                                onMouseDown={() => navigateToResult('post', post.id)}
+                                >
+                                <p className="font-medium truncate">{post.content.substring(0, 50)}...</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {post.platform} • {post.status}
+                                </p>
+                                </div>
+                            ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {searchResults.data.posts.length === 0 &&
-                        searchResults.data.media.length === 0 &&
-                        searchResults.data.brands.length === 0 && (
-                          <div className="p-4 text-center text-muted-foreground">
-                            No results found for &quot;{searchQuery}&quot;
-                          </div>
                         )}
-                    </>
-                  )}
+
+                        {searchResults.data.media.length > 0 && (
+                            <div className="p-2">
+                            <h3 className="text-sm font-medium px-2 py-1">Media</h3>
+                            {searchResults.data.media.map(media => (
+                                <div
+                                key={`media-${media.id}`}
+                                className="p-2 hover:bg-accent cursor-pointer rounded-sm"
+                                onMouseDown={() => navigateToResult('media', media.id)}
+                                >
+                                <p className="font-medium truncate">{media.url.substring(0, 50)}</p>
+                                <p className="text-xs text-muted-foreground">{media.type}</p>
+                                </div>
+                            ))}
+                            </div>
+                        )}
+
+                        {searchResults.data.brands.length > 0 && (
+                            <div className="p-2">
+                            <h3 className="text-sm font-medium px-2 py-1">Brands</h3>
+                            {searchResults.data.brands.map(brand => (
+                                <div
+                                key={`brand-${brand.id}`}
+                                className="p-2 hover:bg-accent cursor-pointer rounded-sm flex items-center gap-2"
+                                onMouseDown={() => navigateToResult('brand', brand.id)}
+                                >
+                                {brand.logo && (
+                                    <Avatar className="h-6 w-6">
+                                    <AvatarImage src={brand.logo} alt={brand.name} />
+                                    <AvatarFallback>{brand.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                )}
+                                <div>
+                                    <p className="font-medium">{brand.name}</p>
+                                    {brand.description && (
+                                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                        {brand.description.substring(0, 60)}...
+                                    </p>
+                                    )}
+                                </div>
+                                </div>
+                            ))}
+                            </div>
+                        )}
+
+                        {searchResults.data.posts.length === 0 &&
+                            searchResults.data.media.length === 0 &&
+                            searchResults.data.brands.length === 0 && (
+                            <div className="p-4 text-center text-muted-foreground">
+                                No results found for &quot;{searchQuery}&quot;
+                            </div>
+                        )}
+                        </>
+                    )}
+                    </div>
+                )}
                 </div>
-              )}
-            </div>
-          )}
+            )}
         </div>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-4">
-          {/* Notifications with dropdown */}
-          {config?.headerNotificationsEnabled !== false && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+
+        {/* Right Section - Utility Icons and User Menu */}
+        <div className="flex items-center gap-2 md:gap-3 lg:gap-4 ml-auto">
+            {/* Mobile Search Button */}
+            {config?.headerSearchEnabled !== false && (
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative hover:bg-accent hover:text-accent-foreground dark:hover:bg-input/50"
-                >
-                  <Bell className="w-5 h-5 dark:text-white" />
-                  {unreadCount > 0 && (
-                    <Badge className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground">
-                      {unreadCount}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-96 max-h-[80vh] overflow-y-auto backdrop-blur-sm"
-              >
-                <DropdownMenuLabel className="flex justify-between items-center">
-                  <span>Notifications</span>
-                  <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-6"
-                    disabled={isSubmitting}
-                    onClick={handleMarkAllAsRead}
-                  >
-                    Mark all as read
-                  </Button>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+                    size="icon"
+                    className="md:block lg:hidden" // Visible on mobile and medium screens
+                    onClick={() => {
+                        setSearchOpen(true);
+                        // Focus on the input once the modal is rendered
+                        setTimeout(() => searchInputRef.current?.focus(), 0);
+                    }}
+                >
+                    <Search className="w-5 h-5" />
+                </Button>
+            )}
 
-                {isLoading ? (
-                  <div className="p-4 flex items-center justify-center">
-                    <Skeleton className="w-8 h-8 rounded-full" />
-                    <div className="ml-3 space-y-1">
-                      <Skeleton className="h-4 w-[200px]" />
-                      <Skeleton className="h-3 w-[150px]" />
-                    </div>
-                  </div>
-                ) : notifications.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    No new notifications
-                  </div>
-                ) : (
-                  notifications.map(notification => (
-                    <DropdownMenuItem
-                      variant={
-                        notification.type === NotificationType.POST_FAILED ? 'destructive' : 'default'
-                      }
-                      key={notification.id}
-                      className={`flex flex-col items-start gap-1 p-3 ${
-                        !notification.read ? 'bg-accent/50' : ''
-                      }`}
-                    >
-                      <div className="flex items-start w-full">
-                        <div className="flex-1">
-                          <p className="font-medium">{notification.title}</p>
-                          <p className="text-sm text-muted-foreground">{notification.message}</p>
-                        </div>
-                        <time className="text-xs text-muted-foreground ml-2">
-                          {new Date(notification.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </time>
-                      </div>
-                      {notification.metadata?.error && (
-                        <p className="text-xs text-destructive mt-1">
-                          Error: {notification.metadata.error}
-                        </p>
-                      )}
-                      {notification.metadata?.postUrl && (
-                        <a
-                          href={notification.metadata.postUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-500 mt-1 hover:underline"
+            {/* Notifications with dropdown */}
+            {config?.headerNotificationsEnabled !== false && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="relative hover:bg-accent hover:text-accent-foreground dark:hover:bg-input/50"
                         >
-                          View post
-                        </a>
-                      )}
+                            <Bell className="w-5 h-5 dark:text-white" />
+                            {unreadCount > 0 && (
+                                <Badge className="absolute -top-1 -right-1.5 w-4 h-4 p-0 text-xs flex items-center justify-center bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </Badge>
+                            )}
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        align="end"
+                        className="w-80 md:w-96 max-h-[80vh] overflow-y-auto backdrop-blur-sm"
+                    >
+                        <DropdownMenuLabel className="flex justify-between items-center">
+                            <span>Notifications</span>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs"
+                                disabled={isSubmitting || unreadCount === 0}
+                                onClick={handleMarkAllAsRead}
+                            >
+                                Mark all as read
+                            </Button>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+
+                        {isLoading ? (
+                            <div className="p-4 flex items-center">
+                                <Skeleton className="w-8 h-8 rounded-full" />
+                                <div className="ml-3 space-y-1 flex-1">
+                                    <Skeleton className="h-4 w-3/4" />
+                                    <Skeleton className="h-3 w-1/2" />
+                                </div>
+                            </div>
+                        ) : notifications.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                                No new notifications
+                            </div>
+                        ) : (
+                            notifications.map(notification => (
+                                <DropdownMenuItem
+                                    variant={
+                                        notification.type === NotificationType.POST_FAILED ? 'destructive' : 'default'
+                                    }
+                                    key={notification.id}
+                                    className={`flex flex-col items-start gap-1 p-3 h-auto ${
+                                        !notification.read ? 'bg-accent/50' : ''
+                                    }`}
+                                >
+                                    <div className="flex items-start w-full">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{notification.title}</p>
+                                            <p className="text-sm text-muted-foreground whitespace-normal">{notification.message}</p>
+                                        </div>
+                                        <time className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                                            {new Date(notification.createdAt).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </time>
+                                    </div>
+                                    {notification.metadata?.error && (
+                                        <p className="text-xs text-destructive mt-1 truncate w-full">
+                                            Error: {notification.metadata.error}
+                                        </p>
+                                    )}
+                                    {notification.metadata?.postUrl && (
+                                        <a
+                                            href={notification.metadata.postUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-500 mt-1 hover:underline"
+                                        >
+                                            View post
+                                        </a>
+                                    )}
+                                </DropdownMenuItem>
+                            ))
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
+
+            {config?.headerThemeToggleEnabled !== false && <ThemeToggle />}
+            {config?.headerLanguageEnabled !== false && <GoogleTranslate />}
+
+            {/* User Menu */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        className="flex items-center gap-2 px-1 md:px-2 py-1 md:py-1.5 hover:bg-accent rounded-xl transition"
+                    >
+                        <Avatar className="size-8 md:size-9">
+                            <AvatarImage src={user?.image ?? ""} alt={user?.name ?? ""} />
+                            <AvatarFallback>
+                                {user?.name?.charAt(0) || user?.email?.charAt(0) || <User className="size-5" />}
+                            </AvatarFallback>
+                        </Avatar>
+
+                        {/* User Name - Hidden on mobile, visible from md */}
+                        <div className="hidden sm:flex flex-col items-start text-left">
+                            <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                                {user?.name}
+                            </span>
+                        </div>
+                    </Button>
+
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push('/profile')}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
                     </DropdownMenuItem>
-                  ))
-                )}
-              </DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => router.push('/accounts')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Accounts</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/posts/calendar')}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Calendar</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push('/analytics')}>
+                        <ChartNoAxesCombined className="mr-2 h-4 w-4" />
+                        <span>Analytics</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        onClick={handleLogout}
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
             </DropdownMenu>
-          )}
-
-          {config?.headerThemeToggleEnabled !== false && <ThemeToggle />}
-          {config?.headerLanguageEnabled !== false && <GoogleTranslate />}
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="flex items-center gap-2 p-2 text-foreground bg-transparent">
-                <Avatar className="size-8 text-foreground dark:bg-white">
-                  <AvatarImage src={user?.image ?? ''} alt={user?.name ?? ''} />
-                  <AvatarFallback className="dark:text-white">
-                    {user?.name?.charAt(0) || user?.email?.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden lg:flex flex-col items-start text-sm">
-                  <span className="font-semibold text-foreground dark:text-white">{user.name}</span>
-                  <span className="text-muted-foreground dark:text-gray-300">{user.email}</span>
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/profile')}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/accounts')}>
-                <Users className="mr-2 h-4 w-4" />
-                <span>Accounts</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/posts/calendar')}>
-                <Calendar className="mr-2 h-4 w-4" />
-                <span>Calendar</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/analytics')}>
-                <ChartNoAxesCombined className="mr-2 h-4 w-4" />
-                <span>Analytics</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
-      {/* Logout Confirmation Dialog */}
+      {/* Mobile Search Modal - remains fixed for full responsiveness */}
+      {config?.headerSearchEnabled !== false && (
+          <div className={`fixed inset-0 bg-background/95 backdrop-blur-sm md:hidden p-4 z-50 transition-opacity duration-300 ${searchOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                  <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                          ref={searchInputRef}
+                          placeholder="Search posts, media, brands..."
+                          value={searchQuery}
+                          onChange={handleSearchChange}
+                          // Removed onFocus and onBlur here to keep the modal open and focused
+                          className="rounded-sm pl-10 pr-10 focus-visible:ring-primary/50"
+                      />
+                      {searchQuery && (
+                          <X
+                              className="absolute right-8 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground cursor-pointer"
+                              onClick={clearSearch}
+                          />
+                      )}
+                      <Microphone
+                          setText={setMicrophoneTranscript}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 dark:text-white"
+                      />
+                  </div>
+                  <Button variant="ghost" onClick={() => setSearchOpen(false)} className="flex-shrink-0">
+                      Cancel
+                  </Button>
+              </div>
+
+              {/* Search Results in Mobile Modal */}
+              {searchQuery && (
+                  <div className="bg-background rounded-md border max-h-[70vh] overflow-y-auto shadow-xl">
+                      {!searchResults ? (
+                          <div className="p-4 flex items-center justify-center">
+                              <Skeleton className="w-8 h-8 rounded-full" />
+                              <div className="ml-3 space-y-1 flex-1">
+                                  <Skeleton className="h-4 w-3/4" />
+                                  <Skeleton className="h-3 w-1/2" />
+                              </div>
+                          </div>
+                      ) : (
+                          <>
+                              {searchResults.data.posts.length > 0 && (
+                                  <div className="p-2">
+                                      <h3 className="text-sm font-medium px-2 py-1">Posts</h3>
+                                      {searchResults.data.posts.map(post => (
+                                          <div
+                                              key={`post-${post.id}`}
+                                              className="p-2 hover:bg-accent cursor-pointer rounded-sm"
+                                              onClick={() => navigateToResult('post', post.id)}
+                                          >
+                                              <p className="font-medium truncate">{post.content.substring(0, 50)}...</p>
+                                              <p className="text-xs text-muted-foreground">
+                                                  {post.platform} • {post.status}
+                                              </p>
+                                          </div>
+                                      ))}
+                                  </div>
+                              )}
+
+                              {searchResults.data.media.length > 0 && (
+                                  <div className="p-2">
+                                      <h3 className="text-sm font-medium px-2 py-1">Media</h3>
+                                      {searchResults.data.media.map(media => (
+                                          <div
+                                              key={`media-${media.id}`}
+                                              className="p-2 hover:bg-accent cursor-pointer rounded-sm"
+                                              onClick={() => navigateToResult('media', media.id)}
+                                          >
+                                              <p className="font-medium truncate">{media.url.substring(0, 50)}</p>
+                                              <p className="text-xs text-muted-foreground">{media.type}</p>
+                                          </div>
+                                      ))}
+                                  </div>
+                              )}
+
+                              {searchResults.data.brands.length > 0 && (
+                                  <div className="p-2">
+                                      <h3 className="text-sm font-medium px-2 py-1">Brands</h3>
+                                      {searchResults.data.brands.map(brand => (
+                                          <div
+                                              key={`brand-${brand.id}`}
+                                              className="p-2 hover:bg-accent cursor-pointer rounded-sm flex items-center gap-2"
+                                              onClick={() => navigateToResult('brand', brand.id)}
+                                          >
+                                              {brand.logo && (
+                                                  <Avatar className="h-6 w-6">
+                                                      <AvatarImage src={brand.logo} alt={brand.name} />
+                                                      <AvatarFallback>{brand.name.charAt(0)}</AvatarFallback>
+                                                  </Avatar>
+                                              )}
+                                              <div>
+                                                  <p className="font-medium">{brand.name}</p>
+                                                  {brand.description && (
+                                                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                                          {brand.description.substring(0, 60)}...
+                                                      </p>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              )}
+
+                              {searchResults.data.posts.length === 0 &&
+                                  searchResults.data.media.length === 0 &&
+                                  searchResults.data.brands.length === 0 && (
+                                      <div className="p-4 text-center text-muted-foreground">
+                                          No results found for &quot;{searchQuery}&quot;
+                                      </div>
+                                  )}
+                          </>
+                      )}
+                  </div>
+              )}
+          </div>
+      )}
+
+      {/* Logout Confirmation Dialog - unchanged */}
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <DialogContent>
           <DialogHeader>

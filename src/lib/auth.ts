@@ -22,7 +22,7 @@ export const authOptions: AuthOptions = {
         email: { label: 'Email', type: 'email', placeholder: 'your@email.com' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         // Handle registration if name is provided
         if (credentials?.name) {
           return handleRegistration(credentials);

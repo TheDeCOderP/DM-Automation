@@ -19,7 +19,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
       <AppSidebar/>
       <SidebarInset>
         <AppHeader user={session?.user}/>
-        <main className='p-10'>
+        <main className='p-5 lg:p-10'>
           {children}
         </main>
       </SidebarInset>

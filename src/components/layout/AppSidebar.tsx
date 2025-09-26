@@ -26,6 +26,7 @@ import { useSidebar } from "@/hooks/useSidebar";
 import { useSidebarSettings } from "@/hooks/useSidebarSettings";
 import type { SidebarGroup as Group, SidebarItem } from "@prisma/client";
 import { SidebarSettings } from "@prisma/client";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface SidebarGroupWithItems extends Group {
   items: SidebarItem[];
@@ -190,7 +191,7 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
         <SidebarTrigger className="h-7 w-7 rounded-full absolute z-50 top-6 -right-4 bg-primary text-primary-foreground hover:bg-primary/90" />
       </SidebarHeader>
 
-      <div className="p-4 group-data-[collapsible=icon]:px-2 ">
+      <div className="p-4 group-data-[collapsible=icon]:px-1.5 ">
         <Link href="/posts/create">
           <Button className="w-full group-data-[collapsible=icon]:aspect-square group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-0">
             <Plus className="size-4 group-data-[collapsible=icon]:size-5" />
@@ -199,77 +200,77 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
         </Link>
       </div>
 
-      <SidebarContent className="flex-1 overflow-y-auto px-2" style={groupGapStyle}>
-        {isLoadingSidebar ? (
-          <div className="space-y-4 px-2">
-            {/* Fake groups */}
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-3 w-24" /> {/* group label */}
-                <div className="space-y-2">
-                  {[...Array(4)].map((_, j) => (
-                    <div key={j} className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4 rounded-full" /> {/* icon */}
-                      <Skeleton className="h-3 w-28" /> {/* text */}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : sidebar?.length > 0 ? (
-          sidebar.map((group: SidebarGroupWithItems) => (
-            <SidebarGroup key={group.id}>
-              {group.title === "Site Settings" ? (
-                <SidebarGroupLabel
-                  asChild
-                  className={`uppercase text-xs font-bold text-muted-foreground group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""}`}
-                >
-                  <Link href={`/${base}/site-settings`}>{group.title}</Link>
-                </SidebarGroupLabel>
-              ) : (
-                <SidebarGroupLabel
-                  className={`cursor-pointer uppercase text-xs font-bold text-muted-foreground group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""}`}
-                  onClick={() => toggleGroup(group.id)}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    {group.title}
-                    <LucideIcons.ChevronDown
-                      className={`h-4 w-4 transition-transform duration-200 ${
-                        isGroupOpen(group.id) ? "rotate-180" : ""
-                      }`}
-                    />
+      <SidebarContent className="flex-1 overflow-y-auto px-2 group-data-[collapsible=icon]:px-0 " style={groupGapStyle}>
+        <ScrollArea className="h-full w-full">
+          {isLoadingSidebar ? (
+            <div className="space-y-4 px-2">
+              {/* Fake groups */}
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-24" /> {/* group label */}
+                  <div className="space-y-2">
+                    {[...Array(4)].map((_, j) => (
+                      <div key={j} className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4 rounded-full" /> {/* icon */}
+                        <Skeleton className="h-3 w-28" /> {/* text */}
+                      </div>
+                    ))}
                   </div>
-                </SidebarGroupLabel>
-              )}
-              {isGroupOpen(group.id) && (
-                <SidebarGroupContent>
-                  <SidebarMenu className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center">
-                    {group.items.map((item) => {
-                      const Icon = getIcon(item.icon);
-                      return (
-                        <SidebarMenuItem key={item.id}>
-                          <SidebarMenuButton asChild size={menuButtonSize}>
-                            <Link href={item.href}>
-                              <Icon className={iconSizeClass} />
-                              <span className="group-data-[collapsible=icon]:sr-only">
-                                {item.label}
-                              </span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              )}
-            </SidebarGroup>
-          ))
-        ) : (
-          <p className="text-muted-foreground text-sm px-2">No menu found</p>
-        )}
-
-        
+                </div>
+              ))}
+            </div>
+          ) : sidebar?.length > 0 ? (
+            sidebar.map((group: SidebarGroupWithItems) => (
+              <SidebarGroup key={group.id}>
+                {group.title === "Site Settings" ? (
+                  <SidebarGroupLabel
+                    asChild
+                    className={`uppercase text-xs font-bold text-muted-foreground group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""}`}
+                  >
+                    <Link href={`/${base}/site-settings`}>{group.title}</Link>
+                  </SidebarGroupLabel>
+                ) : (
+                  <SidebarGroupLabel
+                    className={`cursor-pointer uppercase text-xs font-bold text-muted-foreground group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""}`}
+                    onClick={() => toggleGroup(group.id)}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      {group.title}
+                      <LucideIcons.ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isGroupOpen(group.id) ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
+                  </SidebarGroupLabel>
+                )}
+                {isGroupOpen(group.id) && (
+                  <SidebarGroupContent>
+                    <SidebarMenu className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center">
+                      {group.items.map((item) => {
+                        const Icon = getIcon(item.icon);
+                        return (
+                          <SidebarMenuItem key={item.id}>
+                            <SidebarMenuButton asChild size={menuButtonSize}>
+                              <Link href={item.href}>
+                                <Icon className={iconSizeClass} />
+                                <span className="group-data-[collapsible=icon]:sr-only">
+                                  {item.label}
+                                </span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                )}
+              </SidebarGroup>
+            ))
+          ) : (
+            <p className="text-muted-foreground text-sm px-2">No menu found</p>
+          )}
+        </ScrollArea>
       </SidebarContent>
 
       <SidebarRail />

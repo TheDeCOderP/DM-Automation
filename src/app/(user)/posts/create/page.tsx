@@ -270,7 +270,7 @@ export default function CreatePostPage() {
         </div>
 
         {/* Subheading + Tabs */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="hidden md:flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-muted-foreground">
             Choose Wizard or Advanced layout
           </p>
@@ -433,14 +433,14 @@ export default function CreatePostPage() {
 
       {/* Sticky action bar (shared) */}
       <div className="sticky bottom-0 left-0 right-0 bg-background/80 backdrop-blur border-t">
-        <div className="max-w-6xl mx-auto px-12 py-3 flex items-center justify-between gap-3">
-          <div className="text-sm text-muted-foreground">
+        <div className="max-w-6xl mx-auto lg:px-12 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="text-sm text-muted-foreground hidden md:block">
             {selectedBrandId ? `Brand selected` : `No brand selected`} • {allSelectedItemsCount} account/page selected • {uploadedFiles.length} file(s)
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 w-full">
             <SchedulePostModal onSubmit={() => handleSubmit({ isScheduled: true })} schedule={schedule} setSchedule={setSchedule} />
             <Button
-              className="min-w-[120px]"
+              className="min-w-[120px] z-50"
               disabled={isPublishing || !allSelectedItemsCount}
               onClick={() => handleSubmit({ isScheduled: false })}
               size="sm"
