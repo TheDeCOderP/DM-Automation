@@ -58,6 +58,7 @@ export default function ZohoWorkDrivePicker({
   // Check connection status and fetch token
   useEffect(() => {
     async function fetchToken() {
+      setIsLoading(true);
       try {
         const res = await fetch("/api/accounts/zoho/workdrive");
         
@@ -72,6 +73,8 @@ export default function ZohoWorkDrivePicker({
       } catch (error) {
         console.error("Error checking Zoho connection:", error);
         setIsConnected(false);
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -81,6 +84,9 @@ export default function ZohoWorkDrivePicker({
   const fetchFiles = async (folderId = 'shared') => {
     setLoadingFiles(true);
     setError('');
+    
+    // Clear files immediately when starting to load new folder
+    setFiles([]);
     
     try {
       const params = new URLSearchParams({
@@ -94,11 +100,11 @@ export default function ZohoWorkDrivePicker({
 
       const response = await fetch(`/api/accounts/zoho/workdrive/files?${params}`);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch files');
       }
-
+console.log("Fetched files:", data);
       if (data.success) {
         let filteredFiles = data.files || [];
         
@@ -188,7 +194,8 @@ export default function ZohoWorkDrivePicker({
 
   const handleFileClick = async (file: ZohoFile) => {
     if (file.is_folder) {
-      // Navigate to folder
+      // Navigate to folder - clear files immediately
+      setFiles([]);
       setCurrentFolder(file.id);
       setFolderPath([...folderPath, { id: file.id, name: file.name }]);
       await fetchFiles(file.id);
@@ -199,6 +206,8 @@ export default function ZohoWorkDrivePicker({
   };
 
   const navigateToFolder = (folderId: string, folderIndex: number) => {
+    // Clear files immediately when navigating
+    setFiles([]);
     const newPath = folderPath.slice(0, folderIndex + 1);
     setFolderPath(newPath);
     setCurrentFolder(folderId);
@@ -207,12 +216,20 @@ export default function ZohoWorkDrivePicker({
 
   const handleBack = () => {
     if (folderPath.length > 1) {
+      // Clear files immediately when going back
+      setFiles([]);
       const newPath = folderPath.slice(0, -1);
       const previousFolder = newPath[newPath.length - 1];
       setFolderPath(newPath);
       setCurrentFolder(previousFolder.id);
       fetchFiles(previousFolder.id);
     }
+  };
+
+  const handleRefresh = () => {
+    // Clear files immediately when refreshing
+    setFiles([]);
+    fetchFiles(currentFolder);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -274,6 +291,7 @@ export default function ZohoWorkDrivePicker({
 
   const handleOpenPicker = () => {
     setIsPickerOpen(true);
+    // Reset everything when opening picker
     setFiles([]);
     setCurrentFolder('shared');
     setFolderPath([{ id: 'shared', name: 'Shared Files' }]);
@@ -303,6 +321,9 @@ export default function ZohoWorkDrivePicker({
     return extension.toUpperCase() || 'File';
   };
 
+  // Show loading state when files are being loaded
+  const showLoadingState = loadingFiles || (files.length === 0 && !error);
+
   return (
     <>
       {isConnected ? (
@@ -320,6 +341,7 @@ export default function ZohoWorkDrivePicker({
         <Button
           size={"lg"}
           variant="outline"
+          disabled={isLoading}
           onClick={handleConnect}
           className="flex items-center gap-2 bg-transparent"
         >
@@ -346,6 +368,7 @@ export default function ZohoWorkDrivePicker({
                     variant="outline"
                     size="sm"
                     onClick={handleBack}
+                    disabled={loadingFiles}
                     className="h-8 w-8 p-0"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -358,9 +381,10 @@ export default function ZohoWorkDrivePicker({
                     <div key={folder.id} className="flex items-center gap-1">
                       <button
                         onClick={() => navigateToFolder(folder.id, index)}
+                        disabled={loadingFiles}
                         className={`hover:text-blue-600 hover:underline truncate max-w-[120px] ${
                           index === folderPath.length - 1 ? 'font-medium text-gray-800' : ''
-                        }`}
+                        } ${loadingFiles ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {folder.name}
                       </button>
@@ -371,7 +395,7 @@ export default function ZohoWorkDrivePicker({
               </div>
 
               <Button
-                onClick={() => fetchFiles(currentFolder)}
+                onClick={handleRefresh}
                 disabled={loadingFiles}
                 variant="outline"
                 size="sm"
@@ -392,7 +416,21 @@ export default function ZohoWorkDrivePicker({
             {/* Files Content */}
             <ScrollArea className="flex-1 border rounded-lg">
               <div className="p-2">
-                {files.length > 0 ? (
+                {showLoadingState ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4 p-3">
+                        <Skeleton className="w-5 h-5 rounded" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-3 w-1/2" />
+                        </div>
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    ))}
+                  </div>
+                ) : files.length > 0 ? (
                   <div className="space-y-2">
                     {files.map((file) => (
                       <div
@@ -455,20 +493,6 @@ export default function ZohoWorkDrivePicker({
                       </div>
                     ))}
                   </div>
-                ) : loadingFiles ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4 p-3">
-                        <Skeleton className="w-5 h-5 rounded" />
-                        <div className="flex-1 space-y-2">
-                          <Skeleton className="h-4 w-3/4" />
-                          <Skeleton className="h-3 w-1/2" />
-                        </div>
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-24" />
-                      </div>
-                    ))}
-                  </div>
                 ) : (
                   <div className="text-center py-12">
                     <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -478,7 +502,7 @@ export default function ZohoWorkDrivePicker({
                         : 'No files found in this folder'
                       }
                     </p>
-                    <Button onClick={() => fetchFiles(currentFolder)}>
+                    <Button onClick={handleRefresh}>
                       Try Again
                     </Button>
                   </div>
@@ -489,7 +513,7 @@ export default function ZohoWorkDrivePicker({
             {/* Footer Info */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <div className="text-sm text-gray-500">
-                {files.length > 0 ? (
+                {!showLoadingState && files.length > 0 ? (
                   <>
                     {files.length} items
                     {files.some(f => f.is_shared) && (
@@ -498,6 +522,8 @@ export default function ZohoWorkDrivePicker({
                       </span>
                     )}
                   </>
+                ) : showLoadingState ? (
+                  'Loading...'
                 ) : (
                   'No files to display'
                 )}

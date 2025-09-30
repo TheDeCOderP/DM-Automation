@@ -1,5 +1,6 @@
 // src/app/api/accounts/zoho/workdrive/files/route.ts
 import { prisma } from '@/lib/prisma';
+import { getToken } from 'next-auth/jwt';
 import { SocialAccount } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -145,12 +146,12 @@ async function getSharedFiles(accessToken: string): Promise<ZohoApiFile[]> {
     const userId = await getCurrentUserId(accessToken)
     if (!userId) throw new Error('Could not get current user ID')
 
-    const incomingRes = await fetch(`${ZOHO_WORKDRIVE_API_URL}/users/${userId}/incomingfiles?page[limit]=1000`, {
+    const incomingRes = await fetch(`${ZOHO_WORKDRIVE_API_URL}/users/${userId}/incomingfiles`, {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`,
         Accept: 'application/vnd.api+json',
       },
-    })
+    });
     
     const incomingData: ZohoFilesResponse = await incomingRes.json()
     const incomingFiles: ZohoApiFile[] = incomingData?.data || []
@@ -169,7 +170,7 @@ async function getSharedFiles(accessToken: string): Promise<ZohoApiFile[]> {
 // Helper function to get folder contents
 async function getFolderContents(accessToken: string, folderId: string): Promise<ZohoApiFile[]> {
   try {
-    const folderRes = await fetch(`${ZOHO_WORKDRIVE_API_URL}/files/${folderId}/files?page[limit]=1000`, {
+    const folderRes = await fetch(`${ZOHO_WORKDRIVE_API_URL}/files/${folderId}/files`, {
       headers: {
         Authorization: `Zoho-oauthtoken ${accessToken}`,
         Accept: 'application/vnd.api+json',
@@ -215,19 +216,37 @@ function transformFileData(file: ZohoApiFile): ZohoFile {
   }
 }
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+export async function GET(req: NextRequest) {
+  const token = await getToken({ req });
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url)
   const folderId = searchParams.get('folderId') || 'shared'
   const includeShared = searchParams.get('includeShared') === 'true'
 
   try {
+
     const account = await prisma.socialAccount.findFirst({
-      where: { platform: 'ZOHO_WORKDRIVE' },
-      orderBy: { createdAt: 'desc' },
-    })
+      where: {
+        platform: 'ZOHO_WORKDRIVE',
+        brands: {
+          some: {
+            brand: {
+              members: {
+                some: {
+                  userId: token.id,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
 
     if (!account) {
-      return NextResponse.json({ error: 'No Zoho WorkDrive account found' }, { status: 404 })
+      return NextResponse.json({ error: 'No Zoho WorkDrive account connected' }, { status: 400 });
     }
 
     const accessToken = await refreshZohoToken(account)
