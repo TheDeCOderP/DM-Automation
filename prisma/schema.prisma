@@ -12,6 +12,8 @@ datasource db {
 
 enum Platform {
   ALL
+  YOUTUBE
+  TIKTOK
   GOOGLE
   MEDIUM
   PINTEREST
@@ -21,6 +23,7 @@ enum Platform {
   TWITTER
   FACEBOOK
   INSTAGRAM
+  ZOHO_WORKDRIVE
 }
 
 enum Frequency {

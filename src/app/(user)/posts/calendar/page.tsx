@@ -284,6 +284,9 @@ function getEventColor(platform: Platform): string {
     [Platform.PINTEREST]: "#E60023",
     [Platform.QUORA]: "#B92B27",
     [Platform.REDDIT]: "#FF4500",
+    [Platform.YOUTUBE]: "#FF0000",
+    [Platform.TIKTOK]: "#000000",
+    [Platform.ZOHO_WORKDRIVE]: "#FF7A00",
   }
   return colors[platform] || "#6B7280"
 }

@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import GoogleDrivePicker from "./GoogleDrivePicker";
+import { getPlatformIcon } from "@/utils/ui/icons";
+import ZohoFilesManager from "./ZohoWorkDrive";
 
 interface MediaFile {
   file: File
@@ -369,8 +371,20 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col gap-2 sm:flex-row items-center justify-between border-t">
+        <CardFooter className="flex flex-col gap-2 md:flex-row items-center justify-between border-t">
           <GoogleDrivePicker onFileSelect={handleFileAdd} />
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2">Or</span>
+            </div>
+          </div>
+
+          <ZohoFilesManager onFileSelect={handleFileAdd} />
+
           <Button 
             onClick={handleGenerateClick}
             className="bg-purple-600 text-white hover:bg-purple-700"
