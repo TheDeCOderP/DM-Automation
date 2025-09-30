@@ -1,3 +1,4 @@
+// /api/accounts/zoho/workdrive/callback/route.ts
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,21 +15,26 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
-  const encodedState = searchParams.get('state')
+  const error = searchParams.get('error')
 
-  if (!encodedState) {
-    const errorUrl = new URL('/auth/error', req.nextUrl.origin)
-    errorUrl.searchParams.set('message', 'invalid_state')
+  // Handle OAuth errors from Zoho
+  if (error) {
+    console.error('Zoho OAuth error:', error);
+    const errorDescription = searchParams.get('error_description');
+    const errorUrl = new URL('/accounts', req.nextUrl.origin)
+    errorUrl.searchParams.set('error', `Zoho authentication failed: ${errorDescription || error}`)
     return NextResponse.redirect(errorUrl.toString())
   }
 
   if (!code) {
-    const errorUrl = new URL('/auth/error', req.nextUrl.origin)
-    errorUrl.searchParams.set('message', 'missing_code')
+    const errorUrl = new URL('/accounts', req.nextUrl.origin)
+    errorUrl.searchParams.set('error', 'missing_code')
     return NextResponse.redirect(errorUrl.toString())
   }
 
   try {
+    console.log('Exchanging code for token...');
+    
     const tokenRes = await fetch(`${ZOHO_ACCOUNTS_URL}/oauth/v2/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -42,73 +48,82 @@ export async function GET(req: NextRequest) {
     })
 
     const tokenData = await tokenRes.json()
-    const { access_token, refresh_token, expires_in } = tokenData
+    console.log('Token response:', tokenData);
 
-    if (!access_token) {
+    if (!tokenRes.ok) {
       throw new Error(`Token exchange failed: ${tokenData.error || 'Unknown error'}`)
     }
 
-    const expiresInSeconds = parseInt(expires_in.toString())
+    const { access_token, refresh_token, expires_in } = tokenData
+
+    if (!access_token) {
+      throw new Error('No access token received from Zoho')
+    }
+
+    const expiresInSeconds = parseInt(expires_in?.toString() || '3600')
     const tokenExpiresAt = new Date(Date.now() + expiresInSeconds * 1000)
 
-    let userData
-    let userInfo
-    let zohoUserId
-    let zohoUsername
-
+    console.log('Fetching user profile...');
+    
+    // Try to get user info from WorkDrive API first
+    let zohoUserId = null;
+    let zohoUsername = 'Zoho WorkDrive User';
+    
     try {
       const profileRes = await fetch(ZOHO_WORKDRIVE_USER_URL, {
         headers: {
           Authorization: `Zoho-oauthtoken ${access_token}`,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
+          Accept: 'application/vnd.api+json',
         },
       })
-      userData = await profileRes.json()
-      userInfo = userData.data || userData
-      zohoUserId =
-        userInfo.id ||
-        userInfo.user_id ||
-        userInfo.zuid ||
-        userInfo.user_id
-      zohoUsername =
-        userInfo.display_name ||
-        userInfo.name ||
-        userInfo.email_id ||
-        userInfo.email
-    } catch {
+      
+      if (profileRes.ok) {
+        const userData = await profileRes.json()
+        console.log('WorkDrive user data:', userData);
+        
+        const userInfo = userData.data || userData;
+        zohoUserId = userInfo.id || userInfo.attributes?.zuid || userInfo.zuid;
+        zohoUsername = userInfo.attributes?.display_name || 
+                      userInfo.attributes?.name || 
+                      userInfo.display_name || 
+                      userInfo.name || 
+                      'Zoho WorkDrive User';
+      } else {
+        console.warn('WorkDrive API failed, trying accounts API...');
+        throw new Error('WorkDrive API failed');
+      }
+    } catch (workdriveError) {
+      console.warn('WorkDrive API error, trying accounts API:', workdriveError);
+      
+      // Fallback to accounts API
       try {
-        const accountsRes = await fetch('https://accounts.zoho.in/oauth/user/info', {
+        const accountsRes = await fetch(`${ZOHO_ACCOUNTS_URL}/oauth/user/info`, {
           headers: {
             Authorization: `Zoho-oauthtoken ${access_token}`,
-            Accept: 'application/json',
           },
         })
-        userData = await accountsRes.json()
-        userInfo = userData
-        zohoUserId = userInfo.ZUID || userInfo.user_id || userInfo.id
-        zohoUsername = userInfo.Display_Name || userInfo.Full_Name || userInfo.Email
-      } catch {
-        try {
-          const tokenInfoRes = await fetch(`${ZOHO_ACCOUNTS_URL}/oauth/v2/token/info`, {
-            headers: {
-              Authorization: `Zoho-oauthtoken ${access_token}`,
-            },
-          })
-          userData = await tokenInfoRes.json()
-          zohoUserId = userData.user_id || userData.client_id || `zoho_${Date.now()}`
-          zohoUsername = userData.user_name || 'Zoho User'
-        } catch {
-          zohoUserId = `zoho_workdrive_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-          zohoUsername = 'Zoho WorkDrive User'
+        
+        if (accountsRes.ok) {
+          const userInfo = await accountsRes.json()
+          console.log('Accounts user info:', userInfo);
+          
+          zohoUserId = userInfo.ZUID || userInfo.id;
+          zohoUsername = userInfo.Display_Name || userInfo.Full_Name || userInfo.Email || 'Zoho User';
         }
+      } catch (accountsError) {
+        console.warn('Accounts API also failed:', accountsError);
       }
     }
 
+    // If we still don't have a user ID, generate one
     if (!zohoUserId) {
-      throw new Error('Failed to retrieve or generate unique Zoho User ID')
+      zohoUserId = `zoho_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('Generated fallback user ID:', zohoUserId);
     }
 
+    console.log('Final user details:', { zohoUserId, zohoUsername });
+
+    // Create or update social account
     const account = await prisma.socialAccount.upsert({
       where: {
         platform_platformUserId: {
@@ -132,30 +147,35 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    const brand = await prisma.userBrand.findFirst({
+    console.log('Social account created/updated:', account.id);
+
+    // Find user's brand
+    const userBrand = await prisma.userBrand.findFirst({
       where: {
         userId: token.id,
       },
     })
 
-    if (!brand) {
+    if (!userBrand) {
       throw new Error('No brand found for user to link Zoho account')
     }
 
+    // Link to brand
     await prisma.socialAccountBrand.upsert({
       where: {
         brandId_socialAccountId: {
-          brandId: brand.id,
+          brandId: userBrand.brandId,
           socialAccountId: account.id,
         },
       },
       update: {},
       create: {
-        brandId: brand.id,
+        brandId: userBrand.brandId,
         socialAccountId: account.id,
       },
     })
 
+    // Link to user
     await prisma.userSocialAccount.upsert({
       where: {
         userId_socialAccountId: {
@@ -170,12 +190,16 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    console.log('Zoho account successfully connected');
+    
     const dashboardUrl = new URL('/accounts', req.nextUrl.origin)
-    dashboardUrl.searchParams.set('zoho', 'connected')
+    dashboardUrl.searchParams.set('success', 'zoho_connected')
     return NextResponse.redirect(dashboardUrl.toString())
+    
   } catch (error) {
-    const errorUrl = new URL('/auth/error', req.nextUrl.origin)
-    errorUrl.searchParams.set('message', error instanceof Error ? error.message : 'Unknown Zoho error')
+    console.error('Zoho callback error:', error);
+    const errorUrl = new URL('/accounts', req.nextUrl.origin)
+    errorUrl.searchParams.set('error', error instanceof Error ? error.message : 'Unknown Zoho error')
     return NextResponse.redirect(errorUrl.toString())
   }
 }

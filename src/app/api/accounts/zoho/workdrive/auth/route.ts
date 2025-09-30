@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
         'WorkDrive.users.ALL',          // Read access to WorkDrive
         'WorkDrive.files.ALL',           // All file operations
         'WorkDrive.teamfolders.ALL',     // All team folder operations (includes team listing)
-        'ZohoFiles.files.READ'
+        'ZohoFiles.files.READ',
+        'aaaserver.profile.READ'
     ].join(',');
   
   const authUrl = new URL('https://accounts.zoho.in/oauth/v2/auth');
