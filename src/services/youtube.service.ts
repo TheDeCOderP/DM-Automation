@@ -1,5 +1,6 @@
 // lib/youtube-service.ts
 import { prisma } from "@/lib/prisma";
+import { decryptToken } from "@/lib/encryption";
 import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
 
 interface YouTubeTokenResponse {
@@ -132,6 +133,10 @@ export async function publishToYouTube(
     }
 
     const socialAccount = userSocialAccount.socialAccount;
+    socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
+    if(socialAccount.refreshToken) {
+        socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);
+    }
 
     // Refresh token if needed
     let accessToken = socialAccount.accessToken;
@@ -436,6 +441,11 @@ export async function fetchYouTubeVideoAnalytics(post: Post) {
     }
 
     const socialAccount = userSocialAccount.socialAccount;
+    socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
+    if(socialAccount.refreshToken) {
+        socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);
+    }
+
     let accessToken = socialAccount.accessToken;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
         accessToken = await refreshYouTubeToken(socialAccount);

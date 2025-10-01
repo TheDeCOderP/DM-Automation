@@ -1,5 +1,6 @@
 // lib/social/facebook.ts
 import { prisma } from "@/lib/prisma";
+import { decryptToken } from "@/lib/encryption";
 import { Post, Media, Platform } from "@prisma/client";
 
 interface FacebookPostResponse {
@@ -76,6 +77,10 @@ export async function publishToFacebook(
     }
 
     const socialAccount = userSocialAccount.socialAccount;
+    socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
+    if(socialAccount.refreshToken) {
+      socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);
+    }
 
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
       throw new Error('Facebook token is expired');

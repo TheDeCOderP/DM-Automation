@@ -1,7 +1,7 @@
 // app/api/social-accounts/google/callback/route.ts
-import { NextResponse } from 'next/server';
-import { type NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from "@/lib/prisma";
+import { encryptToken } from "@/lib/encryption";
+import { NextRequest, NextResponse } from "next/server";
 
 const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/google/callback`;
 
@@ -52,6 +52,10 @@ export async function GET(request: NextRequest) {
     // 3. Save to DB
     if (userId && brandId) {
       try {
+        // Encrypt tokens before saving
+        const encryptedAccessToken = await encryptToken(tokenData.access_token);
+        const encryptedRefreshToken = await encryptToken(tokenData.refresh_token || '');
+        
         const account = await prisma.socialAccount.upsert({
           where: {
             platform_platformUserId: {
@@ -60,8 +64,8 @@ export async function GET(request: NextRequest) {
             },
           },
           update: {
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token || null,
+            accessToken: encryptedAccessToken,
+            refreshToken: encryptedRefreshToken || null,
             tokenExpiresAt: tokenData.expires_in
               ? new Date(Date.now() + tokenData.expires_in * 1000)
               : null,
@@ -69,8 +73,8 @@ export async function GET(request: NextRequest) {
           },
           create: {
             platform: 'GOOGLE',
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token || null,
+            accessToken: encryptedAccessToken,
+            refreshToken: encryptedRefreshToken || null,
             tokenExpiresAt: tokenData.expires_in
               ? new Date(Date.now() + tokenData.expires_in * 1000)
               : null,

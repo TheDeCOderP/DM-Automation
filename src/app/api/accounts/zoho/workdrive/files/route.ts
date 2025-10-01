@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 import { SocialAccount } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
+import { decryptToken, encryptToken } from '@/lib/encryption';
 
 const ZOHO_WORKDRIVE_API_URL = 'https://www.zohoapis.in/workdrive/api/v1'
 
@@ -88,6 +89,8 @@ async function refreshZohoToken(socialAccount: SocialAccount): Promise<string> {
     throw new Error("Zoho refresh token is missing. User needs to re-authenticate.")
   }
 
+  const refreshToken = await decryptToken(socialAccount.refreshToken);
+
   if (socialAccount.tokenExpiresAt && new Date() >= socialAccount.tokenExpiresAt) {
     const refreshRes = await fetch('https://accounts.zoho.in/oauth/v2/token', {
       method: 'POST',
@@ -95,7 +98,7 @@ async function refreshZohoToken(socialAccount: SocialAccount): Promise<string> {
       body: new URLSearchParams({
         client_id: process.env.ZOHO_CLIENT_ID!,
         client_secret: process.env.ZOHO_CLIENT_SECRET!,
-        refresh_token: socialAccount.refreshToken,
+        refresh_token: refreshToken,
         grant_type: 'refresh_token',
       }),
     })
@@ -109,10 +112,12 @@ async function refreshZohoToken(socialAccount: SocialAccount): Promise<string> {
     const { access_token, expires_in } = data
     const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000)
 
+    const encryptedAccessToken = await encryptToken(access_token);
+
     await prisma.socialAccount.update({
       where: { id: socialAccount.id },
       data: {
-        accessToken: access_token,
+        accessToken: encryptedAccessToken,
         tokenExpiresAt,
       },
     })

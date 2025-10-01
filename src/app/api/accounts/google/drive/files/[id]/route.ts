@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import type { SocialAccount } from "@prisma/client";
+import { decryptToken } from "@/lib/encryption";
 
 /**
  * Helper that checks whether a Date is expired (with a 60s buffer).
@@ -121,7 +122,7 @@ export async function GET(
     const socialAccount = userSocialAccount.socialAccount;
 
     // If token expired (or missing), refresh
-    let accessToken = socialAccount.accessToken;
+    let accessToken = await decryptToken(socialAccount.accessToken);
     if (!accessToken || isTokenExpired(socialAccount.tokenExpiresAt)) {
       accessToken = await refreshGoogleToken(socialAccount);
     }

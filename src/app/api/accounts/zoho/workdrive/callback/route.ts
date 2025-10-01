@@ -1,6 +1,7 @@
 // /api/accounts/zoho/workdrive/callback/route.ts
 import { prisma } from '@/lib/prisma'
 import { getToken } from 'next-auth/jwt'
+import { encryptToken } from '@/lib/encryption'
 import { NextRequest, NextResponse } from 'next/server'
 
 const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/zoho/workdrive/callback`
@@ -123,6 +124,10 @@ export async function GET(req: NextRequest) {
 
     console.log('Final user details:', { zohoUserId, zohoUsername });
 
+    // Encrypt tokens before saving
+    const encryptedAccessToken = await encryptToken(tokenData.access_token);
+    const encryptedRefreshToken = await encryptToken(tokenData.refresh_token || '');
+
     // Create or update social account
     const account = await prisma.socialAccount.upsert({
       where: {
@@ -132,15 +137,15 @@ export async function GET(req: NextRequest) {
         },
       },
       update: {
-        accessToken: access_token,
-        refreshToken: refresh_token,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken || null,
         tokenExpiresAt,
         platformUsername: zohoUsername,
       },
       create: {
         platform: 'ZOHO_WORKDRIVE',
-        accessToken: access_token,
-        refreshToken: refresh_token,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken || null,
         tokenExpiresAt,
         platformUserId: zohoUserId,
         platformUsername: zohoUsername,

@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { encryptToken } from '@/lib/encryption';
 
 const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/callback`;
 
@@ -54,6 +55,10 @@ export async function GET(request: NextRequest) {
     // 3. Save to database and link to brand
     if (userId && brandId) {
       try {
+        // Encrypt tokens before saving
+        const encryptedAccessToken = await encryptToken(tokenData.access_token);
+        const encryptedRefreshToken = await encryptToken(tokenData.refresh_token || '');
+
         // Upsert social account keyed by platform + platformUserId
         const account = await prisma.socialAccount.upsert({
           where: {
@@ -63,15 +68,15 @@ export async function GET(request: NextRequest) {
             }
           },
           update: {
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token || null,
+            accessToken: encryptedAccessToken,
+            refreshToken: encryptedRefreshToken || null,
             tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
             platformUsername: profile.name || profile.given_name || '',
           },
           create: {
             platform: 'LINKEDIN',
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token || null,
+            accessToken: encryptedAccessToken,
+            refreshToken: encryptedRefreshToken || null,
             tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
             platformUserId: profile.sub,
             platformUsername: profile.name || profile.given_name || '',

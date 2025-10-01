@@ -1,7 +1,7 @@
 // app/api/social-accounts/youtube/callback/route.ts
-import { NextResponse } from 'next/server';
-import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { encryptToken } from '@/lib/encryption';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -100,6 +100,11 @@ export async function GET(request: NextRequest) {
 
     const channel = channelData.items[0];
 
+    // Encrypt tokens before saving
+    const encryptedAccessToken = await encryptToken(tokenData.access_token);
+    const encryptedRefreshToken = await encryptToken(tokenData.refresh_token || '');
+
+
     // 3. Save to database
     console.log('Saving to database...');
     const account = await prisma.socialAccount.upsert({
@@ -110,16 +115,16 @@ export async function GET(request: NextRequest) {
         }
       },
       update: {
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || null,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken || null,
         tokenExpiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
         platformUserId: channel.id,
         platformUsername: channel.snippet.title,
       }, 
       create: {
         platform: 'YOUTUBE',
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || null,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken || null,
         tokenExpiresAt: new Date(Date.now() + (tokenData.expires_in * 1000)),
         platformUserId: channel.id,
         platformUsername: channel.snippet.title,

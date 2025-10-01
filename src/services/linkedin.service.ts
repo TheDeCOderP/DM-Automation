@@ -1,3 +1,4 @@
+import { decryptToken } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { Post, Media } from "@prisma/client";
 
@@ -95,6 +96,10 @@ export async function publishToLinkedin(
     }
 
     const socialAccount = userSocialAccount.socialAccount;
+    socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
+    if(socialAccount.refreshToken) {
+      socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);
+    }
   
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
       throw new Error('LinkedIn token is expired');

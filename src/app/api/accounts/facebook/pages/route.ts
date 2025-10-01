@@ -1,4 +1,5 @@
 //api/accounts/facebook/pages/route.ts
+import { decryptToken } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -24,9 +25,11 @@ export async function GET(req: Request) {
 
     if (!account) throw new Error('No account found');
 
+    const accessToken = await decryptToken(account.accessToken);
+
     // Fetch pages from Facebook API
     const facebookResponse = await fetch(
-      `https://graph.facebook.com/v23.0/me/accounts?access_token=${account.accessToken}`
+      `https://graph.facebook.com/v23.0/me/accounts?access_token=${accessToken}`
     );
 
     if (!facebookResponse.ok) {

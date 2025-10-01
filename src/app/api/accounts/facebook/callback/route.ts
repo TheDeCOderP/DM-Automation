@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { type NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { encryptToken } from '@/lib/encryption'
 
 const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/facebook/callback`
 
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
     )
     const longLivedTokenData = await longLivedTokenRes.json()
 
-    const userAccessToken = longLivedTokenData.access_token || tokenData.access_token
+    const userAccessToken = longLivedTokenData.access_token || tokenData.access_token;
+    const encryptedAccessToken = await encryptToken(userAccessToken);
 
     /** Expiration handling */
     let expiresIn = 60 * 60 * 24 * 60 // default 60 days
@@ -70,13 +72,13 @@ export async function GET(request: NextRequest) {
           },
         },
         update: {
-          accessToken: userAccessToken,
+          accessToken: encryptedAccessToken,
           tokenExpiresAt,
           platformUsername: profile.name,
         },
         create: {
           platform: 'FACEBOOK',
-          accessToken: userAccessToken,
+          accessToken: encryptedAccessToken,
           tokenExpiresAt,
           platformUserId: profile.id,
           platformUsername: profile.name,

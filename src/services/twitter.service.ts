@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { decryptToken } from "@/lib/encryption";
 import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
 
 interface TwitterTokenResponse {
@@ -166,6 +167,10 @@ export async function publishToTwitter(
     }
 
     const socialAccount = userSocialAccount.socialAccount;
+    socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
+    if(socialAccount.refreshToken) {
+        socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);
+    }
 
     // Token refresh
     let { accessToken } = socialAccount;
@@ -354,6 +359,10 @@ export async function fetchTwitterPostAnalytics(post: Post) {
     }
 
     const socialAccount = userSocialAccount.socialAccount;
+    socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
+    if(socialAccount.refreshToken) {
+        socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);
+    }
 
     let { accessToken } = socialAccount;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
