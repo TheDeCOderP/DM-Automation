@@ -7,10 +7,11 @@ import { type MediaType, Status, Frequency, type Platform } from "@prisma/client
 
 import type { ScheduleData } from "@/types/scheduled-data"
 import type { UploadApiResponse } from "cloudinary"
-// Updated import paths to use standard naming
-import { publishToFacebook } from "@/services/facebook.service"
-import { publishToLinkedin } from "@/services/linkedin.service"
-import { publishToTwitter } from "@/services/twitter.service"
+
+import { publishToTwitter } from "@/services/twitter.service";
+import { publishToYouTube } from "@/services/youtube.service";
+import { publishToFacebook } from "@/services/facebook.service";
+import { publishToLinkedin } from "@/services/linkedin.service";
 
 function generateCronExpression(schedule: ScheduleData) {
   // Convert the user's local date/time + offset to UTC components for cron
@@ -472,6 +473,8 @@ export async function POST(req: NextRequest) {
             await publishToLinkedin(post)
           } else if (post.platform === "TWITTER") {
             await publishToTwitter(post)
+          } else if(post.platform === "YOUTUBE") {
+            await publishToYouTube(post)
           } else if (post.platform === "FACEBOOK") {
             if (post.pageTokenId) {
               const pageToken = await prisma.pageToken.findUnique({

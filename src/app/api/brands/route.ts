@@ -20,6 +20,15 @@ export async function GET(req: NextRequest) {
                     include: {
                         // Correct way to include social accounts through the junction table
                         socialAccounts: {
+                            where: {
+                                socialAccount: {
+                                    platform: {
+                                        not: {
+                                            in: ["ZOHO_WORKDRIVE", "GOOGLE"]
+                                        }
+                                    }
+                                },
+                            },
                             include: {
                                 socialAccount: {
                                     include: {

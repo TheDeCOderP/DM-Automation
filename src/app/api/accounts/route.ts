@@ -18,6 +18,15 @@ export async function GET(req: NextRequest) {
         brand: {
           include: {
             socialAccounts: {
+              where: {
+                socialAccount: {
+                  platform: {
+                    not: {
+                      in: ["ZOHO_WORKDRIVE", "GOOGLE"]
+                    }
+                  }
+                },
+              },
               include: {
                 socialAccount: {
                   include: {
@@ -27,7 +36,7 @@ export async function GET(req: NextRequest) {
                         user: true
                       }
                     }
-                  }
+                  },
                 }
               },
             },

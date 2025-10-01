@@ -1,0 +1,555 @@
+// lib/youtube-service.ts
+import { prisma } from "@/lib/prisma";
+import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
+
+interface YouTubeTokenResponse {
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+    token_type?: string;
+    scope?: string;
+}
+
+interface YouTubeErrorResponse {
+    error: string;
+    error_description?: string;
+}
+
+interface YouTubeVideoResponse {
+    id: string;
+    snippet: {
+        title: string;
+        description: string;
+        tags?: string[];
+        categoryId: string;
+    };
+    status: {
+        privacyStatus: string;
+        publishAt?: string;
+    };
+}
+
+interface VideoUploadBody {
+    snippet: {
+        title: string;
+        description: string;
+        tags?: string[];
+        categoryId: string;
+    };
+    status: {
+        privacyStatus: 'public' | 'private' | 'unlisted';
+        publishAt?: string;
+        selfDeclaredMadeForKids?: boolean;
+    };
+}
+
+async function refreshYouTubeToken(socialAccount: SocialAccount): Promise<string> {
+    if (!socialAccount.refreshToken) {
+        throw new Error("YouTube refresh token is missing. User needs to re-authenticate.");
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        throw new Error("YouTube client credentials are not configured.");
+    }
+
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+            client_id: process.env.GOOGLE_CLIENT_ID!,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+            refresh_token: socialAccount.refreshToken,
+            grant_type: "refresh_token",
+        }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        console.error("Failed to refresh YouTube token:", data);
+        throw new Error(
+            `Could not refresh YouTube token. Reason: ${
+                data.error_description || data.error || "Unknown error"
+            }`
+        );
+    }
+
+    const {
+        access_token: newAccessToken,
+        refresh_token: newRefreshToken,
+        expires_in: expiresIn,
+    } = data;
+
+    const newExpiresAt = new Date(Date.now() + expiresIn * 1000);
+    await prisma.socialAccount.update({
+        where: { id: socialAccount.id },
+        data: {
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken || socialAccount.refreshToken,
+            tokenExpiresAt: newExpiresAt,
+        },
+    });
+
+    console.log("Successfully refreshed YouTube token");
+    return newAccessToken;
+}
+
+function isTokenExpired(expiresAt: Date | null): boolean {
+    if (!expiresAt) return true;
+    return new Date() >= new Date(expiresAt.getTime() - 5 * 60 * 1000); // 5 minute buffer
+}
+
+export async function publishToYouTube(
+    post: Post & { media?: Media[] }
+): Promise<{ videoId: string; videoUrl: string; title: string }> {
+    if (!post) {
+        throw new Error("Invalid input for publishToYouTube");
+    }
+
+    // Find YouTube account
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
+        where: {
+            userId: post.userId,
+            socialAccount: {
+                platform: "YOUTUBE",
+                brands: {
+                    some: {
+                        brandId: post.brandId,
+                    },
+                },
+            },
+        },
+        include: {
+            socialAccount: true,
+        },
+    });
+
+    if (!userSocialAccount) {
+        await handlePostFailure(post, "No connected YouTube account found for this brand");
+        throw new Error("User has no connected YouTube account for this brand");
+    }
+
+    const socialAccount = userSocialAccount.socialAccount;
+
+    // Refresh token if needed
+    let accessToken = socialAccount.accessToken;
+    if (isTokenExpired(socialAccount.tokenExpiresAt)) {
+        accessToken = await refreshYouTubeToken(socialAccount);
+    }
+
+    // Get media
+    const media = post.media || await prisma.media.findMany({ 
+        where: { postId: post.id } 
+    });
+
+    const videoMedia = media.find(m => m.type === MediaType.VIDEO);
+    if (!videoMedia) {
+        await handlePostFailure(post, "YouTube post requires at least one video");
+        throw new Error("YouTube post requires at least one video");
+    }
+
+    try {
+        // Upload video to YouTube
+        const videoId = await uploadVideoToYouTube(
+            videoMedia, 
+            accessToken, 
+            post.content,
+        );
+
+        const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        
+        // Update post status and record success
+        await recordSuccessfulPost(post, socialAccount, videoId, videoUrl);
+        
+        return {
+            videoId,
+            videoUrl,
+            title: extractVideoTitle(post.content)
+        };
+
+    } catch (error) {
+        await handlePostFailure(
+            post, 
+            error instanceof Error ? error.message : "Unknown upload error"
+        );
+        throw error;
+    }
+}
+
+async function uploadVideoToYouTube(
+    media: Media, 
+    accessToken: string, 
+    description: string,
+    scheduledFor?: Date | null
+): Promise<string> {
+    try {
+        console.log('Starting YouTube upload process...');
+        
+        // 1. First, upload the video file using resumable upload
+        const videoId = await uploadVideoFile(media, accessToken);
+        
+        // 2. Then, update the video metadata
+        await updateVideoMetadata(videoId, accessToken, description, scheduledFor);
+        
+        console.log('YouTube upload completed successfully:', videoId);
+        return videoId;
+        
+    } catch (error) {
+        console.error('YouTube upload error:', error);
+        throw new Error(`Failed to upload video to YouTube: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function uploadVideoFile(
+    media: Media, 
+    accessToken: string
+): Promise<string> {
+    console.log('Fetching video from URL:', media.url);
+    
+    // Fetch the video file
+    const response = await fetch(media.url);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch video from URL: ${media.url}. Status: ${response.status}`);
+    }
+
+    const videoBuffer = await response.arrayBuffer();
+    console.log('Video fetched successfully, size:', videoBuffer.byteLength);
+
+    // Prepare initial metadata for resumable upload
+    const initialMetadata = {
+        snippet: {
+            title: "Uploading...", // Temporary title
+            description: "Video is being uploaded...",
+            categoryId: "22",
+        },
+        status: {
+            privacyStatus: "private", // Start as private, update later
+            selfDeclaredMadeForKids: false
+        }
+    };
+
+    // Initiate resumable upload session
+    console.log('Initiating resumable upload session...');
+    const initResponse = await fetch(
+        "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+        {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+                "X-Upload-Content-Type": getYouTubeMediaType(media.type),
+                "X-Upload-Content-Length": videoBuffer.byteLength.toString(),
+            },
+            body: JSON.stringify(initialMetadata),
+        }
+    );
+
+    if (!initResponse.ok) {
+        const errorText = await initResponse.text();
+        console.error('Upload initiation failed:', errorText);
+        throw new Error(`Failed to initiate YouTube upload: ${initResponse.status} - ${errorText}`);
+    }
+
+    const uploadUrl = initResponse.headers.get("Location");
+    if (!uploadUrl) {
+        throw new Error("No upload URL received from YouTube");
+    }
+
+    console.log('Upload session created, uploading video data...');
+
+    // Upload the video data
+    const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+            "Content-Type": getYouTubeMediaType(media.type),
+            "Content-Length": videoBuffer.byteLength.toString(),
+        },
+        body: videoBuffer,
+    });
+
+    if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('Video upload failed:', errorText);
+        throw new Error(`Failed to upload video data: ${uploadResponse.status} - ${errorText}`);
+    }
+
+    const uploadData = await uploadResponse.json();
+    
+    if (!uploadData.id) {
+        throw new Error("No video ID received from YouTube upload");
+    }
+
+    console.log('Video file uploaded successfully, ID:', uploadData.id);
+    return uploadData.id;
+}
+
+async function updateVideoMetadata(
+    videoId: string,
+    accessToken: string,
+    description: string,
+    scheduledFor?: Date | null
+): Promise<void> {
+    console.log('Updating video metadata for:', videoId);
+    
+    const videoMetadata: VideoUploadBody = {
+        snippet: {
+            title: extractVideoTitle(description),
+            description: description,
+            tags: extractTags(description),
+            categoryId: "22", // People & Blogs
+        },
+        status: {
+            privacyStatus: scheduledFor ? 'private' : 'public',
+            publishAt: scheduledFor ? scheduledFor.toISOString() : undefined,
+            selfDeclaredMadeForKids: false
+        }
+    };
+
+    const updateResponse = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,status`,
+        {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                id: videoId,
+                ...videoMetadata
+            }),
+        }
+    );
+
+    if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        console.error('Metadata update failed:', errorText);
+        throw new Error(`Failed to update video metadata: ${updateResponse.status} - ${errorText}`);
+    }
+
+    console.log('Video metadata updated successfully');
+}
+
+function extractVideoTitle(content: string): string {
+    const firstLine = content.split('\n')[0].trim();
+    const title = firstLine || "Uploaded Video";
+    return title.length > 100 ? title.substring(0, 97) + '...' : title;
+}
+
+function extractTags(content: string): string[] {
+    const hashtags = content.match(/#(\w+)/g) || [];
+    return hashtags.map(tag => tag.substring(1)).slice(0, 10);
+}
+
+function getYouTubeMediaType(mediaType: MediaType): string {
+    switch (mediaType) {
+        case MediaType.VIDEO:
+            return "video/*";
+        case MediaType.IMAGE:
+            return "image/jpeg";
+        default:
+            return "video/*";
+    }
+}
+
+async function recordSuccessfulPost(
+    post: Post,
+    socialAccount: SocialAccount,
+    videoId: string,
+    videoUrl: string
+) {
+    
+    await prisma.$transaction([
+        prisma.post.update({
+            where: { id: post.id },
+            data: { 
+                status: 'PUBLISHED',
+                url: videoUrl,
+                publishedAt: new Date(),
+                updatedAt: new Date()
+            }
+        }),
+        prisma.notification.create({
+            data: {
+                userId: post.userId,
+                type: "POST_PUBLISHED",
+                title: "Video Published on YouTube",
+                message: `Your video "${extractVideoTitle(post.content)}" has been published on YouTube`,
+                metadata: {
+                    postId: post.id,
+                    platform: "YOUTUBE",
+                    videoUrl: videoUrl,
+                    videoId: videoId,
+                }
+            }
+        })
+    ]);
+
+    console.log(`Post ${post.id} 'published' successfully on YouTube`);
+}
+
+async function handlePostFailure(post: Post, errorMessage: string) {
+    await prisma.$transaction([
+        prisma.post.update({
+            where: { id: post.id },
+            data: { 
+                status: 'FAILED',
+                updatedAt: new Date()
+            }
+        }),
+        prisma.notification.create({
+            data: {
+                userId: post.userId,
+                type: "POST_FAILED",
+                title: "YouTube Upload Failed",
+                message: `Failed to upload your video to YouTube: ${errorMessage}`,
+                metadata: {
+                    postId: post.id,
+                    platform: "YOUTUBE",
+                    error: errorMessage
+                }
+            }
+        })
+    ]);
+
+    console.error('YouTube upload failed for post:', post.id, errorMessage);
+}
+
+// Analytics and status functions
+export async function fetchYouTubeVideoAnalytics(post: Post) {
+    if (!post?.userId) throw new Error("Missing userId");
+
+    const videoId = extractVideoIdFromUrl(post.url);
+    if (!videoId) throw new Error("Missing or invalid YouTube video URL");
+
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
+        where: { 
+            userId: post.userId, 
+            socialAccount: { platform: "YOUTUBE" }
+        },
+        include: { socialAccount: true }
+    });
+
+    if (!userSocialAccount) {
+        throw new Error("No connected YouTube account found");
+    }
+
+    const socialAccount = userSocialAccount.socialAccount;
+    let accessToken = socialAccount.accessToken;
+    if (isTokenExpired(socialAccount.tokenExpiresAt)) {
+        accessToken = await refreshYouTubeToken(socialAccount);
+    }
+
+    const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=statistics,snippet,status`,
+        { 
+            headers: { 
+                "Authorization": `Bearer ${accessToken}`,
+                "Accept": "application/json"
+            } 
+        }
+    );
+
+    if (!res.ok) {
+        throw new Error(`YouTube API failed: ${await res.text()}`);
+    }
+
+    const data = await res.json();
+    
+    if (!data.items || data.items.length === 0) {
+        throw new Error("Video not found on YouTube");
+    }
+
+    const video = data.items[0];
+    return {
+        viewCount: parseInt(video.statistics?.viewCount || "0"),
+        likeCount: parseInt(video.statistics?.likeCount || "0"),
+        commentCount: parseInt(video.statistics?.commentCount || "0"),
+        privacyStatus: video.status?.privacyStatus,
+        title: video.snippet?.title,
+        description: video.snippet?.description,
+    };
+}
+
+export async function checkYouTubeVideoStatus(post: Post) {
+    if (!post.url) throw new Error("Post has no YouTube URL");
+
+    const videoId = extractVideoIdFromUrl(post.url);
+    if (!videoId) throw new Error("Invalid YouTube URL");
+
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
+        where: { 
+            userId: post.userId, 
+            socialAccount: { platform: "YOUTUBE" }
+        },
+        include: { socialAccount: true }
+    });
+
+    if (!userSocialAccount) {
+        throw new Error("No connected YouTube account found");
+    }
+
+    const socialAccount = userSocialAccount.socialAccount;
+    let accessToken = socialAccount.accessToken;
+    if (isTokenExpired(socialAccount.tokenExpiresAt)) {
+        accessToken = await refreshYouTubeToken(socialAccount);
+    }
+
+    const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=status`,
+        { 
+            headers: { 
+                "Authorization": `Bearer ${accessToken}`,
+                "Accept": "application/json"
+            } 
+        }
+    );
+
+    if (!res.ok) {
+        throw new Error(`YouTube API failed: ${await res.text()}`);
+    }
+
+    const data = await res.json();
+    return data.items?.[0]?.status || null;
+}
+
+function extractVideoIdFromUrl(url: string | null): string | null {
+    if (!url) return null;
+    
+    try {
+        const urlObj = new URL(url);
+        return urlObj.searchParams.get('v') || url.split('/').pop() || null;
+    } catch {
+        return url.split('v=')[1]?.split('&')[0] || null;
+    }
+}
+
+// Utility function to test YouTube connection
+export async function testYouTubeConnection(accessToken: string): Promise<boolean> {
+    try {
+        const response = await fetch(
+            'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/json'
+                }
+            }
+        );
+
+        if (response.status === 401) {
+            throw new Error('Invalid or expired access token');
+        }
+
+        if (!response.ok) {
+            throw new Error(`YouTube API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return !!data.items && data.items.length > 0;
+    } catch (error) {
+        console.error('YouTube connection test failed:', error);
+        throw error;
+    }
+}
