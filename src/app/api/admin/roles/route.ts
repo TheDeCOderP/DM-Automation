@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       }
     })
     
-    if(user?.role.name != "SUPERADMIN"){
+    if(user?.role.name != "SuperAdmin"){
       return new NextResponse("Unauthorized", { status: 401 });
     }
     

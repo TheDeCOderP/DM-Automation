@@ -108,24 +108,26 @@ export async function publishToYouTube(
     if (!post) {
         throw new Error("Invalid input for publishToYouTube");
     }
-
+console.log('Publishing to YouTube:', post);
     // Find YouTube account
     const userSocialAccount = await prisma.userSocialAccount.findFirst({
-        where: {
-            userId: post.userId,
-            socialAccount: {
-                platform: "YOUTUBE",
-                brands: {
-                    some: {
-                        brandId: post.brandId,
-                    },
-                },
-            },
-        },
-        include: {
-            socialAccount: true,
-        },
+      where: {
+        userId: post.userId,
+        socialAccount: {
+          platform: 'YOUTUBE',
+          brands: {
+            some: {
+              brandId: post.brandId
+            }
+          }
+        }
+      },
+      include: {
+        socialAccount: true,
+        user: true
+      }
     });
+
 
     if (!userSocialAccount) {
         await handlePostFailure(post, "No connected YouTube account found for this brand");

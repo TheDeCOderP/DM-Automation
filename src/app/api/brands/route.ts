@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
             include: {
                 brand: {
                     include: {
-                        // Correct way to include social accounts through the junction table
                         socialAccounts: {
                             where: {
                                 socialAccount: {
@@ -32,26 +31,60 @@ export async function GET(req: NextRequest) {
                             include: {
                                 socialAccount: {
                                     include: {
-                                        // Include page tokens if needed
                                         pageTokens: true
                                     }
                                 }
                             }
+                        },
+                        // Include members to show role information
+                        members: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                        image: true,
+                                    }
+                                },
+                                role: {
+                                    select: {
+                                        name: true,
+                                    }
+                                },
+                            }
                         }
                     }
-                }
+                },
+                role: true, // Include user's role for each brand
             },
         });
 
-        // Transform the data to make it more usable
+        console.log("Fetched userBrands:", JSON.stringify(userBrands, null, 2));
+
+        // Transform the data to include role and members information
         const brands = userBrands.map(ub => ({
             ...ub.brand,
             // Flatten the socialAccounts structure
             socialAccounts: ub.brand.socialAccounts.map(sa => ({
                 ...sa.socialAccount,
-                // You can add any additional fields from the junction table here
+            })),
+            // Include user's role for this specific brand
+            userRole: ub.role.name,
+            isAdmin: ub.role.name === "BrandAdmin",
+            // Include all members (users who have access to this brand)
+            members: ub.brand.members.map(member => ({
+                id: member.user.id,
+                name: member.user.name,
+                email: member.user.email,
+                image: member.user.image,
+                role: member.role.name,
+                // Add isCurrentUser flag to identify the current user
+                isCurrentUser: member.user.id === token.id
             }))
         }));
+
+        console.log("Transformed brands:", JSON.stringify(brands, null, 2));
 
         return NextResponse.json({ data: brands }, { status: 200 });
     } catch (error) {

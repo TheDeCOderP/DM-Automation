@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 
 // Define admin roles that should see everything
-const ADMIN_ROLES = ["SUPERADMIN", "ADMIN"];
+const ADMIN_ROLES = ["SuperAdmin", "Admin"];
 
 export async function GET(req: NextRequest) {
   try {

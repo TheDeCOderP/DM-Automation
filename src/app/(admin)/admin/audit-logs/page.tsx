@@ -244,7 +244,7 @@ async function AuditLogsContent() {
 export default async function AuditLogsPage() {
   const session = await getServerSession(authOptions);
   
-  if (!session?.user || !["ADMIN", "SUPERADMIN"].includes(session.user.role || '')) {
+  if (!session?.user || !["Admin", "SuperAdmin"].includes(session.user.role || '')) {
     return (
       <div className="container mx-auto p-6">
         <Alert variant="destructive">

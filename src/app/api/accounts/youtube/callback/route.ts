@@ -43,11 +43,6 @@ export async function GET(request: NextRequest) {
   const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/youtube/callback`;
 
   try {
-    console.log('Exchanging code for tokens...');
-    console.log('Redirect URI:', redirectUri);
-    console.log('Client ID exists:', !!process.env.GOOGLE_CLIENT_ID);
-    console.log('Client Secret exists:', !!process.env.GOOGLE_CLIENT_SECRET);
-
     // 1. Exchange code for tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -161,6 +156,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log("Linking YouTube account to brand:", { brandId, socialAccountId: account.id });
     console.log('YouTube account connected successfully');
 
     // 4. Redirect to dashboard

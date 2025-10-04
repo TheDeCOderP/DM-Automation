@@ -147,6 +147,10 @@ model User {
   AuditLog      AuditLog[]
   blogs         Blog[]
   socialAccounts UserSocialAccount[]
+  
+  // Add these two relations for BrandInvitation
+  sentBrandInvitations BrandInvitation[] @relation("SentBrandInvitations")
+  acceptedBrandInvitations BrandInvitation[] @relation("AcceptedBrandInvitations")
 }
 
 model Brand {
@@ -162,15 +166,18 @@ model Brand {
   posts          Post[]
   media          Media[]
   socialAccounts SocialAccountBrand[]
+  BrandInvitations BrandInvitation[]
 }
 
 model UserBrand {
   id        String   @id @default(cuid())
   userId    String
   brandId   String
+  roleId    String   @default("PCR-0003")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
@@ -300,6 +307,36 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+  REJECTED
+}
+
+model BrandInvitation {
+  id           String           @id @default(cuid())
+  brandId      String
+  brand        Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  status       InvitationStatus @default(PENDING)
+  token        String           @unique
+  expiresAt    DateTime
+  invitedById  String
+  invitedBy    User             @relation(fields: [invitedById], references: [id], onDelete: Cascade, name: "SentBrandInvitations")
+  invitedToId  String
+  invitedTo    User             @relation(fields: [invitedToId], references: [id], onDelete: Cascade, name: "AcceptedBrandInvitations")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([brandId, invitedToId, status])
+  @@index([token])
+  @@index([expiresAt])
+  @@index([invitedById])
+  @@index([invitedToId])
+  @@index([brandId, invitedToId, status])
+}
+
 model Role {
   id                 String               @id @default(cuid())
   name               String               @unique
@@ -312,6 +349,7 @@ model Role {
   SidebarGroupAccess SidebarGroupAccess[]
   SidebarItemAccess  SidebarItemAccess[]
   RolePageAccess     RolePageAccess[]
+  UserBrand          UserBrand[]
 
   @@unique([id])
 }

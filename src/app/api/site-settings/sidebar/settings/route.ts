@@ -14,7 +14,7 @@ async function checkAuth(req: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  if (!["ADMIN", "SUPERADMIN"].includes(user.role.name)) {
+  if (!["Admin", "SuperAdmin"].includes(user.role.name)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;

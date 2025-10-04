@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `UserBrand` ADD COLUMN `role` VARCHAR(191) NOT NULL DEFAULT 'PCR-0003';
