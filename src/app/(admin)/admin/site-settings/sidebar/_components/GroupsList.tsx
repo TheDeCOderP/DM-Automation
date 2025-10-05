@@ -8,18 +8,8 @@ interface SidebarGroup {
   id: string;
   title: string;
   position: number;
-  items: {
-    label: string;
-    id: string;
-    href: string;
-    icon: string | null;
-    position: number;
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    sidebarGroupId: string;
-  }[];
-  roleAccess?: { roleId: string; hasAccess: boolean; role: string; }[] | undefined;
+  items: SidebarItem[];
+  roleAccess?: { roleId: string; hasAccess: boolean; role: string }[];
 }
 
 interface SidebarItem {

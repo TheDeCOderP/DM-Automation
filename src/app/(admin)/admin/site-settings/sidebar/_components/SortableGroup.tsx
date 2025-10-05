@@ -4,13 +4,21 @@ import { Draggable } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash, GripVertical } from "lucide-react";
 
-import { SidebarItem } from "@prisma/client";
 
 interface SidebarGroup {
   id: string;
   title: string;
   position: number;
   items: SidebarItem[];
+  roleAccess?: { roleId: string; hasAccess: boolean; role: string }[];
+}
+
+interface SidebarItem {
+  id: string;
+  label: string;
+  href: string;
+  icon?: string;
+  position: number;
   roleAccess?: { roleId: string; hasAccess: boolean; role: string }[];
 }
 
