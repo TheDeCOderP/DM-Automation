@@ -1,31 +1,24 @@
 // middleware.ts
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
-    console.log('Middleware triggered');
-  const { pathname } = request.nextUrl;
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
   
-  // Get session token from cookies
-  const sessionToken = request.cookies.get('next-auth.session-token')?.value || 
-                       request.cookies.get('__Secure-next-auth.session-token')?.value;
-  
-  console.log('Session token exists:', !!sessionToken);
-  console.log('Pathname:', pathname);
+  const sessionToken = await getToken({ req });
 
-  // Public routes that should redirect to dashboard if authenticated
   const publicRoutes = ['/', '/login', '/signup'];
   
   if (sessionToken && publicRoutes.includes(pathname)) {
-    console.log('Redirecting to /posts/calendar');
-    return NextResponse.redirect(new URL('/posts/calendar', request.url));
+    return NextResponse.redirect(new URL('/posts/calendar', req.url));
   }
 
   // Protect private routes
   const privateRoutes = ['/posts', '/dashboard', '/profile'];
   if (!sessionToken && privateRoutes.some(route => pathname.startsWith(route))) {
     console.log('Redirecting to /login');
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/login', req.url));
   }
 
   return NextResponse.next();

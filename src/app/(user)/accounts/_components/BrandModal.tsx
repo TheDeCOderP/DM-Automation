@@ -18,7 +18,7 @@ interface BrandModalProps {
   onSuccess?: (brand: Brand) => void
 }
 
-export function BrandModal({ open, onOpenChange, onSuccess, brand }: BrandModalProps) {
+export default function BrandModal({ open, onOpenChange, onSuccess, brand }: BrandModalProps) {
   const isEditMode = !!brand
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)

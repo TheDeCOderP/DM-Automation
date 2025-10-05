@@ -60,8 +60,6 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        console.log("Fetched userBrands:", JSON.stringify(userBrands, null, 2));
-
         // Transform the data to include role and members information
         const brands = userBrands.map(ub => ({
             ...ub.brand,
@@ -83,8 +81,6 @@ export async function GET(req: NextRequest) {
                 isCurrentUser: member.user.id === token.id
             }))
         }));
-
-        console.log("Transformed brands:", JSON.stringify(brands, null, 2));
 
         return NextResponse.json({ data: brands }, { status: 200 });
     } catch (error) {

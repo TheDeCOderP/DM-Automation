@@ -5,20 +5,20 @@ import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRightToLine, Globe, LayoutDashboard, Share2 } from "lucide-react";
 
-import MediaUpload from "@/components/features/MediaUpload";
-import CaptionsCard from "@/components/features/CaptionsCard";
-import AccountsCard from "@/components/features/AccountsCard";
-import BrandsCard from "@/components/features/BrandsCard";
-
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
 import type { Platform, SocialAccount, Brand, PageToken } from "@prisma/client";
 import type { ScheduleData } from "@/types/scheduled-data";
-import SchedulePostModal from "@/components/modals/SchedulePostModal";
+
+import BrandsCard from "./_components/BrandsCard";
+import MediaUpload from "./_components/MediaUpload";
+import CaptionsCard from "./_components/CaptionsCard";
+import AccountsCard from "./_components/AccountsCard";
+import SchedulePostModal from "./_components/SchedulePostModal";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

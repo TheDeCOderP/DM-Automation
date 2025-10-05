@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-import { SocialAccount, Platform } from "@prisma/client";
 import { getPlatformIcon } from "@/utils/ui/icons";
+import { SocialAccount, Platform } from "@prisma/client";
 
 type SocialAccountWithUser = SocialAccount & {
   user: { image: string | null };
@@ -34,7 +34,7 @@ const platforms = [
   { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500" },
 ];
 
-export function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {
+export default function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {
   const { data: session } = useSession();
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);

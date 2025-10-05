@@ -104,7 +104,7 @@ export default function ZohoWorkDrivePicker({
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch files');
       }
-console.log("Fetched files:", data);
+
       if (data.success) {
         let filteredFiles = data.files || [];
         

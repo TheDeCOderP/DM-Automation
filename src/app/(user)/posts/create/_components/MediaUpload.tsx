@@ -12,9 +12,9 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import GoogleDrivePicker from "./GoogleDrivePicker";
-import { getPlatformIcon } from "@/utils/ui/icons";
-import ZohoFilesManager from "./ZohoWorkDrive";
+
+import ZohoWorkDrivePicker from "@/components/features/ZohoWorkDrive";
+import GoogleDrivePicker from "@/components/features/GoogleDrivePicker";
 
 interface MediaFile {
   file: File
@@ -383,7 +383,7 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
             </div>
           </div>
 
-          <ZohoFilesManager onFileSelect={handleFileAdd} />
+          <ZohoWorkDrivePicker onFileSelect={handleFileAdd} />
 
           <Button 
             onClick={handleGenerateClick}

@@ -4,12 +4,12 @@ import useSWR from "swr";
 import { useState } from "react";
 import { Facebook, Info } from "lucide-react";
 
-import { Label } from "../ui/label";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
-import { Skeleton } from "../ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { getPlatformIcon } from "@/utils/ui/icons";
 import type { PageToken, SocialAccount } from "@prisma/client";
