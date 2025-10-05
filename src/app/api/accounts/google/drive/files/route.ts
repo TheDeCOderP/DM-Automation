@@ -6,58 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SocialAccount } from "@prisma/client";
 import { decryptToken } from "@/lib/encryption";
 
-function isTokenExpired(expiresAt: Date | null | undefined): boolean {
-  if (!expiresAt) return true;
-  return new Date(expiresAt).getTime() < Date.now() + 60_000; // 1 min buffer
-}
-
-async function refreshGoogleToken(socialAccount: SocialAccount): Promise<string> {
-  if (!socialAccount.refreshToken) {
-    // Since isConnected field doesn't exist, we can't update it
-    throw new Error("Google refresh token missing. Re-auth required.");
-  }
-
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Google client credentials not configured.");
-  }
-
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: socialAccount.refreshToken,
-      grant_type: "refresh_token",
-    }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    console.error("Failed to refresh Google token:", data);
-    throw new Error(
-      `Could not refresh Google token. Reason: ${data.error_description || data.error || "Unknown error"}`
-    );
-  }
-
-  const newAccessToken = data.access_token as string;
-  const expiresIn = typeof data.expires_in === "number" ? data.expires_in : parseInt(data.expires_in || "0", 10);
-  const newExpiresAt = new Date(Date.now() + expiresIn * 1000);
-
-  await prisma.socialAccount.update({
-    where: { id: socialAccount.id },
-    data: {
-      accessToken: newAccessToken,
-      tokenExpiresAt: newExpiresAt,
-    },
-  });
-
-  console.log("✅ Refreshed Google token");
-  return newAccessToken;
-}
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 
 export async function GET(req: NextRequest) {
   try {
@@ -95,7 +44,7 @@ export async function GET(req: NextRequest) {
 
     let accessToken = await decryptToken(account.accessToken);
     if (!accessToken || isTokenExpired(account.tokenExpiresAt)) {
-      accessToken = await refreshGoogleToken(account);
+      accessToken = await refreshAccessToken(account);
     }
 
     const oauth2Client = new google.auth.OAuth2(

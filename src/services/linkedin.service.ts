@@ -1,6 +1,7 @@
-import { decryptToken } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { Post, Media } from "@prisma/client";
+import { isTokenExpired } from "@/utils/token";
+import { decryptToken } from "@/lib/encryption";
 
 interface LinkedInMedia {
   status: string;
@@ -300,11 +301,6 @@ async function handleLinkedInPostFailure(
       }
     })
   ]);
-}
-
-function isTokenExpired(expiresAt: Date | null): boolean {
-  if (!expiresAt) return true;
-  return new Date(expiresAt) < new Date(Date.now() + 300000); // 5 minute buffer
 }
 
 export async function fetchLinkedInPostAnalytics(post: Post) {

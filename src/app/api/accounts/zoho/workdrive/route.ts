@@ -1,7 +1,7 @@
 // app/api/accounts/zoho/workdrive/route.ts
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
-import { SocialAccount, Platform } from "@prisma/client";
+import { Platform } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {

@@ -1,59 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { isTokenExpired } from "@/utils/token";
 import { decryptToken } from "@/lib/encryption";
 import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
-
-interface TwitterTokenResponse {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-    token_type?: string;
-    scope?: string;
-    error?: string;
-    error_description?: string;
-}
-
-interface TwitterErrorResponse {
-    error: string;
-    error_description?: string;
-    detail?: string;
-}
-
-interface TwitterMediaUploadResponse {
-    media_id: number;
-    media_id_string: string;
-    size: number;
-    expires_after_secs: number;
-    image?: {
-        image_type: string;
-        w: number;
-        h: number;
-    };
-    video?: {
-        video_type: string;
-    };
-}
-
-interface TwitterTweetResponse {
-    data: {
-        id: string;
-        text: string;
-    };
-    errors?: Array<{
-        detail: string;
-        title: string;
-        resource_type: string;
-        parameter: string;
-        value: string;
-        type: string;
-    }>;
-}
-
-interface TweetBody {
-    text: string;
-    media?: {
-        media_ids: string[];
-    };
-}
+import type { TwitterTweetResponse, TweetBody, TwitterErrorResponse, TwitterTokenResponse } from "@/types/twitter";
 
 async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string> {
     if (!socialAccount.refreshToken) {
@@ -111,11 +60,6 @@ async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string
 
     console.log("Successfully refreshed and updated Twitter token");
     return newAccessToken;
-}
-
-function isTokenExpired(expiresAt: Date | null): boolean {
-    if (!expiresAt) return true;
-    return new Date(expiresAt) < new Date(Date.now() + 60000); // 1 minute buffer
 }
 
 export async function publishToTwitter(

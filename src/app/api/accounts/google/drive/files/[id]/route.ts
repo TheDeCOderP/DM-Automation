@@ -3,77 +3,9 @@ import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import type { SocialAccount } from "@prisma/client";
+
 import { decryptToken } from "@/lib/encryption";
-
-/**
- * Helper that checks whether a Date is expired (with a 60s buffer).
- */
-function isTokenExpired(expiresAt: Date | null | undefined): boolean {
-  if (!expiresAt) return true;
-  return new Date(expiresAt).getTime() < Date.now() + 60_000; // 60s buffer
-}
-
-/**
- * Refresh Google access token using the stored refresh token.
- * Updates the SocialAccount row in the DB with the new access token and expiry.
- */
-async function refreshGoogleToken(socialAccount: SocialAccount): Promise<string> {
-  if (!socialAccount.refreshToken) {
-    // Since isConnected field doesn't exist, we can't update it
-    throw new Error("Google refresh token is missing. User needs to re-authenticate.");
-  }
-
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Google client credentials are not configured.");
-  }
-
-  const tokenUrl = "https://oauth2.googleapis.com/token";
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    refresh_token: socialAccount.refreshToken,
-    grant_type: "refresh_token",
-  });
-
-  const res = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    console.error("Failed to refresh Google token:", data);
-    // Since isConnected field doesn't exist, we can't update it
-    throw new Error(
-      `Could not refresh Google token. Reason: ${data.error_description || data.error || "Unknown error"}`
-    );
-  }
-
-  const newAccessToken = data.access_token as string | undefined;
-  const expiresIn = typeof data.expires_in === "number" ? data.expires_in : parseInt(data.expires_in || "0", 10);
-
-  if (!newAccessToken) {
-    throw new Error("Refresh response did not contain access_token.");
-  }
-
-  const newExpiresAt = expiresIn && !Number.isNaN(expiresIn)
-    ? new Date(Date.now() + expiresIn * 1000)
-    : null;
-
-  await prisma.socialAccount.update({
-    where: { id: socialAccount.id },
-    data: {
-      accessToken: newAccessToken,
-      tokenExpiresAt: newExpiresAt,
-    },
-  });
-
-  return newAccessToken;
-}
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 
 /**
  * GET handler - downloads a Google Drive file by ID for the authenticated user
@@ -124,7 +56,7 @@ export async function GET(
     // If token expired (or missing), refresh
     let accessToken = await decryptToken(socialAccount.accessToken);
     if (!accessToken || isTokenExpired(socialAccount.tokenExpiresAt)) {
-      accessToken = await refreshGoogleToken(socialAccount);
+      accessToken = await refreshAccessToken(socialAccount);
     }
 
     // Construct OAuth2 client with credentials

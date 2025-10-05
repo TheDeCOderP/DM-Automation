@@ -3,63 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 import { SocialAccount } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 import { decryptToken, encryptToken } from '@/lib/encryption';
 import { ZohoFile, ZohoApiFile, ZohoTokenResponse, ZohoFilesResponse } from '@/types/zoho';
 
 const ZOHO_WORKDRIVE_API_URL = 'https://www.zohoapis.in/workdrive/api/v1';
-
-class ZohoApiError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public originalError?: unknown
-  ) {
-    super(message);
-    this.name = 'ZohoApiError';
-  }
-}
-
-async function refreshZohoToken(socialAccount: SocialAccount): Promise<string> {
-  if (!socialAccount.refreshToken) {
-    throw new ZohoApiError('Zoho refresh token is missing. User needs to re-authenticate.', 401);
-  }
-
-  try {
-    const refreshRes = await fetch('https://accounts.zoho.in/oauth/v2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.ZOHO_CLIENT_ID!,
-        client_secret: process.env.ZOHO_CLIENT_SECRET!,
-        refresh_token: socialAccount.refreshToken,
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    const data: ZohoTokenResponse = await refreshRes.json();
-    
-    if (!refreshRes.ok) {
-      throw new ZohoApiError(data.error || 'Failed to refresh token', refreshRes.status);
-    }
-
-    const { access_token, expires_in } = data;
-    const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
-    const encryptedAccessToken = await encryptToken(access_token);
-
-    await prisma.socialAccount.update({
-      where: { id: socialAccount.id },
-      data: {
-        accessToken: encryptedAccessToken,
-        tokenExpiresAt,
-      },
-    });
-
-    return access_token;
-  } catch (error) {
-    if (error instanceof ZohoApiError) throw error;
-    throw new ZohoApiError('Failed to refresh Zoho token', 500, error);
-  }
-}
 
 /**
  * Fetch shared files for a user
@@ -74,7 +23,7 @@ async function getSharedFiles(accessToken: string, userId: string): Promise<Zoho
     });
 
     if (!response.ok) {
-      throw new ZohoApiError('Failed to fetch shared files', response.status);
+      throw new Error('Failed to fetch shared files');
     }
 
     const data: ZohoFilesResponse = await response.json();
@@ -88,7 +37,7 @@ async function getSharedFiles(accessToken: string, userId: string): Promise<Zoho
     }));
   } catch (error) {
     console.error('Error fetching shared files:', error);
-    throw new ZohoApiError('Failed to fetch shared files', 500, error);
+    throw new Error('Failed to fetch shared files');
   }
 }
 
@@ -105,7 +54,7 @@ async function getFolderContents(accessToken: string, folderId: string): Promise
     });
 
     if (!response.ok) {
-      throw new ZohoApiError('Failed to fetch folder contents', response.status);
+      throw new Error('Failed to fetch folder contents');
     }
 
     const data: ZohoFilesResponse = await response.json();
@@ -115,7 +64,7 @@ async function getFolderContents(accessToken: string, folderId: string): Promise
     }));
   } catch (error) {
     console.error(`Error fetching folder ${folderId}:`, error);
-    throw new ZohoApiError('Failed to fetch folder contents', 500, error);
+    throw new Error('Failed to fetch folder contents');
   }
 }
 
@@ -155,11 +104,6 @@ function sortFiles(files: ZohoFile[]): ZohoFile[] {
   });
 }
 
-function isTokenExpired(expiresAt: Date | null): boolean {
-    if (!expiresAt) return true;
-    return new Date(expiresAt) < new Date(Date.now() + 60000); // 1 minute buffer
-}
-
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req });
@@ -197,7 +141,7 @@ export async function GET(req: NextRequest) {
     // Token refresh
     let { accessToken } = socialAccount;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
-        accessToken = await refreshZohoToken(socialAccount);
+        accessToken = await refreshAccessToken(socialAccount);
     }
 
     let files: ZohoFile[] = [];

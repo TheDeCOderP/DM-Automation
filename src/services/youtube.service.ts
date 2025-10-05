@@ -1,6 +1,7 @@
 // lib/youtube-service.ts
 import { prisma } from "@/lib/prisma";
 import { decryptToken } from "@/lib/encryption";
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
 
 interface YouTubeTokenResponse {
@@ -44,64 +45,6 @@ interface VideoUploadBody {
     };
 }
 
-async function refreshYouTubeToken(socialAccount: SocialAccount): Promise<string> {
-    if (!socialAccount.refreshToken) {
-        throw new Error("YouTube refresh token is missing. User needs to re-authenticate.");
-    }
-
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-        throw new Error("YouTube client credentials are not configured.");
-    }
-
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            refresh_token: socialAccount.refreshToken,
-            grant_type: "refresh_token",
-        }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        console.error("Failed to refresh YouTube token:", data);
-        throw new Error(
-            `Could not refresh YouTube token. Reason: ${
-                data.error_description || data.error || "Unknown error"
-            }`
-        );
-    }
-
-    const {
-        access_token: newAccessToken,
-        refresh_token: newRefreshToken,
-        expires_in: expiresIn,
-    } = data;
-
-    const newExpiresAt = new Date(Date.now() + expiresIn * 1000);
-    await prisma.socialAccount.update({
-        where: { id: socialAccount.id },
-        data: {
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken || socialAccount.refreshToken,
-            tokenExpiresAt: newExpiresAt,
-        },
-    });
-
-    console.log("Successfully refreshed YouTube token");
-    return newAccessToken;
-}
-
-function isTokenExpired(expiresAt: Date | null): boolean {
-    if (!expiresAt) return true;
-    return new Date() >= new Date(expiresAt.getTime() - 5 * 60 * 1000); // 5 minute buffer
-}
-
 export async function publishToYouTube(
     post: Post & { media?: Media[] }
 ): Promise<{ videoId: string; videoUrl: string; title: string }> {
@@ -143,7 +86,7 @@ console.log('Publishing to YouTube:', post);
     // Refresh token if needed
     let accessToken = socialAccount.accessToken;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
-        accessToken = await refreshYouTubeToken(socialAccount);
+        accessToken = await refreshAccessToken(socialAccount);
     }
 
     // Get media
@@ -450,7 +393,7 @@ export async function fetchYouTubeVideoAnalytics(post: Post) {
 
     let accessToken = socialAccount.accessToken;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
-        accessToken = await refreshYouTubeToken(socialAccount);
+        accessToken = await refreshAccessToken(socialAccount);
     }
 
     const res = await fetch(
@@ -505,7 +448,7 @@ export async function checkYouTubeVideoStatus(post: Post) {
     const socialAccount = userSocialAccount.socialAccount;
     let accessToken = socialAccount.accessToken;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
-        accessToken = await refreshYouTubeToken(socialAccount);
+        accessToken = await refreshAccessToken(socialAccount);
     }
 
     const res = await fetch(

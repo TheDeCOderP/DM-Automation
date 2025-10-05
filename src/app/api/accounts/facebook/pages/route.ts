@@ -1,7 +1,7 @@
 //api/accounts/facebook/pages/route.ts
-import { decryptToken } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { decryptToken } from "@/lib/encryption";
 
 export async function GET(req: Request) {
   try {

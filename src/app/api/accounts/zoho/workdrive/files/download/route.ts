@@ -2,6 +2,8 @@
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { isTokenExpired } from "@/utils/token";
 import { decryptToken, encryptToken } from '@/lib/encryption';
 
 import { ZohoTokenResponse } from '@/types/zoho';
@@ -127,11 +129,6 @@ async function downloadFile(accessToken: string, fileId: string) {
     if (error instanceof ZohoApiError) throw error;
     throw new ZohoApiError('Failed to download file from Zoho WorkDrive', 500, error);
   }
-}
-
-function isTokenExpired(expiresAt: Date | null): boolean {
-    if (!expiresAt) return true;
-    return new Date(expiresAt) < new Date(Date.now() + 60000); // 1 minute buffer
 }
 
 export async function GET(req: NextRequest) {

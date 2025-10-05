@@ -1,6 +1,7 @@
 // lib/social/facebook.ts
 import { prisma } from "@/lib/prisma";
 import { decryptToken } from "@/lib/encryption";
+import { isTokenExpired } from "@/utils/token";
 import { Post, Media, Platform } from "@prisma/client";
 
 interface FacebookPostResponse {
@@ -306,9 +307,4 @@ async function recordSuccessfulFacebookPost(
       }
     })
   ]);
-}
-
-function isTokenExpired(expiresAt: Date | null): boolean {
-  if (!expiresAt) return true;
-  return new Date(expiresAt) < new Date(Date.now() + 300000); // 5 minute buffer
 }
