@@ -9,12 +9,12 @@ export async function GET(req: NextRequest) {
   const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/zoho/workdrive/callback`;
   
     const zohoScope = [
-        'WorkDrive.team.ALL', 
-        'WorkDrive.users.ALL',          // Read access to WorkDrive
-        'WorkDrive.files.ALL',           // All file operations
-        'WorkDrive.teamfolders.ALL',     // All team folder operations (includes team listing)
-        'ZohoFiles.files.READ',
-        'aaaserver.profile.READ'
+      'WorkDrive.team.READ', 
+      'WorkDrive.users.READ',          // Read access to WorkDrive
+      'WorkDrive.files.READ',           // All file operations
+      'WorkDrive.teamfolders.READ',     // All team folder operations (includes team listing)
+      'ZohoFiles.files.READ',
+      'aaaserver.profile.READ'
     ].join(',');
   
   const authUrl = new URL('https://accounts.zoho.in/oauth/v2/auth');

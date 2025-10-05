@@ -229,35 +229,6 @@
   resolved "https://registry.yarnpkg.com/@fontsource/poppins/-/poppins-5.2.7.tgz#bad145a8a625340873faff1f95b254f032e0d588"
   integrity sha512-6uQyPmseo4FgI97WIhA4yWRlNaoLk4vSDK/PyRwdqqZb5zAEuc+Kunt8JTMcsHYUEGYBtN15SNkMajMdqUSUmg==
 
-"@fullcalendar/core@^6.1.18":
-  version "6.1.18"
-  resolved "https://registry.yarnpkg.com/@fullcalendar/core/-/core-6.1.18.tgz#772477215aa45c4cad0f45a83465a9c8095bd15a"
-  integrity sha512-cD7XtZIZZ87Cg2+itnpsONCsZ89VIfLLDZ22pQX4IQVWlpYUB3bcCf878DhWkqyEen6dhi5ePtBoqYgm5K+0fQ==
-  dependencies:
-    preact "~10.12.1"
-
-"@fullcalendar/daygrid@^6.1.18", "@fullcalendar/daygrid@~6.1.18":
-  version "6.1.18"
-  resolved "https://registry.yarnpkg.com/@fullcalendar/daygrid/-/daygrid-6.1.18.tgz#49b4a237d0115b4695cd8593d0dfa36d81fa5ad4"
-  integrity sha512-s452Zle1SdMEzZDw+pDczm8m3JLIZzS9ANMThXTnqeqJewW1gqNFYas18aHypJSgF9Fh9rDJjTSUw04BpXB/Mg==
-
-"@fullcalendar/interaction@^6.1.18":
-  version "6.1.18"
-  resolved "https://registry.yarnpkg.com/@fullcalendar/interaction/-/interaction-6.1.18.tgz#2fbcae93f982af2abfe8a1078bfa740fe559fe44"
-  integrity sha512-f/mD5RTjzw+Q6MGTMZrLCgIrQLIUUO9NV/58aM2J6ZBQZeRlNizDqmqldqyG+j49zj2vFhUfZibPrVKWm5yA4Q==
-
-"@fullcalendar/react@^6.1.18":
-  version "6.1.18"
-  resolved "https://registry.yarnpkg.com/@fullcalendar/react/-/react-6.1.18.tgz#6424d941dbc8aabdbf2db12c44c5e29a45daac11"
-  integrity sha512-Jwvb+T+/1yGZKe+UYXn0id022HJm0Fq2X/PGFvVh/QRYAI/6xPMRvJrwercBkToxf6LjqYXrDO+/NhRN6IDlmg==
-
-"@fullcalendar/timegrid@^6.1.18":
-  version "6.1.18"
-  resolved "https://registry.yarnpkg.com/@fullcalendar/timegrid/-/timegrid-6.1.18.tgz#8673c4870282ade1545f12e81c0dc11d2da039f6"
-  integrity sha512-T/ouhs+T1tM8JcW7Cjx+KiohL/qQWKqvRITwjol8ktJ1e1N/6noC40/obR1tyolqOxMRWHjJkYoj9fUqfoez9A==
-  dependencies:
-    "@fullcalendar/daygrid" "~6.1.18"
-
 "@hello-pangea/dnd@^18.0.1":
   version "18.0.1"
   resolved "https://registry.yarnpkg.com/@hello-pangea/dnd/-/dnd-18.0.1.tgz#7d5ef7fe8bddf195307b16e03635b1be582b7b8d"
@@ -4697,11 +4668,6 @@ preact@^10.6.3:
   version "10.27.0"
   resolved "https://registry.yarnpkg.com/preact/-/preact-10.27.0.tgz#7e614fb651cc1f49275bfb7682e811d759a5364f"
   integrity sha512-/DTYoB6mwwgPytiqQTh/7SFRL98ZdiD8Sk8zIUVOxtwq4oWcwrcd1uno9fE/zZmUaUrFNYzbH14CPebOz9tZQw==
-
-preact@~10.12.1:
-  version "10.12.1"
-  resolved "https://registry.yarnpkg.com/preact/-/preact-10.12.1.tgz#8f9cb5442f560e532729b7d23d42fd1161354a21"
-  integrity sha512-l8386ixSsBdbreOAkqtrwqHwdvR35ID8c3rKPa8lCWuO86dBi32QWHV4vfsZK1utLLFMvw+Z5Ad4XLkZzchscg==
 
 prelude-ls@^1.2.1:
   version "1.2.1"

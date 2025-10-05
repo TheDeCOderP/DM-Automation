@@ -46,7 +46,6 @@ export default function ZohoWorkDrivePicker({
 }: ZohoWorkDrivePickerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [files, setFiles] = useState<ZohoFile[]>([]);
@@ -55,20 +54,16 @@ export default function ZohoWorkDrivePicker({
   const [currentFolder, setCurrentFolder] = useState('shared');
   const [folderPath, setFolderPath] = useState([{ id: 'shared', name: 'Shared Files' }]);
 
-  // Check connection status and fetch token
+  // Check connection status
   useEffect(() => {
-    async function fetchToken() {
+    async function checkConnection() {
       setIsLoading(true);
       try {
         const res = await fetch("/api/accounts/zoho/workdrive");
         
         if (res.ok) {
           const data = await res.json();
-          console.log("Zoho connection data:", data);
-          setIsConnected(true);
-          setAccessToken(data.account.accessToken);
-        } else {
-          setIsConnected(false);
+          setIsConnected(data.isConnected);
         }
       } catch (error) {
         console.error("Error checking Zoho connection:", error);
@@ -78,7 +73,7 @@ export default function ZohoWorkDrivePicker({
       }
     }
 
-    fetchToken();
+    checkConnection();
   }, []);
 
   const fetchFiles = async (folderId = 'shared') => {
@@ -136,48 +131,52 @@ export default function ZohoWorkDrivePicker({
   const downloadFileFromWorkDrive = async (file: ZohoFile) => {
     setIsLoading(true);
     try {
-      if (!file.download_url) {
-        throw new Error('No download URL available for this file');
-      }
-      console.log("Using access token:", accessToken);
-      if (!accessToken) {
-        throw new Error('No access token available');
+      if (!file.id) {
+        throw new Error('File ID is required');
       }
 
-      // Get the file extension from name or use default
-      const fileExtension = getFileExtension(file.name);
-      const fileName = file.name.includes('.') ? file.name : `${file.name}.${fileExtension}`;
-      
-      // Use Zoho-oauthtoken header for Zoho API
-      const response = await fetch(file.download_url, {
-        headers: {
-          'Authorization': `Zoho-oauthtoken ${accessToken}`,
-          'Accept': 'application/json',
-        }
+      const response = await fetch(`/api/accounts/zoho/workdrive/files/download?fileId=${file.id}`, {
+        method: 'GET',
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please reconnect your Zoho account.');
-        }
-        throw new Error(`Failed to download file: ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to download file: ${response.statusText}`);
       }
-      
+
+      // Get the blob and filename from response
       const blob = await response.blob();
       
-      // Determine MIME type from extension if not provided
+      // Extract filename from content-disposition header or use file name
+      const contentDisposition = response.headers.get('content-disposition');
+      let fileName = file.name;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+        if (filenameMatch) {
+          fileName = filenameMatch[1];
+        }
+      }
+
+      // Ensure file has proper extension
+      const fileExtension = getFileExtension(fileName);
+      if (!fileExtension && file.extension) {
+        fileName = `${fileName}.${file.extension}`;
+      }
+
+      // Determine MIME type
       let mimeType = file.mime_type;
       if (!mimeType) {
-        mimeType = getMimeTypeFromExtension(fileExtension);
+        mimeType = getMimeTypeFromExtension(getFileExtension(fileName));
       }
-      
+
       const downloadedFile = new File([blob], fileName, { type: mimeType });
       onFileSelect(downloadedFile);
       setIsPickerOpen(false);
       toast.success("File imported successfully from Zoho WorkDrive");
     } catch (error) {
       console.error("Error downloading file:", error);
-      toast.error("Failed to download file from Zoho WorkDrive");
+      toast.error(error instanceof Error ? error.message : "Failed to download file from Zoho WorkDrive");
     } finally {
       setIsLoading(false);
     }
@@ -475,7 +474,7 @@ export default function ZohoWorkDrivePicker({
                             {formatDate(file.modified_time)}
                           </span>
 
-                          {!file.is_folder && file.download_url && (
+                          {!file.is_folder && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -484,7 +483,7 @@ export default function ZohoWorkDrivePicker({
                                 downloadFileFromWorkDrive(file);
                               }}
                               className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              disabled={!isFileSelectable(file)}
+                              disabled={!isFileSelectable(file) || isLoading}
                             >
                               <Download className="w-4 h-4" />
                             </Button>
