@@ -64,7 +64,10 @@ async function refreshZohoAccessToken(socialAccount: SocialAccount): Promise<str
     const { access_token, refresh_token, expires_in } = data;
 
     const encryptedAccessToken = await encryptToken(access_token);
-    const encryptedRefreshToken = await encryptToken(refresh_token);
+    let encryptedRefreshToken = socialAccount.refreshToken; // fallback
+    if (data.refresh_token) {
+      encryptedRefreshToken = await encryptToken(data.refresh_token);
+    }
     const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
 
     await prisma.socialAccount.update({
