@@ -24,11 +24,10 @@ export async function refreshAccessToken(socialAccount: SocialAccount): Promise<
     case "ZOHO_WORKDRIVE":
       return refreshZohoAccessToken(socialAccount);
     case "GOOGLE":
+    case "YOUTUBE":
       return refreshGoogleAccessToken(socialAccount);
     case "TWITTER":
       return refreshTwitterAccessToken(socialAccount);
-    case "YOUTUBE":
-      return refreshYouTubeAccessToken(socialAccount);
     default:
       throw new Error(`Unsupported platform: ${socialAccount.platform}`);
   }
@@ -40,7 +39,7 @@ async function refreshZohoAccessToken(socialAccount: SocialAccount): Promise<str
   }
 
   if (!process.env.ZOHO_CLIENT_ID || !process.env.ZOHO_CLIENT_SECRET) {
-    throw new Error("Google client credentials are not configured.");
+    throw new Error("Zoho client credentials are not configured.");
   }
 
   try {
@@ -116,7 +115,10 @@ async function refreshGoogleAccessToken(socialAccount: SocialAccount): Promise<s
     const { access_token, refresh_token, expires_in } = data;
 
     const encryptedAccessToken = await encryptToken(access_token);
-    const encryptedRefreshToken = await encryptToken(refresh_token);
+    let encryptedRefreshToken = socialAccount.refreshToken;
+    if (data.refresh_token) {
+      encryptedRefreshToken = await encryptToken(data.refresh_token);
+    }
     const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
 
     await prisma.socialAccount.update({
@@ -187,56 +189,5 @@ async function refreshTwitterAccessToken(socialAccount: SocialAccount): Promise<
     } catch (error) {
       console.error("Error refreshing Twitter token:", error);
       throw new Error("Failed to refresh Twitter token");
-    }
-}
-
-async function refreshYouTubeAccessToken(socialAccount: SocialAccount): Promise<string> {
-    if (!socialAccount.refreshToken) {
-        throw new Error("YouTube refresh token is missing. User needs to re-authenticate.");
-    }
-
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-        throw new Error("YouTube client credentials are not configured.");
-    }
-
-    try {
-      const response = await fetch("https://oauth2.googleapis.com/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            refresh_token: socialAccount.refreshToken,
-            grant_type: "refresh_token",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(`Could not refresh YouTube token. Reason: ${data.error_description || data.error || "Unknown error"}`);
-      }
-
-      const { access_token, refresh_token, expires_in } = data;
-
-      const encryptedAccessToken = await encryptToken(access_token);
-      const encryptedRefreshToken = await encryptToken(refresh_token);
-      const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
-
-      await prisma.socialAccount.update({
-        where: { id: socialAccount.id },
-        data: {
-          accessToken: encryptedAccessToken,
-          refreshToken: encryptedRefreshToken,
-          tokenExpiresAt
-        },
-      });
-
-      return access_token;
-    } catch (error) {
-      console.error("Error refreshing YouTube token:", error);
-      throw new Error("Failed to refresh YouTube token");
     }
 }

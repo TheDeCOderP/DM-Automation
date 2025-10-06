@@ -72,6 +72,10 @@ export async function decryptToken(
   config: EncryptionConfig = defaultConfig
 ): Promise<string> {
   try {
+     if (!encryptedToken.startsWith('{')) {
+      return encryptedToken;
+    }
+
     const { algorithm, key } = config;
     const { iv, encryptedData, authTag } = JSON.parse(encryptedToken) as EncryptedToken;
 

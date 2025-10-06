@@ -122,11 +122,9 @@ export async function GET(req: NextRequest) {
       console.log('Generated fallback user ID:', zohoUserId);
     }
 
-    console.log('Final user details:', { zohoUserId, zohoUsername });
-
     // Encrypt tokens before saving
-    const encryptedAccessToken = await encryptToken(tokenData.access_token);
-    const encryptedRefreshToken = await encryptToken(tokenData.refresh_token || '');
+    const encryptedAccessToken = await encryptToken(access_token);
+    const encryptedRefreshToken = await encryptToken(refresh_token);
 
     // Create or update social account
     const account = await prisma.socialAccount.upsert({
