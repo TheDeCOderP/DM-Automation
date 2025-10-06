@@ -25,30 +25,45 @@ export async function publishToFacebook(
     // 1. Get Facebook account through user relation
     const userSocialAccount = await prisma.userSocialAccount.findFirst({
       where: {
-        userId: post.userId,
-        socialAccount: {
-          platform: Platform.FACEBOOK,
-          brands: {
-            some: {
-              brandId: post.brandId,
+        OR: [
+          // Case 1: User personally connected the brand’s LinkedIn account
+          {
+            userId: post.userId,
+            socialAccount: {
+              platform: 'FACEBOOK',
+              brands: {
+                some: {
+                  brandId: post.brandId
+                }
+              }
             }
-          }
-        }
-      },
-      include: {
-        user: true,
-        socialAccount: {
-          include: {
-            brands: {
-              include: {
-                brand: true
+          },
+          // Case 2: Another user connected the LinkedIn account, but it's linked to the same brand
+          {
+            socialAccount: {
+              platform: 'FACEBOOK',
+              brands: {
+                some: {
+                  brandId: post.brandId
+                }
               }
             },
-            pageTokens: true
+            user: {
+              brands: {
+                some: {
+                  brandId: post.brandId
+                }
+              }
+            }
           }
-        }
+        ]
+      },
+      include: {
+        socialAccount: true,
+        user: true
       }
     });
+
 
     if (!userSocialAccount) {
       // Update post status to failed if no connected account

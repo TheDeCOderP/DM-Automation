@@ -103,7 +103,7 @@ export default function AcceptInvitePage() {
         
         // Redirect to dashboard after 2 seconds
         setTimeout(() => {
-          router.push('/dashboard');
+          router.push('/accounts');
         }, 2000);
       } else {
         console.error("Error accepting invitation:", data);

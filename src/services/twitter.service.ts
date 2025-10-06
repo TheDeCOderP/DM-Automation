@@ -1,66 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { isTokenExpired } from "@/utils/token";
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 import { decryptToken } from "@/lib/encryption";
 import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
 import type { TwitterTweetResponse, TweetBody, TwitterErrorResponse, TwitterTokenResponse } from "@/types/twitter";
-
-async function refreshTwitterToken(socialAccount: SocialAccount): Promise<string> {
-    if (!socialAccount.refreshToken) {
-        throw new Error("Twitter refresh token is missing. User needs to re-authenticate.");
-    }
-
-    if (!process.env.TWITTER_CLIENT_ID || !process.env.TWITTER_CLIENT_SECRET) {
-        throw new Error("Twitter client credentials are not configured.");
-    }
-
-    const basicAuth = Buffer.from(
-        `${process.env.TWITTER_CLIENT_ID}:${process.env.TWITTER_CLIENT_SECRET}`
-    ).toString("base64");
-
-    const response = await fetch("https://api.twitter.com/2/oauth2/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${basicAuth}`,
-        },
-        body: new URLSearchParams({
-            refresh_token: socialAccount.refreshToken,
-            grant_type: "refresh_token",
-            client_id: process.env.TWITTER_CLIENT_ID!,
-        }),
-    });
-
-    const data: TwitterTokenResponse | TwitterErrorResponse = await response.json();
-
-    if (!response.ok) {
-        console.error("Failed to refresh Twitter token:", data);
-        const errorData = data as TwitterErrorResponse;
-        throw new Error(
-            `Could not refresh Twitter token. Reason: ${
-                errorData.error_description || errorData.error || "Unknown error"
-            }`
-        );
-    }
-
-    const {
-        access_token: newAccessToken,
-        refresh_token: newRefreshToken,
-        expires_in: expiresIn,
-    } = data as TwitterTokenResponse;
-
-    const newExpiresAt = new Date(Date.now() + expiresIn * 1000);
-    await prisma.socialAccount.update({
-        where: { id: socialAccount.id },
-        data: {
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-            tokenExpiresAt: newExpiresAt,
-        },
-    });
-
-    console.log("Successfully refreshed and updated Twitter token");
-    return newAccessToken;
-}
 
 export async function publishToTwitter(
     post: Post & { media?: Media[] }
@@ -72,21 +14,45 @@ export async function publishToTwitter(
     // Find Twitter account through user junction table
     const userSocialAccount = await prisma.userSocialAccount.findFirst({
         where: {
-            userId: post.userId,
-            socialAccount: {
-                platform: "TWITTER",
+            OR: [
+            // Case 1: User personally connected the brand’s LinkedIn account
+            {
+                userId: post.userId,
+                socialAccount: {
+                platform: 'TWITTER',
                 brands: {
                     some: {
-                        brandId: post.brandId,
-                    },
-                },
+                    brandId: post.brandId
+                    }
+                }
+                }
             },
+            // Case 2: Another user connected the LinkedIn account, but it's linked to the same brand
+            {
+                socialAccount: {
+                platform: 'TWITTER',
+                brands: {
+                    some: {
+                    brandId: post.brandId
+                    }
+                }
+                },
+                user: {
+                brands: {
+                    some: {
+                    brandId: post.brandId
+                    }
+                }
+                }
+            }
+            ]
         },
         include: {
             socialAccount: true,
             user: true
-        },
+        }
     });
+
 
     if (!userSocialAccount) {
         await prisma.post.update({
@@ -119,7 +85,7 @@ export async function publishToTwitter(
     // Token refresh
     let { accessToken } = socialAccount;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
-        accessToken = await refreshTwitterToken(socialAccount);
+        accessToken = await refreshAccessToken(socialAccount);
     }
 
     // Get media if not provided
@@ -310,7 +276,7 @@ export async function fetchTwitterPostAnalytics(post: Post) {
 
     let { accessToken } = socialAccount;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
-        accessToken = await refreshTwitterToken(socialAccount);
+        accessToken = await refreshAccessToken(socialAccount);
     }
 
     const res = await fetch(

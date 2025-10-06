@@ -58,7 +58,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
   const handleDisconnect = async (accountId: string, platform: Platform) => {
     setDisconnectingId(accountId);
     try {
-      const response = await fetch(`/api/accounts?platform=${platform}&socialAccountId=${accountId}`, {
+      const response = await fetch(`/api/accounts/${platform.toLowerCase()}?brandId=${brandId}`, {
         method: "DELETE",
       });
       

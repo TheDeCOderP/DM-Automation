@@ -53,21 +53,45 @@ export async function publishToLinkedin(
     // 1. Get LinkedIn account through user junction table
     const userSocialAccount = await prisma.userSocialAccount.findFirst({
       where: {
-        userId: post.userId,
-        socialAccount: {
-          platform: 'LINKEDIN',
-          brands: {
-            some: {
-              brandId: post.brandId
+        OR: [
+          // Case 1: User personally connected the brand’s LinkedIn account
+          {
+            userId: post.userId,
+            socialAccount: {
+              platform: 'LINKEDIN',
+              brands: {
+                some: {
+                  brandId: post.brandId
+                }
+              }
+            }
+          },
+          // Case 2: Another user connected the LinkedIn account, but it's linked to the same brand
+          {
+            socialAccount: {
+              platform: 'LINKEDIN',
+              brands: {
+                some: {
+                  brandId: post.brandId
+                }
+              }
+            },
+            user: {
+              brands: {
+                some: {
+                  brandId: post.brandId
+                }
+              }
             }
           }
-        }
+        ]
       },
       include: {
         socialAccount: true,
         user: true
       }
     });
+
 
     if (!userSocialAccount) {
       // Update post status to failed if no connected account
