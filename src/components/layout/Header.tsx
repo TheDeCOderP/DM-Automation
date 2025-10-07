@@ -191,6 +191,12 @@ export default function Header() {
         { title: "Contact", href: "https://prabisha.com/contact/" },
       ],
     },
+    {
+      title: "Resources",
+      items: [
+        { title: "Blogs", href: "/blogs" },
+      ]
+    }
   ];
   
 
@@ -239,7 +245,7 @@ export default function Header() {
             <NavigationMenu>
               <NavigationMenuList>
                 {/* Filter out 'Legal' from the main desktop nav bar if it's meant to be in the footer/separate section */}
-                {menuItems.filter(item => item.title !== "Legal").map((item) => (
+                {menuItems.map((item) => (
                   <NavigationMenuItem key={item.title}>
                     <NavigationMenuTrigger className="text-sm font-medium">
                       {item.title}
@@ -257,21 +263,15 @@ export default function Header() {
                     </NavigationMenuContent>
                   </NavigationMenuItem>
                 ))}
-                {/* Adding a simple link item for 'Legal' if it's meant to be a simple dropdown on desktop */}
-                {/* Or, if "Legal" should also be a dropdown, keep it in the main map. I'll keep it simple for now. */}
-                <NavigationMenuItem>
-                    <Link href={legalLinks[0]?.href || "#"} legacyBehavior passHref>
-                        <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50">
-                            Legal
-                        </NavigationMenuLink>
-                    </Link>
-                </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
           </div>
 
           {/* Desktop CTA Buttons & Theme Toggle */}
           <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             <div className="hidden lg:flex items-center gap-2">
               <Button variant="ghost" asChild>
                 <Link href="/login">Login</Link>
@@ -280,7 +280,6 @@ export default function Header() {
                 <Link href="/register">Get Started</Link>
               </Button>
             </div>
-            <ThemeToggle />
             
             {/* Mobile Menu Button - Moved to the far right for better layout */}
             <Button

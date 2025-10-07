@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   authUrl.searchParams.append('redirect_uri', redirectUri);
   authUrl.searchParams.append(
     'scope',
-    'https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/userinfo.profile'
+    'https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile'
   );
   authUrl.searchParams.append('state', state);
   authUrl.searchParams.append('access_type', 'offline'); // for refresh token

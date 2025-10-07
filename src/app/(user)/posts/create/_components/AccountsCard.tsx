@@ -1,7 +1,7 @@
 "use client"
 
 import useSWR from "swr";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Facebook, Info } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,20 @@ export default function AccountsCard({
     }`,
     fetcher
   )
+
+  // useEffect(() => {
+  //   fetch("/api/accounts/linkedin/pages")
+  //   .then((res: any) => {
+  //     if (!res.ok) throw new Error("Failed to fetch LinkedIn pages");
+  //     return res.json();
+  //   })
+  //   .then((data: any) => {
+  //     console.log(data);
+  //   })
+  //   .catch((error: any) => {
+  //     console.error("Error fetching LinkedIn pages:", error);
+  //   });
+  // })
 
   const facebookPages: PageToken[] = data?.pages || []
   const [rememberAccounts, setRememberAccounts] = useState(false)

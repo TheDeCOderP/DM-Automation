@@ -60,7 +60,7 @@ export async function publishToYouTube(
             {
                 userId: post.userId,
                 socialAccount: {
-                platform: 'LINKEDIN',
+                platform: 'YOUTUBE',
                 brands: {
                     some: {
                     brandId: post.brandId
@@ -106,11 +106,19 @@ export async function publishToYouTube(
         socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);
     }
 
+    // if(await isTokenInvalid(socialAccount.accessToken)){
+    //     throw new Error("Access Token Invalid Before");
+    // }
+
     // Refresh token if needed
     let accessToken = socialAccount.accessToken;
     if (isTokenExpired(socialAccount.tokenExpiresAt)) {
         accessToken = await refreshAccessToken(socialAccount);
     }
+    
+    // if(await isTokenInvalid(accessToken)){
+    //     throw new Error("Access Token Invalid After");
+    // }
 
     // Get media
     const media = post.media || await prisma.media.findMany({ 
@@ -148,6 +156,17 @@ export async function publishToYouTube(
             error instanceof Error ? error.message : "Unknown upload error"
         );
         throw error;
+    }
+}
+
+async function isTokenInvalid(accessToken: string): Promise<boolean> {
+    try {
+        const response = await fetch(
+            'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + accessToken
+        );
+        return !response.ok;
+    } catch {
+        return true;
     }
 }
 

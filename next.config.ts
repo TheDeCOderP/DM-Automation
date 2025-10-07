@@ -12,7 +12,8 @@ const nextConfig: NextConfig = {
       'harrowbusiness.com',
       'placehold.co',
       'lh3.googleusercontent.com',
-      'randomuser.me'
+      'randomuser.me',
+      "media-cdn.prabisha.com"
     ],
   },
   serverExternalPackages: ["twitter-api-v2"]
