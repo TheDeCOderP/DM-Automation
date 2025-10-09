@@ -16,7 +16,6 @@ const nextConfig: NextConfig = {
       "media-cdn.prabisha.com"
     ],
   },
-  serverExternalPackages: ["twitter-api-v2"]
 };
 
 export default nextConfig;

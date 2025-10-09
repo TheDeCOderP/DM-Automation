@@ -67,7 +67,12 @@ async function main() {
     prisma.role.upsert({
       where: { name: "BRAND_USER" },
       update: {},
-      create: { id: "brand_user", name: "BRAND_USER", description: "Brand User" },
+      create: { id: "PCR-0004", name: "BRAND_ADMIN", description: "The one who creates a brand" },
+    }),
+    prisma.role.upsert({
+      where: { name: "BRAND_USER" },
+      update: {},
+      create: { id: "PCR-0005", name: "BRAND_USER", description: "The one who works for a brand" },
     }),
   ]);
 

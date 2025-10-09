@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" next build",
+    "build:memory-optimized": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192 --gc-interval=100 --expose-gc\" next build",
     "start": "next start",
     "lint": "next lint",
-    "studio": "prisma studio"
+    "studio": "prisma studio",
+    "clean": "rimraf .next",
+    "prebuild": "yarn clean"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -94,8 +97,10 @@
     "@types/papaparse": "^5.3.16",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5"
