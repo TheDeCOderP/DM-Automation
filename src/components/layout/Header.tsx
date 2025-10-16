@@ -198,9 +198,6 @@ export default function Header() {
       ]
     }
   ];
-  
-
-  const legalLinks = menuItems.find(item => item.title === "Legal")?.items || [];
 
   return (
     <nav

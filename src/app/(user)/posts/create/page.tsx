@@ -222,6 +222,7 @@ export default function CreatePostPage() {
       case "accounts":
         return (
           <AccountsCard
+            brandId={selectedBrandId}
             accounts={brandAccounts}
             selectedAccounts={selectedAccounts}
             setSelectedAccounts={setSelectedAccounts}
@@ -319,6 +320,7 @@ export default function CreatePostPage() {
             <TabsContent value="accounts" className="mt-0">
               <div className="max-w-5xl mx-auto">
                 <AccountsCard
+                  brandId={selectedBrandId}
                   accounts={brandAccounts}
                   selectedAccounts={selectedAccounts}
                   setSelectedAccounts={setSelectedAccounts}

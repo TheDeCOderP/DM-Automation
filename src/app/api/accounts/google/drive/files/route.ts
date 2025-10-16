@@ -3,7 +3,6 @@ import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import type { SocialAccount } from "@prisma/client";
 import { decryptToken } from "@/lib/encryption";
 
 import { isTokenExpired, refreshAccessToken } from "@/utils/token";

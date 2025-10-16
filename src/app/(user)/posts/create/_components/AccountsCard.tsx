@@ -1,8 +1,8 @@
 "use client"
 
 import useSWR from "swr";
-import { useEffect, useState } from "react";
-import { Facebook, Info } from "lucide-react";
+import { useState } from "react";
+import { Facebook, Linkedin, Info } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { getPlatformIcon } from "@/utils/ui/icons";
 import type { PageToken, SocialAccount } from "@prisma/client";
 
 interface AccountsCardProps {
+  brandId: string
   accounts: SocialAccount[]
   selectedAccounts: string[]
   setSelectedAccounts: React.Dispatch<React.SetStateAction<string[]>>
@@ -25,67 +26,84 @@ interface AccountsCardProps {
 const fetcher = (url: string) => fetch(url).then((res: Response) => res.json())
 
 export default function AccountsCard({
+  brandId,
   accounts,
   selectedAccounts,
   setSelectedAccounts,
   selectedPageTokenIds,
   setSelectedPageTokenIds,
 }: AccountsCardProps) {
-  const { data, isLoading } = useSWR(
+  const { data: facebookData, isLoading: facebookLoading } = useSWR(
     `/api/accounts/facebook/pages?platformUserId=${
       accounts.find((acc) => acc.platform === "FACEBOOK")?.platformUserId || ""
     }`,
     fetcher
-  )
+  );
 
-  // useEffect(() => {
-  //   fetch("/api/accounts/linkedin/pages")
-  //   .then((res: any) => {
-  //     if (!res.ok) throw new Error("Failed to fetch LinkedIn pages");
-  //     return res.json();
-  //   })
-  //   .then((data: any) => {
-  //     console.log(data);
-  //   })
-  //   .catch((error: any) => {
-  //     console.error("Error fetching LinkedIn pages:", error);
-  //   });
-  // })
+  const { data: linkedinData, isLoading: linkedinLoading } = useSWR(
+    `/api/accounts/linkedin/pages?platformUserId=${
+      accounts.find((acc) => acc.platform === "LINKEDIN")?.platformUserId || ""
+    }`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
+  );
 
-  const facebookPages: PageToken[] = data?.pages || []
-  const [rememberAccounts, setRememberAccounts] = useState(false)
+  const facebookPages: PageToken[] = facebookData?.pages || [];
+  const linkedinPages: PageToken[] = linkedinData?.pages || [];
+  
+  const [rememberAccounts, setRememberAccounts] = useState(false);
+
+  // Check if user has LinkedIn personal account to show connect button
+  const hasLinkedInAccount = accounts.some(acc => acc.platform === "LINKEDIN");
+
+  const handleLinkedInPageAccess = () => {
+    try {
+      if (!brandId) {
+        console.error("No brand ID available");
+        return;
+      }
+      
+      window.location.href = `/api/accounts/linkedin/pages/auth?brandId=${brandId}`;
+    } catch (error) {
+      console.error("Error redirecting to LinkedIn auth:", error);
+    }
+  };
 
   const handleAccountChange = (accountId: string, checked: boolean) => {
     setSelectedAccounts((prev) =>
       checked ? [...prev, accountId] : prev.filter((id) => id !== accountId)
-    )
-  }
+    );
+  };
 
   const handlePageTokenChange = (pageId: string, checked: boolean) => {
     setSelectedPageTokenIds((prev) =>
       checked ? [...prev, pageId] : prev.filter((id) => id !== pageId)
-    )
-  }
+    );
+  };
 
   const isAccountSelected = (accountId: string) =>
-    selectedAccounts.includes(accountId)
+    selectedAccounts.includes(accountId);
 
   const isPageTokenSelected = (pageId: string) =>
-    selectedPageTokenIds.includes(pageId)
+    selectedPageTokenIds.includes(pageId);
 
   const handleSelectAll = () => {
-    const allAccountIds = accounts.map((account) => account.id)
-    const allPageIds = facebookPages.map((page) => page.id)
-    setSelectedAccounts(allAccountIds)
-    setSelectedPageTokenIds(allPageIds)
-  }
+    const allAccountIds = accounts.map((account) => account.id);
+    const allFacebookPageIds = facebookPages.map((page) => page.id);
+    const allLinkedinPageIds = linkedinPages.map((page) => page.id);
+    setSelectedAccounts(allAccountIds);
+    setSelectedPageTokenIds([...allFacebookPageIds, ...allLinkedinPageIds]);
+  };
 
   const handleDeselectAll = () => {
-    setSelectedAccounts([])
-    setSelectedPageTokenIds([])
-  }
+    setSelectedAccounts([]);
+    setSelectedPageTokenIds([]);
+  };
 
-  const allSelectedCount = selectedAccounts.length + selectedPageTokenIds.length
+  const allSelectedCount = selectedAccounts.length + selectedPageTokenIds.length;
 
   return (
     <>
@@ -124,7 +142,7 @@ export default function AccountsCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                disabled={accounts.length === 0 && facebookPages.length === 0}
+                disabled={accounts.length === 0 && facebookPages.length === 0 && linkedinPages.length === 0}
               >
                 Select All
               </Button>
@@ -155,6 +173,14 @@ export default function AccountsCard({
                       onCheckedChange={(checked) =>
                         handleAccountChange(account.id, checked as boolean)
                       }
+                      // Disable LinkedIn personal account if LinkedIn pages are selected
+                      disabled={
+                        account.platform === "LINKEDIN" && 
+                        linkedinPages.length > 0 && 
+                        selectedPageTokenIds.some(id => 
+                          linkedinPages.some(page => page.id === id)
+                        )
+                      }
                     />
                     <Avatar className="size-8">
                       <AvatarImage
@@ -169,9 +195,22 @@ export default function AccountsCard({
                       htmlFor={account.id}
                       className={`text-sm font-normal cursor-pointer ${
                         isAccountSelected(account.id) ? "font-bold" : ""
+                      } ${
+                        account.platform === "LINKEDIN" && 
+                        linkedinPages.length > 0 && 
+                        selectedPageTokenIds.some(id => 
+                          linkedinPages.some(page => page.id === id)
+                        ) ? "opacity-50" : ""
                       }`}
                     >
                       {account.platformUsername}
+                      {account.platform === "LINKEDIN" && 
+                       linkedinPages.length > 0 && 
+                       selectedPageTokenIds.some(id => 
+                         linkedinPages.some(page => page.id === id)
+                       ) && (
+                        <span className="text-xs text-gray-500 block">(disabled - pages selected)</span>
+                      )}
                     </Label>
                   </div>
                 ))}
@@ -181,7 +220,7 @@ export default function AccountsCard({
       </Card>
 
       {/* Facebook Pages Section */}
-      {isLoading ? (
+      {facebookLoading ? (
         <Card className="mt-4">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
@@ -243,6 +282,92 @@ export default function AccountsCard({
           </CardContent>
         </Card>
       )}
+
+      {/* LinkedIn Pages Section */}
+      <Card className="mt-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-blue-800 text-white text-xs font-bold">
+                {linkedinPages.length}
+              </span>
+              <h2 className="text-lg font-semibold">LinkedIn Pages</h2>
+            </div>
+            {hasLinkedInAccount && (
+              <Button 
+                onClick={handleLinkedInPageAccess}
+                size="sm"
+                variant="outline"
+              >
+                {linkedinPages.length > 0 ? "Refresh Pages" : "Connect Pages"}
+              </Button>
+            )}
+          </CardTitle>
+          {!hasLinkedInAccount && (
+            <p className="text-sm text-gray-500 mt-2">
+              Connect a LinkedIn personal account first to access LinkedIn Pages
+            </p>
+          )}
+        </CardHeader>
+
+        <CardContent>
+          {linkedinLoading ? (
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          ) : linkedinPages.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              {linkedinPages.map((page: PageToken) => (
+                <div key={page.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={page.id}
+                    checked={isPageTokenSelected(page.id)}
+                    onCheckedChange={(checked) =>
+                      handlePageTokenChange(page.id, checked as boolean)
+                    }
+                  />
+                  <Avatar className="size-12 bg-blue-100">
+                    <AvatarImage
+                      src={page.pageImage || undefined}
+                      alt={page.name}
+                    />
+                    <AvatarFallback className="bg-blue-100 text-blue-800">
+                      <Linkedin className="size-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <Label
+                    htmlFor={page.id}
+                    className="text-sm font-bold cursor-pointer"
+                  >
+                    {page.name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          ) : hasLinkedInAccount ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500 mb-3">
+                No LinkedIn Pages found. Connect to see available pages.
+              </p>
+              <Button onClick={handleLinkedInPageAccess}>
+                Connect LinkedIn Pages
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500">
+                Connect a LinkedIn personal account to access LinkedIn Pages
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </>
-  )
+  );
 }

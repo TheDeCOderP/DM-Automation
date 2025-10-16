@@ -1,4 +1,3 @@
-
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
@@ -48,31 +47,31 @@ async function main() {
   const userPassword = await bcrypt.hash("user123", 10);
 
   // Seed roles - explicit IDs
-  const [superAdminRole, adminRole, userRole, brandUserRole] = await Promise.all([
+  const [superAdminRole, adminRole, userRole, brandAdminRole, brandUserRole] = await Promise.all([
     prisma.role.upsert({
-      where: { name: "SUPERADMIN" },
+      where: { name: "SuperAdmin" },
       update: {},
-      create: { id: "PCR-0001", name: "SUPERADMIN" },
+      create: { id: "PCR-0001", name: "SuperAdmin" },
     }),
     prisma.role.upsert({
       where: { name: "ADMIN" },
       update: {},
-      create: { id: "PCR-0002", name: "ADMIN" },
+      create: { id: "PCR-0002", name: "Admin" },
     }),
     prisma.role.upsert({
       where: { name: "USER" },
       update: {},
-      create: { id: "PCR-0003", name: "USER" },
+      create: { id: "PCR-0003", name: "User" },
     }),
     prisma.role.upsert({
-      where: { name: "BRAND_USER" },
+      where: { name: "BrandAdmin" },
       update: {},
-      create: { id: "PCR-0004", name: "BRAND_ADMIN", description: "The one who creates a brand" },
+      create: { id: "PCR-0004", name: "BrandAdmin", description: "The one who creates a brand" },
     }),
     prisma.role.upsert({
-      where: { name: "BRAND_USER" },
+      where: { name: "BrandUser" },
       update: {},
-      create: { id: "PCR-0005", name: "BRAND_USER", description: "The one who works for a brand" },
+      create: { id: "PCR-0005", name: "BrandUser", description: "The one who works for a brand" },
     }),
   ]);
 
@@ -184,27 +183,18 @@ async function main() {
   });
   console.log("Seeding: SiteConfig -> done.");
 
+  // ───────────────────────────────────────────────
   // Sidebar Groups & Items
+  // ───────────────────────────────────────────────
+  
+  // Management Group
   const managementGroup = await prisma.sidebarGroup.upsert({
     where: { title: "Management" },
     update: {},
     create: { title: "Management", position: 0, isActive: true },
   });
-  await prisma.sidebarGroupAccess.upsert({
-    where: {
-      roleId_sidebarGroupId: {
-        roleId: superAdminRole.id,
-        sidebarGroupId: managementGroup.id,
-      },
-    },
-    update: { hasAccess: true },
-    create: {
-      roleId: superAdminRole.id,
-      sidebarGroupId: managementGroup.id,
-      hasAccess: true,
-    },
-  });
 
+  // Users item
   const usersItem = await prisma.sidebarItem.upsert({
     where: { href: "/admin/users" },
     update: {
@@ -221,21 +211,8 @@ async function main() {
       sidebarGroupId: managementGroup.id,
     },
   });
-  await prisma.sidebarItemAccess.upsert({
-    where: {
-      roleId_sidebarItemId: {
-        roleId: superAdminRole.id,
-        sidebarItemId: usersItem.id,
-      },
-    },
-    update: { hasAccess: true },
-    create: {
-      roleId: superAdminRole.id,
-      sidebarItemId: usersItem.id,
-      hasAccess: true,
-    },
-  });
 
+  // Roles item
   const rolesItem = await prisma.sidebarItem.upsert({
     where: { href: "/admin/roles" },
     update: {
@@ -252,21 +229,8 @@ async function main() {
       sidebarGroupId: managementGroup.id,
     },
   });
-  await prisma.sidebarItemAccess.upsert({
-    where: {
-      roleId_sidebarItemId: {
-        roleId: superAdminRole.id,
-        sidebarItemId: rolesItem.id,
-      },
-    },
-    update: { hasAccess: true },
-    create: {
-      roleId: superAdminRole.id,
-      sidebarItemId: rolesItem.id,
-      hasAccess: true,
-    },
-  });
 
+  // Settings item
   const settingsItem = await prisma.sidebarItem.upsert({
     where: { href: "/admin/site-settings" },
     update: {
@@ -283,58 +247,31 @@ async function main() {
       sidebarGroupId: managementGroup.id,
     },
   });
-  await prisma.sidebarItemAccess.upsert({
-    where: {
-      roleId_sidebarItemId: {
-        roleId: superAdminRole.id,
-        sidebarItemId: settingsItem.id,
-      },
-    },
-    update: { hasAccess: true },
-    create: {
-      roleId: superAdminRole.id,
-      sidebarItemId: settingsItem.id,
-      hasAccess: true,
-    },
-  });
 
-  // Management -> Ideas
-  const ideasItem = await prisma.sidebarItem.upsert({
-    where: { href: "/admin/ideas" },
-    update: {
-      label: "Ideas",
-      icon: "lightbulb",
-      sidebarGroupId: managementGroup.id,
-    },
-    create: {
-      label: "Ideas",
-      href: "/admin/ideas",
-      icon: "lightbulb",
-      position: 3,
-      isActive: true,
-      sidebarGroupId: managementGroup.id,
-    },
-  });
-  // grant access to SUPERADMIN and ADMIN
-  for (const role of [superAdminRole, adminRole]) {
-    await prisma.sidebarItemAccess.upsert({
-      where: {
-        roleId_sidebarItemId: {
-          roleId: role.id,
-          sidebarItemId: ideasItem.id,
+  // Grant access to SUPERADMIN and ADMIN
+  const superAdminAndAdmin = [superAdminRole, adminRole];
+  for (const role of superAdminAndAdmin) {
+    for (const item of [usersItem, rolesItem, settingsItem]) {
+      await prisma.sidebarItemAccess.upsert({
+        where: {
+          roleId_sidebarItemId: {
+            roleId: role.id,
+            sidebarItemId: item.id,
+          },
         },
-      },
-      update: { hasAccess: true },
-      create: { roleId: role.id, sidebarItemId: ideasItem.id, hasAccess: true },
-    });
+        update: { hasAccess: true },
+        create: { roleId: role.id, sidebarItemId: item.id, hasAccess: true },
+      });
+    }
   }
 
+  // Reports Group
   const reportsGroup = await prisma.sidebarGroup.upsert({
     where: { title: "Reports" },
     update: {},
     create: { title: "Reports", position: 1, isActive: true },
   });
-  for (const role of [adminRole, superAdminRole]) {
+  for (const role of superAdminAndAdmin) {
     await prisma.sidebarGroupAccess.upsert({
       where: {
         roleId_sidebarGroupId: {
@@ -348,18 +285,8 @@ async function main() {
   }
 
   const reportItems = [
-    {
-      label: "Audit Logs",
-      href: "/admin/audit-logs",
-      icon: "activity",
-      position: 0,
-    },
-    {
-      label: "Google Analytics",
-      href: "/admin/google-analytics",
-      icon: "barChart3",
-      position: 1,
-    },
+    { label: "Audit Logs", href: "/admin/audit-logs", icon: "activity", position: 0 },
+    { label: "Google Analytics", href: "/admin/google-analytics", icon: "barChart3", position: 1 },
   ];
 
   for (const item of reportItems) {
@@ -380,7 +307,7 @@ async function main() {
         sidebarGroupId: reportsGroup.id,
       },
     });
-    for (const role of [adminRole, superAdminRole]) {
+    for (const role of superAdminAndAdmin) {
       await prisma.sidebarItemAccess.upsert({
         where: {
           roleId_sidebarItemId: {
@@ -389,12 +316,66 @@ async function main() {
           },
         },
         update: { hasAccess: true },
-        create: {
-          roleId: role.id,
-          sidebarItemId: existing.id,
-          hasAccess: true,
-        },
+        create: { roleId: role.id, sidebarItemId: existing.id, hasAccess: true },
       });
+    }
+  }
+
+  // ───────────────────────────────────────────────
+  // Sidebar Items for User, BrandAdmin, BrandUser
+  // ───────────────────────────────────────────────
+  const navigation = {
+    main: [{ title: "Calendar", icon: "calendar", url: "/posts/calendar" }],
+    configuration: [{ title: "Accounts", icon: "users", url: "/accounts" }],
+    activity: [{ title: "Notifications", icon: "bell", url: "/notifications" }],
+    management: [{ title: "Analytics", icon: "chartNoAxesCombined", url: "/analytics" }],
+  };
+
+  const rolesForNavigation = [userRole, brandAdminRole, brandUserRole];
+
+  // Helpers
+  async function ensureSidebarGroup(title, position) {
+    return prisma.sidebarGroup.upsert({
+      where: { title },
+      update: {},
+      create: { title, position, isActive: true },
+    });
+  }
+
+  async function ensureSidebarItemForRoles(group, item, roles) {
+    const sidebarItem = await prisma.sidebarItem.upsert({
+      where: { href: item.url },
+      update: {
+        label: item.title,
+        icon: item.icon,
+        sidebarGroupId: group.id,
+      },
+      create: {
+        label: item.title,
+        href: item.url,
+        icon: item.icon,
+        position: 0,
+        isActive: true,
+        sidebarGroupId: group.id,
+      },
+    });
+
+    for (const role of roles) {
+      await prisma.sidebarItemAccess.upsert({
+        where: {
+          roleId_sidebarItemId: { roleId: role.id, sidebarItemId: sidebarItem.id },
+        },
+        update: { hasAccess: true },
+        create: { roleId: role.id, sidebarItemId: sidebarItem.id, hasAccess: true },
+      });
+    }
+  }
+
+  let position = 10; // offset to avoid conflicts
+  for (const [section, items] of Object.entries(navigation)) {
+    const group = await ensureSidebarGroup(section.charAt(0).toUpperCase() + section.slice(1), position++);
+    for (const item of items) {
+      await ensureSidebarItemForRoles(group, item, rolesForNavigation);
     }
   }
 
@@ -406,3 +387,4 @@ main()
     console.error("❌ Error seeding database:", e);
     process.exit(1);
   })
+  .finally(() => prisma.$disconnect());

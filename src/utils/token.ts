@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { encryptToken } from "@/lib/encryption";
-
 import type { SocialAccount } from "@prisma/client";
-import type { ZohoTokenResponse } from "@/types/zoho";
-import type { TwitterErrorResponse, TwitterTokenResponse } from "@/types/twitter";
 
 
 export const getTokenValidDays = (expiryDate: Date | null | undefined): number => {
@@ -64,8 +61,8 @@ async function refreshZohoAccessToken(socialAccount: SocialAccount): Promise<str
 
     const encryptedAccessToken = await encryptToken(access_token);
     let encryptedRefreshToken = socialAccount.refreshToken; // fallback
-    if (data.refresh_token) {
-      encryptedRefreshToken = await encryptToken(data.refresh_token);
+    if (refresh_token) {
+      encryptedRefreshToken = await encryptToken(refresh_token);
     }
     const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
 
@@ -116,8 +113,8 @@ async function refreshGoogleAccessToken(socialAccount: SocialAccount): Promise<s
 
     const encryptedAccessToken = await encryptToken(access_token);
     let encryptedRefreshToken = socialAccount.refreshToken;
-    if (data.refresh_token) {
-      encryptedRefreshToken = await encryptToken(data.refresh_token);
+    if (refresh_token) {
+      encryptedRefreshToken = await encryptToken(refresh_token);
     }
     const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
 

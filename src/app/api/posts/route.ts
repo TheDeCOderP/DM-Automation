@@ -11,7 +11,7 @@ import type { UploadApiResponse } from "cloudinary"
 import { publishToTwitter } from "@/services/twitter.service";
 import { publishToYouTube } from "@/services/youtube.service";
 import { publishToFacebook } from "@/services/facebook.service";
-import { publishToLinkedin } from "@/services/linkedin.service";
+import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.service";
 
 function generateCronExpression(schedule: ScheduleData) {
   // Convert the user's local date/time + offset to UTC components for cron
@@ -303,10 +303,35 @@ export async function POST(req: NextRequest) {
         continue
       }
 
+      // Skip LinkedIn accounts if LinkedIn pages are selected (pages are more specific)
+      if (socialAccount.platform === "LINKEDIN" && pageTokenIds.length > 0) {
+        // Check if any of the selected page tokens are LinkedIn pages
+        const linkedinPageTokens = await prisma.pageToken.findMany({
+          where: {
+            id: { in: pageTokenIds },
+            platform: "LINKEDIN"
+          }
+        });
+        
+        if (linkedinPageTokens.length > 0) {
+          console.log(`Skipping general LinkedIn account ${accountId} because specific LinkedIn pages are selected`)
+          continue;
+        }
+      }
+
       // Skip Facebook accounts if Facebook pages are selected (pages are more specific)
       if (socialAccount.platform === "FACEBOOK" && pageTokenIds.length > 0) {
-        console.log(`Skipping general Facebook account ${accountId} because specific Facebook pages are selected`)
-        continue
+        const facebookPageTokens = await prisma.pageToken.findMany({
+          where: {
+            id: { in: pageTokenIds },
+            platform: "FACEBOOK"
+          }
+        });
+        
+        if (facebookPageTokens.length > 0) {
+          console.log(`Skipping general Facebook account ${accountId} because specific Facebook pages are selected`)
+          continue;
+        }
       }
 
       const caption = captions[socialAccount.platform as Platform]
@@ -372,13 +397,15 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      const caption = captions["FACEBOOK"]
+      // Determine platform and caption based on pageToken platform
+      const platform = pageToken.platform
+      const caption = captions[platform]
       if (!caption) continue
 
       const post = await prisma.post.create({
         data: {
           content: caption,
-          platform: "FACEBOOK",
+          platform: platform,
           scheduledAt: scheduledAt,
           status: status,
           userId: token.id,
@@ -470,7 +497,13 @@ export async function POST(req: NextRequest) {
           console.log(`Processing post ${post.id} scheduled for ${post.scheduledAt}`)
 
           if (post.platform === "LINKEDIN") {
-            await publishToLinkedin(post)
+            if (post.pageTokenId) {
+              // This is a LinkedIn Page post
+              await publishToLinkedInPage(post, post.pageTokenId)
+            } else {
+              // This is a LinkedIn personal post
+              await publishToLinkedin(post)
+            }
           } else if (post.platform === "TWITTER") {
             await publishToTwitter(post)
           } else if(post.platform === "YOUTUBE") {

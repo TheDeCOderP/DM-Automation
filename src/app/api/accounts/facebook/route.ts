@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { Platform } from "@prisma/client";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 

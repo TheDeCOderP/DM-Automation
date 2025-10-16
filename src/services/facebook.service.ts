@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { decryptToken } from "@/lib/encryption";
 import { isTokenExpired } from "@/utils/token";
-import { Post, Media, Platform } from "@prisma/client";
+import { Post, Media } from "@prisma/client";
 
 interface FacebookPostResponse {
   id: string;

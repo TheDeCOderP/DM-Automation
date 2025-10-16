@@ -1,12 +1,11 @@
 // src/app/api/accounts/zoho/workdrive/files/route.ts
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
-import { SocialAccount } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { isTokenExpired, refreshAccessToken } from "@/utils/token";
-import { decryptToken, encryptToken } from '@/lib/encryption';
-import { ZohoFile, ZohoApiFile, ZohoTokenResponse, ZohoFilesResponse } from '@/types/zoho';
+import { decryptToken } from '@/lib/encryption';
+import { ZohoFile, ZohoApiFile, ZohoFilesResponse } from '@/types/zoho';
 
 const ZOHO_WORKDRIVE_API_URL = 'https://www.zohoapis.in/workdrive/api/v1';
 

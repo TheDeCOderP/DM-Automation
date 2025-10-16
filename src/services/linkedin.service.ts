@@ -204,6 +204,136 @@ export async function publishToLinkedin(
   }
 }
 
+export async function publishToLinkedInPage(
+  post: Post & { media?: Media[] },
+  pageTokenId?: string
+): Promise<{ id: string }> {
+  try {
+    if (!post) throw new Error('Invalid input');
+
+    // 1. Get LinkedIn Page token
+    const pageToken = await prisma.pageToken.findFirst({
+      where: {
+        id: pageTokenId,
+        platform: 'LINKEDIN',
+        isActive: true,
+      },
+      include: {
+        socialAccount: {
+          include: {
+            brands: {
+              where: {
+                brandId: post.brandId
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!pageToken) {
+      await handleLinkedInPostFailure(post, 'No active LinkedIn Page found for this brand');
+      throw new Error('No active LinkedIn Page found for this brand');
+    }
+
+    // Decrypt the access token
+    const accessToken = await decryptToken(pageToken.accessToken);
+    
+    if (isTokenExpired(pageToken.tokenExpiresAt)) {
+      await handleLinkedInPostFailure(post, 'LinkedIn Page token is expired');
+      throw new Error('LinkedIn Page token is expired');
+    }
+
+    // For LinkedIn Pages, author URN format is different
+    const authorUrn = `urn:li:organization:${pageToken.pageId}`;
+    
+    return await publishLinkedInContent(post, accessToken, authorUrn, 'page', pageToken.id);
+  } catch (error) {
+    console.error("Error in publishing to LinkedIn Page:", error);
+    throw error;
+  }
+}
+
+// Unified function to handle both personal and page posts
+async function publishLinkedInContent(
+  post: Post & { media?: Media[] },
+  accessToken: string,
+  authorUrn: string,
+  postType: 'personal' | 'page',
+  pageTokenId?: string
+): Promise<{ id: string }> {
+  let assetUrn: string | null = null;
+
+  // 1. Get media for the post if not already included
+  const media = post.media || await prisma.media.findMany({
+    where: { postId: post.id }
+  });
+
+  // 2. Handle media upload if provided
+  if (media.length > 0) {
+    try {
+      const firstMedia = media[0];
+      assetUrn = await uploadMediaToLinkedin(firstMedia, accessToken, authorUrn);
+    } catch (error) {
+      console.error('Media upload failed:', error);
+      // Proceed with text-only post if media fails
+    }
+  }
+
+  // 3. Create post body
+  const postBody: LinkedInPostBody = {
+    author: authorUrn,
+    lifecycleState: 'PUBLISHED',
+    specificContent: {
+      'com.linkedin.ugc.ShareContent': {
+        shareCommentary: {
+          text: post.content,
+        },
+        shareMediaCategory: assetUrn ? 'IMAGE' : 'NONE',
+        ...(assetUrn ? {
+          media: [{
+            status: 'READY',
+            description: { text: 'Post image' },
+            media: assetUrn,
+            title: { text: 'Post image' }
+          }]
+        } : {})
+      }
+    },
+    visibility: {
+      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+    }
+  };
+
+  // 4. Post to LinkedIn
+  const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+      'LinkedIn-Version': '202410' // Updated to latest version
+    },
+    body: JSON.stringify(postBody)
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    await handleLinkedInPostFailure(post, data);
+    throw new Error(`LinkedIn API error: ${JSON.stringify(data)}`);
+  }
+
+  // 5. Record successful post
+  if (postType === 'page' && pageTokenId) {
+    await recordSuccessfulLinkedInPost(post, pageTokenId, data.id);
+  } else {
+    //await recordSuccessfulLinkedInPost(post, data.id);
+  }
+  
+  return data;
+}
+
 async function uploadMediaToLinkedin(
   media: Media,
   accessToken: string,

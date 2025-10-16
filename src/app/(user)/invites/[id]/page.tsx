@@ -27,7 +27,7 @@ interface InvitationData {
 export default function AcceptInvitePage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const { data: session, status: sessionStatus } = useSession();
+  const { status: sessionStatus } = useSession();
   const router = useRouter();
   
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
@@ -110,6 +110,7 @@ export default function AcceptInvitePage() {
         setMessage({ type: 'error', text: data.message || 'Failed to accept invitation' });
       }
     } catch (error) {
+      console.error("Error accepting invitation:", error);
       setMessage({ type: 'error', text: 'An error occurred while accepting the invitation' });
     } finally {
       setIsAccepting(false);

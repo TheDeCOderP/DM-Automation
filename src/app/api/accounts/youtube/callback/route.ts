@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     userId = stateData.userId;
     brandId = stateData.brandId;
   } catch (error) {
+    console.error('Invalid state parameter:', error);
     const errorUrl = new URL('/auth/error', request.nextUrl.origin);
     errorUrl.searchParams.set('message', 'Invalid state parameter');
     return NextResponse.redirect(errorUrl.toString());
