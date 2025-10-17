@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Sparkles, Image as ImageIcon, Video, Upload, X } from "lucide-react";
+import { Sparkles, ImageIcon, Video, Upload, X } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -281,9 +282,11 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
                     {imagePreview ? (
                       <div className="relative">
-                        <img
+                        <Image
                           src={imagePreview}
                           alt="Preview"
+                          width={200}
+                          height={200}
                           className="w-full h-48 object-cover rounded-md"
                         />
                         <Button

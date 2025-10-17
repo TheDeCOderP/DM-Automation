@@ -31,10 +31,10 @@ import {
   Download, 
   ChevronLeft, 
   ChevronRight,
-  Image, 
   Video,
   Search,
-  Home
+  Home,
+  ImageIcon
 } from "lucide-react";
 
 interface ZohoFile {
@@ -333,7 +333,7 @@ export default function ZohoWorkDrivePicker({
     const extension = getFileExtension(file.name);
     
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-      return <Image className="w-5 h-5 text-green-500 flex-shrink-0" />;
+      return <ImageIcon className="w-5 h-5 text-green-500 flex-shrink-0" />;
     }
     
     if (['mp4', 'mov', 'avi', 'webm'].includes(extension)) {

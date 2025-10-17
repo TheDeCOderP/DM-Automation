@@ -12,15 +12,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { getPlatformIcon } from "@/utils/ui/icons";
-import type { PageToken, SocialAccount } from "@prisma/client";
+import type { SocialAccount, SocialAccountPage } from "@prisma/client";
 
 interface AccountsCardProps {
   brandId: string
   accounts: SocialAccount[]
   selectedAccounts: string[]
   setSelectedAccounts: React.Dispatch<React.SetStateAction<string[]>>
-  selectedPageTokenIds: string[]
-  setSelectedPageTokenIds: React.Dispatch<React.SetStateAction<string[]>>
+  selectedPageIds: string[]
+  setSelectedPageIds: React.Dispatch<React.SetStateAction<string[]>>
 }
 
 const fetcher = (url: string) => fetch(url).then((res: Response) => res.json())
@@ -30,8 +30,8 @@ export default function AccountsCard({
   accounts,
   selectedAccounts,
   setSelectedAccounts,
-  selectedPageTokenIds,
-  setSelectedPageTokenIds,
+  selectedPageIds,
+  setSelectedPageIds,
 }: AccountsCardProps) {
   const { data: facebookData, isLoading: facebookLoading } = useSWR(
     `/api/accounts/facebook/pages?platformUserId=${
@@ -51,8 +51,8 @@ export default function AccountsCard({
     }
   );
 
-  const facebookPages: PageToken[] = facebookData?.pages || [];
-  const linkedinPages: PageToken[] = linkedinData?.pages || [];
+  const facebookPages: SocialAccountPage[] = facebookData?.pages || [];
+  const linkedinPages: SocialAccountPage[] = linkedinData?.pages || [];
   
   const [rememberAccounts, setRememberAccounts] = useState(false);
 
@@ -78,8 +78,8 @@ export default function AccountsCard({
     );
   };
 
-  const handlePageTokenChange = (pageId: string, checked: boolean) => {
-    setSelectedPageTokenIds((prev) =>
+  const handlePageChange = (pageId: string, checked: boolean) => {
+    setSelectedPageIds((prev) =>
       checked ? [...prev, pageId] : prev.filter((id) => id !== pageId)
     );
   };
@@ -87,23 +87,23 @@ export default function AccountsCard({
   const isAccountSelected = (accountId: string) =>
     selectedAccounts.includes(accountId);
 
-  const isPageTokenSelected = (pageId: string) =>
-    selectedPageTokenIds.includes(pageId);
+  const isPageSelected = (pageId: string) =>
+    selectedPageIds.includes(pageId);
 
   const handleSelectAll = () => {
     const allAccountIds = accounts.map((account) => account.id);
     const allFacebookPageIds = facebookPages.map((page) => page.id);
     const allLinkedinPageIds = linkedinPages.map((page) => page.id);
     setSelectedAccounts(allAccountIds);
-    setSelectedPageTokenIds([...allFacebookPageIds, ...allLinkedinPageIds]);
+    setSelectedPageIds([...allFacebookPageIds, ...allLinkedinPageIds]);
   };
 
   const handleDeselectAll = () => {
     setSelectedAccounts([]);
-    setSelectedPageTokenIds([]);
+    setSelectedPageIds([]);
   };
 
-  const allSelectedCount = selectedAccounts.length + selectedPageTokenIds.length;
+  const allSelectedCount = selectedAccounts.length + selectedPageIds.length;
 
   return (
     <>
@@ -177,7 +177,7 @@ export default function AccountsCard({
                       disabled={
                         account.platform === "LINKEDIN" && 
                         linkedinPages.length > 0 && 
-                        selectedPageTokenIds.some(id => 
+                        selectedPageIds.some(id => 
                           linkedinPages.some(page => page.id === id)
                         )
                       }
@@ -198,7 +198,7 @@ export default function AccountsCard({
                       } ${
                         account.platform === "LINKEDIN" && 
                         linkedinPages.length > 0 && 
-                        selectedPageTokenIds.some(id => 
+                        selectedPageIds.some(id => 
                           linkedinPages.some(page => page.id === id)
                         ) ? "opacity-50" : ""
                       }`}
@@ -206,7 +206,7 @@ export default function AccountsCard({
                       {account.platformUsername}
                       {account.platform === "LINKEDIN" && 
                        linkedinPages.length > 0 && 
-                       selectedPageTokenIds.some(id => 
+                       selectedPageIds.some(id => 
                          linkedinPages.some(page => page.id === id)
                        ) && (
                         <span className="text-xs text-gray-500 block">(disabled - pages selected)</span>
@@ -252,13 +252,13 @@ export default function AccountsCard({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              {facebookPages.map((page: PageToken) => (
+              {facebookPages.map((page: SocialAccountPage) => (
                 <div key={page.id} className="flex items-center gap-2">
                   <Checkbox
                     id={page.id}
-                    checked={isPageTokenSelected(page.id)}
+                    checked={isPageSelected(page.id)}
                     onCheckedChange={(checked) =>
-                      handlePageTokenChange(page.id, checked as boolean)
+                      handlePageChange(page.id, checked as boolean)
                     }
                   />
                   <Avatar className="size-12 bg-blue-100">
@@ -323,13 +323,13 @@ export default function AccountsCard({
             </div>
           ) : linkedinPages.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
-              {linkedinPages.map((page: PageToken) => (
+              {linkedinPages.map((page: SocialAccountPage) => (
                 <div key={page.id} className="flex items-center gap-2">
                   <Checkbox
                     id={page.id}
-                    checked={isPageTokenSelected(page.id)}
+                    checked={isPageSelected(page.id)}
                     onCheckedChange={(checked) =>
-                      handlePageTokenChange(page.id, checked as boolean)
+                      handlePageChange(page.id, checked as boolean)
                     }
                   />
                   <Avatar className="size-12 bg-blue-100">

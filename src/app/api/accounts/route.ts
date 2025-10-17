@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
               include: {
                 socialAccount: {
                   include: {
-                    pageTokens: true,
+                    pages: true,
                     users: {
                       include: {
                         user: true
@@ -149,7 +149,7 @@ export async function DELETE(req: NextRequest) {
         socialAccount: {
           include: {
             brands: true, // Include brand connections to check if account is used by brands
-            pageTokens: true // Include page tokens to handle cleanup
+            pages: true // Include page tokens to handle cleanup
           }
         }
       }
@@ -183,8 +183,8 @@ export async function DELETE(req: NextRequest) {
     // If no users AND no brands left, delete the social account entirely
     if (remainingUsers === 0 && remainingBrands === 0) {
       // First delete related page tokens to avoid foreign key constraints
-      if (userSocialAccount.socialAccount.pageTokens.length > 0) {
-        await prisma.pageToken.deleteMany({
+      if (userSocialAccount.socialAccount.pages.length > 0) {
+        await prisma.socialAccountPage.deleteMany({
           where: {
             socialAccountId: userSocialAccount.socialAccountId,
           },

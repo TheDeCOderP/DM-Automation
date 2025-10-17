@@ -2,48 +2,9 @@
 import { prisma } from "@/lib/prisma";
 import { decryptToken } from "@/lib/encryption";
 import { isTokenExpired, refreshAccessToken } from "@/utils/token";
+
+import { VideoUploadBody } from "@/types/youtube";
 import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
-
-interface YouTubeTokenResponse {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-    token_type?: string;
-    scope?: string;
-}
-
-interface YouTubeErrorResponse {
-    error: string;
-    error_description?: string;
-}
-
-interface YouTubeVideoResponse {
-    id: string;
-    snippet: {
-        title: string;
-        description: string;
-        tags?: string[];
-        categoryId: string;
-    };
-    status: {
-        privacyStatus: string;
-        publishAt?: string;
-    };
-}
-
-interface VideoUploadBody {
-    snippet: {
-        title: string;
-        description: string;
-        tags?: string[];
-        categoryId: string;
-    };
-    status: {
-        privacyStatus: 'public' | 'private' | 'unlisted';
-        publishAt?: string;
-        selfDeclaredMadeForKids?: boolean;
-    };
-}
 
 export async function publishToYouTube(
     post: Post & { media?: Media[] }
@@ -156,17 +117,6 @@ export async function publishToYouTube(
             error instanceof Error ? error.message : "Unknown upload error"
         );
         throw error;
-    }
-}
-
-async function isTokenInvalid(accessToken: string): Promise<boolean> {
-    try {
-        const response = await fetch(
-            'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + accessToken
-        );
-        return !response.ok;
-    } catch {
-        return true;
     }
 }
 

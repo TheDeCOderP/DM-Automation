@@ -199,7 +199,7 @@ model SocialAccount {
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
-  pageTokens        PageToken[]
+  pages             SocialAccountPage[]
   brands            SocialAccountBrand[]
   users             UserSocialAccount[]
 
@@ -231,7 +231,7 @@ model SocialAccountBrand {
   @@unique([brandId, socialAccountId])
 }
 
-model PageToken {
+model SocialAccountPage {
   id              String         @id @default(cuid())
   name            String
   pageId          String
@@ -267,14 +267,60 @@ model Post {
   updatedAt   DateTime   @updatedAt
 
   media       Media[]
+  analytics   PostAnalytics[]
 
   brandId     String
   brand       Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-  pageTokenId String?
-  pageToken   PageToken? @relation(fields: [pageTokenId], references: [id], onDelete: Cascade)
+  socialAccountPageId String?
+  socialAccountPage   SocialAccountPage? @relation(fields: [socialAccountPageId], references: [id], onDelete: Cascade)
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PostAnalytics {
+  id          String   @id @default(cuid())
+  postId      String   @unique
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  // Platform-specific post identifier (the actual post ID on the platform)
+  platformPostId String?
+  
+  // Basic engagement metrics (common across platforms)
+  likes        Int      @default(0)
+  comments     Int      @default(0)
+  shares       Int      @default(0)
+  saves        Int      @default(0)  // For Pinterest, Instagram, etc.
+  clicks       Int      @default(0)
+  impressions  Int      @default(0)
+  reach        Int      @default(0)
+  
+  // Video-specific metrics
+  views        Int      @default(0)
+  videoPlays   Int      @default(0)
+  watchTime    Int?     @default(0) // in seconds
+  completionRate Float?  @default(0) // percentage
+  
+  // Audience metrics
+  engagementRate Float?  @default(0) // calculated field
+  
+  // Platform-specific metrics stored as JSON for flexibility
+  platformSpecificData Json?
+  
+  // Demographics data (can be expanded based on platform availability)
+  demographics Json?
+  
+  // Time-series data for tracking analytics over time
+  analyticsHistory Json? // Array of { timestamp: DateTime, metrics: {...} }
+  
+  // Timestamps
+  lastSyncedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([postId])
+  @@index([platformPostId])
+  @@index([lastSyncedAt])
 }
 
 model Media {

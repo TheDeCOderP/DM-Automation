@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         brand: true,
-        pageToken: {
+        socialAccountPage: {
           include: {
             socialAccount: true
           }

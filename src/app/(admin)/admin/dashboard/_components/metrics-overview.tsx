@@ -19,7 +19,7 @@ type AccountsResponse = {
   data: Array<{
     platform: string
     isConnected: boolean
-    pageTokens?: Array<{ id: string }>
+    socialAccountPages?: Array<{ id: string }>
   }>
 }
 
@@ -48,8 +48,8 @@ export function MetricsOverview() {
         setAnalytics(aJson)
         // Count total connections = social accounts + page tokens
         const socialCount = accJson.data.length
-        const pageTokenCount = accJson.data.reduce((sum, sa) => sum + (sa.pageTokens?.length || 0), 0)
-        setConnections(socialCount + pageTokenCount)
+        const socialAccountPageCount = accJson.data.reduce((sum, sa) => sum + (sa.socialAccountPages?.length || 0), 0)
+        setConnections(socialCount + socialAccountPageCount)
         setError(null)
       } catch (error) {
         if (!mounted) return

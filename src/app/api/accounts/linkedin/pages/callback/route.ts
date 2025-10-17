@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
             const encryptedPageAccessToken = await encryptToken(accessToken);
 
             // Store page token linked to the existing social account
-            await prisma.pageToken.upsert({
+            await prisma.socialAccountPage.upsert({
               where: {
                 pageId_socialAccountId: {
                   pageId: orgId,

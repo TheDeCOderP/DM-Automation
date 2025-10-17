@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
-import type { Platform, SocialAccount, Brand, PageToken } from "@prisma/client";
+import type { Platform, SocialAccount, SocialAccountPage, Brand } from "@prisma/client";
 import type { ScheduleData } from "@/types/scheduled-data";
 
 import BrandsCard from "./_components/BrandsCard";
@@ -23,8 +23,8 @@ import SchedulePostModal from "./_components/SchedulePostModal";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Types aligned with API response
-type SocialAccountWithPageTokens = SocialAccount & {
-  pageTokens: PageToken[];
+type SocialAccountWithPages = SocialAccount & {
+  socialAccountPages: SocialAccountPage[];
   brandId: string;
   brandName: string;
 };
@@ -33,7 +33,7 @@ type LayoutMode = "wizard" | "advanced";
 
 export default function CreatePostPage() {
   const { data, isLoading } = useSwr("/api/accounts", fetcher);
-  const accounts: SocialAccountWithPageTokens[] = data?.data || [];
+  const accounts: SocialAccountWithPages[] = data?.data || [];
   const brands: Brand[] = data?.brands || [];
 
   // Mode: wizard or advanced
@@ -57,7 +57,7 @@ export default function CreatePostPage() {
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
 
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
-  const [selectedPageTokenIds, setSelectedPageTokenIds] = useState<string[]>([]);
+  const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
 
   // Advanced layout state (drag/drop + persistence)
   const [isClient, setIsClient] = useState(false);
@@ -85,7 +85,7 @@ export default function CreatePostPage() {
   }, [rightColumnItems, isClient]);
 
   const brandAccounts = useMemo(() => {
-    if (!selectedBrandId) return [] as SocialAccountWithPageTokens[];
+    if (!selectedBrandId) return [] as SocialAccountWithPages[];
     return accounts.filter((account) => account.brandId === selectedBrandId);
   }, [accounts, selectedBrandId]);
 
@@ -98,12 +98,12 @@ export default function CreatePostPage() {
       }
     });
 
-    if (selectedPageTokenIds.length > 0) {
+    if (selectedPageIds.length > 0) {
       platforms.add("FACEBOOK");
     }
 
     return Array.from(platforms);
-  }, [brandAccounts, selectedAccounts, selectedPageTokenIds]);
+  }, [brandAccounts, selectedAccounts, selectedPageIds]);
 
   const handleFilesChange = (files: File[]) => {
     setUploadedFiles(files);
@@ -113,7 +113,7 @@ export default function CreatePostPage() {
     if (!selectedBrandId) {
       toast.error("Please select a brand first");
       return;
-    } else if (selectedAccounts.length === 0 && selectedPageTokenIds.length === 0) {
+    } else if (selectedAccounts.length === 0 && selectedPageIds.length === 0) {
       toast.error("Please select at least one account or page");
       return;
     } else if (
@@ -134,7 +134,7 @@ export default function CreatePostPage() {
 
       formData.append("brandId", selectedBrandId);
       formData.append("accounts", JSON.stringify(selectedAccounts));
-      formData.append("pageTokenIds", JSON.stringify(selectedPageTokenIds));
+      formData.append("socialAccountPageIds", JSON.stringify(selectedPageIds));
       formData.append("captions", JSON.stringify(platformCaptions));
 
       if (isScheduled) {
@@ -176,7 +176,7 @@ export default function CreatePostPage() {
     }
   };
 
-  const allSelectedItemsCount = selectedAccounts.length + selectedPageTokenIds.length;
+  const allSelectedItemsCount = selectedAccounts.length + selectedPageIds.length;
 
   // Drag-and-drop handlers (advanced mode)
   const onDragEnd = (result: DropResult) => {
@@ -226,8 +226,8 @@ export default function CreatePostPage() {
             accounts={brandAccounts}
             selectedAccounts={selectedAccounts}
             setSelectedAccounts={setSelectedAccounts}
-            selectedPageTokenIds={selectedPageTokenIds}
-            setSelectedPageTokenIds={setSelectedPageTokenIds}
+            selectedPageIds={selectedPageIds}
+            setSelectedPageIds={setSelectedPageIds}
           />
         );
       case "captions":
@@ -297,7 +297,7 @@ export default function CreatePostPage() {
               <TabsTrigger value="accounts" disabled={!selectedBrandId}>2. Accounts</TabsTrigger>
               <TabsTrigger
                 value="captions"
-                disabled={!selectedBrandId || (selectedAccounts.length === 0 && selectedPageTokenIds.length === 0)}
+                disabled={!selectedBrandId || (selectedAccounts.length === 0 && selectedPageIds.length === 0)}
               >
                 3. Captions
               </TabsTrigger>
@@ -324,8 +324,8 @@ export default function CreatePostPage() {
                   accounts={brandAccounts}
                   selectedAccounts={selectedAccounts}
                   setSelectedAccounts={setSelectedAccounts}
-                  selectedPageTokenIds={selectedPageTokenIds}
-                  setSelectedPageTokenIds={setSelectedPageTokenIds}
+                  selectedPageIds={selectedPageIds}
+                  setSelectedPageIds={setSelectedPageIds}
                 />
               </div>
             </TabsContent>

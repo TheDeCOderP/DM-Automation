@@ -206,15 +206,15 @@ export async function publishToLinkedin(
 
 export async function publishToLinkedInPage(
   post: Post & { media?: Media[] },
-  pageTokenId?: string
+  socialAccountPageId?: string
 ): Promise<{ id: string }> {
   try {
     if (!post) throw new Error('Invalid input');
 
     // 1. Get LinkedIn Page token
-    const pageToken = await prisma.pageToken.findFirst({
+    const socialAccountPage = await prisma.socialAccountPage.findFirst({
       where: {
-        id: pageTokenId,
+        id: socialAccountPageId,
         platform: 'LINKEDIN',
         isActive: true,
       },
@@ -231,23 +231,23 @@ export async function publishToLinkedInPage(
       }
     });
 
-    if (!pageToken) {
+    if (!socialAccountPage) {
       await handleLinkedInPostFailure(post, 'No active LinkedIn Page found for this brand');
       throw new Error('No active LinkedIn Page found for this brand');
     }
 
     // Decrypt the access token
-    const accessToken = await decryptToken(pageToken.accessToken);
+    const accessToken = await decryptToken(socialAccountPage.accessToken);
     
-    if (isTokenExpired(pageToken.tokenExpiresAt)) {
+    if (isTokenExpired(socialAccountPage.tokenExpiresAt)) {
       await handleLinkedInPostFailure(post, 'LinkedIn Page token is expired');
       throw new Error('LinkedIn Page token is expired');
     }
 
     // For LinkedIn Pages, author URN format is different
-    const authorUrn = `urn:li:organization:${pageToken.pageId}`;
+    const authorUrn = `urn:li:organization:${socialAccountPage.pageId}`;
     
-    return await publishLinkedInContent(post, accessToken, authorUrn, 'page', pageToken.id);
+    return await publishLinkedInContent(post, accessToken, authorUrn, 'page', socialAccountPage.id);
   } catch (error) {
     console.error("Error in publishing to LinkedIn Page:", error);
     throw error;
@@ -260,7 +260,7 @@ async function publishLinkedInContent(
   accessToken: string,
   authorUrn: string,
   postType: 'personal' | 'page',
-  pageTokenId?: string
+  socialAccountPageId?: string
 ): Promise<{ id: string }> {
   let assetUrn: string | null = null;
 
@@ -325,8 +325,8 @@ async function publishLinkedInContent(
   }
 
   // 5. Record successful post
-  if (postType === 'page' && pageTokenId) {
-    await recordSuccessfulLinkedInPost(post, pageTokenId, data.id);
+  if (postType === 'page' && socialAccountPageId) {
+    await recordSuccessfulLinkedInPost(post, socialAccountPageId, data.id);
   } else {
     //await recordSuccessfulLinkedInPost(post, data.id);
   }

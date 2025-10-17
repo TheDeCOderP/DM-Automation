@@ -108,23 +108,23 @@ export async function publishToFacebook(
     });
 
     // 3. Determine the target (page or user profile)
-    if (!post.pageTokenId) {
+    if (!post.socialAccountPageId) {
       throw new Error('Page ID is required');
     }
     
-    const pageToken = await prisma.pageToken.findFirst({
+    const socialAccountPage = await prisma.socialAccountPage.findFirst({
       where: {
-        id: post.pageTokenId,
+        id: post.socialAccountPageId,
         socialAccountId: socialAccount.id,
       },
     });
 
-    const targetId = pageToken?.pageId;
+    const targetId = socialAccountPage?.pageId;
     if (targetId == undefined) {
       throw new Error('Page ID is missing');
     }
 
-    const page_access_token = pageToken?.accessToken;
+    const page_access_token = socialAccountPage?.accessToken;
     if (page_access_token == undefined) {
       throw new Error('Page access token is missing');
     }

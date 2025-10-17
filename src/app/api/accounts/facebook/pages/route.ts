@@ -19,7 +19,7 @@ export async function GET(req: Request) {
         platform: "FACEBOOK",
       },
       include: {
-        pageTokens: true
+        pages: true
       }
     });
 
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
         category?: string;
       }) => {
         // Upsert the page token
-        const pageToken = await prisma.pageToken.upsert({
+        const socialAccountPage = await prisma.socialAccountPage.upsert({
           where: {
             pageId_socialAccountId: {
               pageId: page.id,
@@ -76,10 +76,10 @@ export async function GET(req: Request) {
         });
 
         return {
-          id: pageToken.id,
-          name: pageToken.name,
-          pageId: pageToken.pageId,
-          access_token: pageToken.accessToken,
+          id: socialAccountPage.id,
+          name: socialAccountPage.name,
+          pageId: socialAccountPage.pageId,
+          access_token: socialAccountPage.accessToken,
           platform: 'FACEBOOK',
           category: page.category,
           isStored: true

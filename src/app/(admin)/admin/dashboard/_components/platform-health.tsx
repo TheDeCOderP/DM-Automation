@@ -15,7 +15,7 @@ type AccountsResponse = {
   data: Array<{
     platform: string
     isConnected: boolean
-    pageTokens?: Array<{ id: string }>
+    socialAccountPages?: Array<{ id: string }>
   }>
 }
 
@@ -44,7 +44,7 @@ export function PlatformHealth({ detailed = false }: PlatformHealthProps) {
         const map: Record<string, number> = {}
         accJson.data.forEach(sa => {
           const key = sa.platform
-          map[key] = (map[key] || 0) + 1 + (sa.pageTokens?.length || 0)
+          map[key] = (map[key] || 0) + 1 + (sa.socialAccountPages?.length || 0)
         })
         setConnections(map)
       }

@@ -17,7 +17,7 @@ interface ApiPost {
   createdAt: string
   updatedAt: string
   brandId: string
-  pageTokenId: string | null
+  socialAccountPageId: string | null
   media: Array<{
     id: string
     url: string
@@ -33,7 +33,7 @@ interface ApiPost {
     createdAt: string
     updatedAt: string
   }
-  pageToken: string | null
+  socialAccountPage: string | null
   user: {
     name: string
     email: string

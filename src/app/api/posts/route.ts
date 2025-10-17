@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
       include: {
         media: true,
         brand: true,
-        pageToken: true,
+        socialAccountPage: true,
         user: {
           select: {
             name: true,
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
     // Parse JSON data from FormData
     const brandId = formData.get("brandId") as string
     const accounts = JSON.parse(formData.get("accounts") as string)
-    const pageTokenIds = JSON.parse((formData.get("pageTokenIds") as string) || "[]")
+    const socialAccountPageIds = JSON.parse((formData.get("socialAccountPageIds") as string) || "[]")
     const captions = JSON.parse(formData.get("captions") as string)
     const schedule = JSON.parse((formData.get("schedule") as string) || "null")
 
@@ -304,31 +304,31 @@ export async function POST(req: NextRequest) {
       }
 
       // Skip LinkedIn accounts if LinkedIn pages are selected (pages are more specific)
-      if (socialAccount.platform === "LINKEDIN" && pageTokenIds.length > 0) {
+      if (socialAccount.platform === "LINKEDIN" && socialAccountPageIds.length > 0) {
         // Check if any of the selected page tokens are LinkedIn pages
-        const linkedinPageTokens = await prisma.pageToken.findMany({
+        const linkedinPages = await prisma.socialAccountPage.findMany({
           where: {
-            id: { in: pageTokenIds },
+            id: { in: socialAccountPageIds },
             platform: "LINKEDIN"
           }
         });
         
-        if (linkedinPageTokens.length > 0) {
+        if (linkedinPages.length > 0) {
           console.log(`Skipping general LinkedIn account ${accountId} because specific LinkedIn pages are selected`)
           continue;
         }
       }
 
       // Skip Facebook accounts if Facebook pages are selected (pages are more specific)
-      if (socialAccount.platform === "FACEBOOK" && pageTokenIds.length > 0) {
-        const facebookPageTokens = await prisma.pageToken.findMany({
+      if (socialAccount.platform === "FACEBOOK" && socialAccountPageIds.length > 0) {
+        const facebookPages = await prisma.socialAccountPage.findMany({
           where: {
-            id: { in: pageTokenIds },
+            id: { in: socialAccountPageIds },
             platform: "FACEBOOK"
           }
         });
         
-        if (facebookPageTokens.length > 0) {
+        if (facebookPages.length > 0) {
           console.log(`Skipping general Facebook account ${accountId} because specific Facebook pages are selected`)
           continue;
         }
@@ -366,9 +366,9 @@ export async function POST(req: NextRequest) {
       createdPosts.push(post)
     }
 
-    for (const pageTokenId of pageTokenIds) {
-      const pageToken = await prisma.pageToken.findUnique({
-        where: { id: pageTokenId },
+    for (const socialAccountPageId of socialAccountPageIds) {
+      const socialAccountPage = await prisma.socialAccountPage.findUnique({
+        where: { id: socialAccountPageId },
         include: {
           socialAccount: {
             include: {
@@ -382,23 +382,23 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      if (!pageToken) {
-        console.error(`Page token with ID ${pageTokenId} not found.`)
+      if (!socialAccountPage) {
+        console.error(`Page token with ID ${socialAccountPageId} not found.`)
         continue
       }
 
       // Check if the social account (which owns the page token) belongs to the current brand
-      const belongsToBrand = pageToken.socialAccount.brands.some(
+      const belongsToBrand = socialAccountPage.socialAccount.brands.some(
         (socialAccountBrand) => socialAccountBrand.brandId === brandId
       )
 
       if (!belongsToBrand) {
-        console.error(`Page token with ID ${pageTokenId} doesn't belong to brand ${brandId}.`)
+        console.error(`Page token with ID ${socialAccountPageId} doesn't belong to brand ${brandId}.`)
         continue
       }
 
-      // Determine platform and caption based on pageToken platform
-      const platform = pageToken.platform
+      // Determine platform and caption based on socialAccountPage platform
+      const platform = socialAccountPage.platform
       const caption = captions[platform]
       if (!caption) continue
 
@@ -411,7 +411,7 @@ export async function POST(req: NextRequest) {
           userId: token.id,
           brandId: brandId,
           frequency: frequency,
-          pageTokenId: pageTokenId,
+          socialAccountPageId: socialAccountPageId,
         },
       })
 
@@ -497,9 +497,9 @@ export async function POST(req: NextRequest) {
           console.log(`Processing post ${post.id} scheduled for ${post.scheduledAt}`)
 
           if (post.platform === "LINKEDIN") {
-            if (post.pageTokenId) {
+            if (post.socialAccountPageId) {
               // This is a LinkedIn Page post
-              await publishToLinkedInPage(post, post.pageTokenId)
+              await publishToLinkedInPage(post, post.socialAccountPageId)
             } else {
               // This is a LinkedIn personal post
               await publishToLinkedin(post)
@@ -509,11 +509,11 @@ export async function POST(req: NextRequest) {
           } else if(post.platform === "YOUTUBE") {
             await publishToYouTube(post)
           } else if (post.platform === "FACEBOOK") {
-            if (post.pageTokenId) {
-              const pageToken = await prisma.pageToken.findUnique({
-                where: { id: post.pageTokenId },
+            if (post.socialAccountPageId) {
+              const socialAccountPage = await prisma.socialAccountPage.findUnique({
+                where: { id: post.socialAccountPageId },
               })
-              if (pageToken) {
+              if (socialAccountPage) {
                 await publishToFacebook(post)
               } else {
                 throw new Error(`Page token not found for post ${post.id}`)

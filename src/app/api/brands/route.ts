@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
                             include: {
                                 socialAccount: {
                                     include: {
-                                        pageTokens: true
+                                        pages: true
                                     }
                                 }
                             }

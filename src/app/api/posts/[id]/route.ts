@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       where: { id },
       include: {
         brand: true,
-        pageToken: true,
+        socialAccountPage: true,
         media: true,
       },
     });
@@ -34,8 +34,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     switch (post.platform) {
       case "FACEBOOK":
-        if (post.pageToken?.accessToken && post.pageToken?.pageId) {
-          //analytics = await fetchFacebookAnalytics(post.pageToken.pageId, post.url, post.pageToken.accessToken);
+        if (post.socialAccountPage?.accessToken && post.socialAccountPage?.pageId) {
+          //analytics = await fetchFacebookAnalytics(post.socialAccountPage.pageId, post.url, post.socialAccountPage.accessToken);
         }
         break;
       case "TWITTER":
