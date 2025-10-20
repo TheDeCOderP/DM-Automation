@@ -31,7 +31,7 @@ export default function AnalyticsPage() {
   const fetchAnalytics = async (period: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api?period=${period}`);
+      const response = await fetch(`/api/analytics?period=${period}`);
       if (response.ok) {
         const analyticsData = await response.json();
         setData(analyticsData);

@@ -457,87 +457,222 @@ async function handleLinkedInPostFailure(
   ]);
 }
 
-export async function fetchLinkedInPostAnalytics(post: Post) {
-  if (!post?.userId || !post?.url) {
-    throw new Error("Missing userId or post URL");
+// Remove the unused import from your file
+// Remove: import { refreshAccessToken } from './some-file';
+
+// Define proper interfaces for the LinkedIn API responses
+interface LinkedInSocialActionsResponse {
+  likesSummary?: {
+    totalLikes: number;
+    aggregatedTotalLikes: number;
+  };
+  commentsSummary?: {
+    totalFirstLevelComments: number;
+    aggregatedTotalComments: number;
+  };
+  $URN: string;
+}
+
+interface LinkedInShareStatisticsElement {
+  totalShareStatistics?: {
+    impressionCount: number;
+    clickCount: number;
+    engagement: number;
+  };
+}
+
+interface LinkedInShareStatisticsResponse {
+  elements: LinkedInShareStatisticsElement[];
+}
+
+interface LinkedInUGCPostResponse {
+  lifecycleState: string;
+  visibility: string;
+  created?: {
+    time: number;
+  };
+  firstPublishedAt: number;
+  author: string;
+}
+
+interface LinkedInAnalyticsData {
+  shareUrn: string;
+  organizationUrn: string;
+  fetchedAt: string;
+  likes?: number;
+  aggregatedLikes?: number;
+  comments?: number;
+  aggregatedComments?: number;
+  activityUrn?: string;
+  rawSocialData?: LinkedInSocialActionsResponse;
+  shareStatistics?: LinkedInShareStatisticsResponse;
+  impressions?: number;
+  clicks?: number;
+  engagement?: number;
+  postDetails?: {
+    lifecycleState: string;
+    visibility: string;
+    createdTime?: number;
+    firstPublishedAt?: number;
+    author: string;
+  };
+  summary: {
+    likes: number;
+    comments: number;
+    impressions: number | string;
+    clicks: number | string;
+    engagement: number | string;
+  };
+}
+
+export async function fetchLinkedInPostAnalytics(post: Post): Promise<LinkedInAnalyticsData> {
+  if (!post?.userId || !post?.url || !post?.socialAccountPageId) {
+    throw new Error("Missing userId or post URL or Page ID");
   }
 
-  // 1. Extract the 'share' URN from the URL
   const shareUrnMatch = post.url.match(/urn:li:share:\d+/);
   if (!shareUrnMatch) {
     throw new Error("Invalid LinkedIn post URL format. 'share' URN not found.");
   }
   const shareUrn = shareUrnMatch[0];
 
-  // 2. Fetch the user's LinkedIn account and access token
-  const userSocialAccount = await prisma.userSocialAccount.findFirst({
+  const page = await prisma.socialAccountPage.findUnique({
     where: {
-      userId: post.userId,
-      socialAccount: {
-        platform: "LINKEDIN",
-      },
+      id: post.socialAccountPageId
     },
     include: {
-      socialAccount: true,
-    },
+      socialAccount: true
+    }
   });
 
-  const socialAccount = userSocialAccount?.socialAccount;
-  if (!socialAccount?.accessToken || !socialAccount?.platformUserId) {
-    throw new Error("Missing LinkedIn access token or user ID");
+  if (!page) {
+    throw new Error("Invalid Page ID");
   }
 
-  // 3. Convert the 'share' URN to a 'ugcPost' URN
-  const sharesUrl = `https://api.linkedin.com/v2/shares/${encodeURIComponent(shareUrn)}?projection=(owner,ugcPost)`;
+  const accessToken = await decryptToken(page.accessToken);
+
+  if (isTokenExpired(page.tokenExpiresAt)) {
+    throw new Error("LinkedIn Page Token Expired");
+  }
+
+  const organizationUrn = `urn:li:organization:${page.pageId}`;
   
-  const sharesRes = await fetch(sharesUrl, {
-    headers: {
-      Authorization: `Bearer ${socialAccount.accessToken}`,
-      "X-Restli-Protocol-Version": "2.0.0",
-    },
-  });
-
-  if (!sharesRes.ok) {
-    const err = await sharesRes.text();
-    throw new Error(`LinkedIn Shares API failed: ${err}`);
-  }
-
-  const sharesData = await sharesRes.json();
-  const ugcPostUrn = sharesData.ugcPost;
-
-  if (!ugcPostUrn) {
-    throw new Error("Could not find ugcPost URN for this share.");
-  }
-
-  // 4. Use the new ugcPost URN to fetch analytics
-  const organizationalUrn = `urn:li:person:${socialAccount.platformUserId}`;
-  const analyticsUrl = `https://api.linkedin.com/v2/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationalUrn)}&shares=${encodeURIComponent(ugcPostUrn)}`;
-
-  const analyticsRes = await fetch(analyticsUrl, {
-    headers: {
-      Authorization: `Bearer ${socialAccount.accessToken}`,
-      "X-Restli-Protocol-Version": "2.0.0",
-      "LinkedIn-Version": "202402",
-    },
-  });
-
-  if (!analyticsRes.ok) {
-    const err = await analyticsRes.text();
-    throw new Error(`LinkedIn Analytics API failed: ${err}`);
-  }
-
-  const analyticsData = await analyticsRes.json();
-  const totalShareStatistics = analyticsData?.elements?.[0]?.totalShareStatistics;
-
-  if (!totalShareStatistics) {
-    throw new Error("No analytics data found for this post.");
-  }
-
-  return {
-    likes: totalShareStatistics.likeCount,
-    comments: totalShareStatistics.commentCount,
-    shares: totalShareStatistics.shareCount,
-    impressions: totalShareStatistics.impressionCount,
-    clicks: totalShareStatistics.clickCount,
+  const headers = {
+    'Authorization': `Bearer ${accessToken}`,
+    'X-Restli-Protocol-Version': '2.0.0'
   };
+
+  try {
+    // Get social actions (likes and comments)
+    const socialActionsResponse = await fetch(
+      `https://api.linkedin.com/v2/socialActions/${encodeURIComponent(shareUrn)}`,
+      {
+        method: 'GET',
+        headers: headers
+      }
+    );
+
+    let analyticsData: LinkedInAnalyticsData = {
+      shareUrn,
+      organizationUrn,
+      fetchedAt: new Date().toISOString(),
+      summary: {
+        likes: 0,
+        comments: 0,
+        impressions: 'Not available',
+        clicks: 'Not available',
+        engagement: 'Not available'
+      }
+    };
+
+    if (socialActionsResponse.ok) {
+      const socialData: LinkedInSocialActionsResponse = await socialActionsResponse.json();
+      const likes = socialData.likesSummary?.totalLikes || 0;
+      const comments = socialData.commentsSummary?.totalFirstLevelComments || 0;
+      
+      analyticsData = {
+        ...analyticsData,
+        likes,
+        aggregatedLikes: socialData.likesSummary?.aggregatedTotalLikes || 0,
+        comments,
+        aggregatedComments: socialData.commentsSummary?.aggregatedTotalComments || 0,
+        activityUrn: socialData.$URN,
+        rawSocialData: socialData,
+        summary: {
+          ...analyticsData.summary,
+          likes,
+          comments
+        }
+      };
+    }
+
+    // Try to get additional metrics from other endpoints
+    try {
+      // Try organizational entity share statistics for impressions
+      const statsResponse = await fetch(
+        `https://api.linkedin.com/v2/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationUrn)}&shares=${encodeURIComponent(shareUrn)}`,
+        {
+          method: 'GET',
+          headers: headers
+        }
+      );
+
+      if (statsResponse.ok) {
+        const statsData: LinkedInShareStatisticsResponse = await statsResponse.json();
+        analyticsData.shareStatistics = statsData;
+        
+        // Extract impressions if available
+        if (statsData.elements && statsData.elements.length > 0) {
+          const element = statsData.elements[0];
+          const impressions = element.totalShareStatistics?.impressionCount || 0;
+          const clicks = element.totalShareStatistics?.clickCount || 0;
+          const engagement = element.totalShareStatistics?.engagement || 0;
+
+          analyticsData.impressions = impressions;
+          analyticsData.clicks = clicks;
+          analyticsData.engagement = engagement;
+          
+          analyticsData.summary = {
+            ...analyticsData.summary,
+            impressions,
+            clicks,
+            engagement
+          };
+        }
+      }
+    } catch (error) {
+      console.log('Share statistics endpoint not available:', error);
+    }
+
+    // Get basic post info for context
+    try {
+      const postResponse = await fetch(
+        `https://api.linkedin.com/v2/ugcPosts/${encodeURIComponent(shareUrn)}`,
+        {
+          method: 'GET',
+          headers: headers
+        }
+      );
+
+      if (postResponse.ok) {
+        const postData: LinkedInUGCPostResponse = await postResponse.json();
+        analyticsData.postDetails = {
+          lifecycleState: postData.lifecycleState,
+          visibility: postData.visibility,
+          createdTime: postData.created?.time,
+          firstPublishedAt: postData.firstPublishedAt,
+          author: postData.author
+        };
+      }
+    } catch (error) {
+      console.log('UGC Posts endpoint not available:', error);
+    }
+
+    console.log(analyticsData);
+    return analyticsData;
+
+  } catch (error) {
+    console.error('Error fetching LinkedIn analytics:', error);
+    throw new Error(`Failed to fetch LinkedIn post analytics: ${error}`);
+  }
 }

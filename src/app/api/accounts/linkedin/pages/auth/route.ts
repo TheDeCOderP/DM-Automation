@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_PAGES_CLIENT_ID}&redirect_uri=${encodeURIComponent(
       redirectUri
-    )}&scope=r_basicprofile,w_organization_social,rw_organization_admin,r_organization_social&state=${state}`;
+    )}&scope=r_basicprofile,w_organization_social,rw_organization_admin,r_organization_social,r_member_postAnalytics&state=${state}`;
 
     return NextResponse.redirect(authUrl);
   } catch (error) {

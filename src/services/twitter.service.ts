@@ -284,11 +284,14 @@ export async function fetchTwitterPostAnalytics(post: Post) {
         { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
+    console.log(res);
+
     if (!res.ok) {
         const err = await res.text();
         throw new Error(`Twitter API failed: ${err}`);
     }
 
     const data = await res.json();
+    console.log(data);
     return data?.data?.[0]?.public_metrics || null;
 }

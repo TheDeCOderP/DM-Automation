@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { toast } from "sonner"
 import { useState } from "react"
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, CircleUserRound, Share2 } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,14 +16,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import { getPlatformIcon } from "@/utils/ui/icons"
 
-import BrandModal from "./_components/BrandModal";
-import ShareBrandModal from "./_components/ShareBrandModal";
-import ConnectAccountsModal from "./_components/ConnectAccountsModal";
-import BrandDetailsModal from "./_components/BrandDetailsModal";
-import { MobileBrandCard, MobileBrandCardSkeleton } from "./_components/MobileBrandCard";
+import BrandModal from "./_components/BrandModal"
+import ShareBrandModal from "./_components/ShareBrandModal"
+import ConnectAccountsModal from "./_components/ConnectAccountsModal"
+import BrandDetailsModal from "./_components/BrandDetailsModal"
+import { MobileBrandCard, MobileBrandCardSkeleton } from "./_components/MobileBrandCard"
 
-import type { SocialAccount } from "@prisma/client";
-import type { BrandWithSocialAccounts } from "@/types/brand";
+import type { SocialAccount } from "@prisma/client"
+import type { BrandWithSocialAccounts } from "@/types/brand"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -31,8 +31,8 @@ function BrandRowSkeleton() {
   return (
     <TableRow className="hidden lg:table-row">
       <TableCell>
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10 rounded-lg" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-12 w-12 rounded-lg" />
           <div className="space-y-2">
             <Skeleton className="h-4 w-32" />
             <Skeleton className="h-3 w-24" />
@@ -40,16 +40,10 @@ function BrandRowSkeleton() {
         </div>
       </TableCell>
       <TableCell>
-        <Skeleton className="h-4 w-36" />
-      </TableCell>
-      <TableCell>
         <div className="flex gap-2">
           <Skeleton className="h-7 w-20 rounded-full" />
           <Skeleton className="h-7 w-20 rounded-full" />
         </div>
-      </TableCell>
-      <TableCell>
-        <Skeleton className="h-4 w-24" />
       </TableCell>
       <TableCell>
         <Skeleton className="h-8 w-8 rounded" />
@@ -69,7 +63,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
         <p className="text-muted-foreground mb-6 max-w-sm">
           We couldn&apos;t fetch your brands. This might be due to a network issue or server problem.
         </p>
-        <Button onClick={onRetry} variant="outline" className="gap-2">
+        <Button onClick={onRetry} variant="outline" className="gap-2 bg-transparent">
           <RefreshCw className="h-4 w-4" />
           Try Again
         </Button>
@@ -77,6 +71,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
     </Card>
   )
 }
+
 export default function BrandsPage() {
   const { data: brands, isLoading, error, mutate } = useSWR("/api/brands", fetcher)
   const [selectedBrand, setSelectedBrand] = useState<BrandWithSocialAccounts | null>(null)
@@ -141,38 +136,36 @@ export default function BrandsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="rounded-xl bg-primary/10 p-3 shrink-0">
-            <CircleUserRound className="h-7 w-7 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
-              Brands
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
-              Create and manage separate business profiles for each of your brands. Connect social accounts and share with team members.
+    <div className="space-y-8">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-primary" />
+              <span className="text-sm font-semibold text-primary uppercase tracking-wider">Brand Management</span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-balance">Your Brands</h1>
+            <p className="text-base text-muted-foreground max-w-2xl leading-relaxed">
+              Create and manage separate business profiles for each of your brands. Connect social accounts and share
+              with team members.
             </p>
           </div>
+          <Button
+            onClick={() => {
+              setSelectedBrand(null)
+              setIsCreateModalOpen(true)
+            }}
+            className="w-full sm:w-auto shadow-lg hover:shadow-xl transition-all duration-200 gap-2 h-11"
+            size="lg"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Create Brand</span>
+          </Button>
         </div>
-        <Button
-          onClick={() => {
-            setSelectedBrand(null)
-            setIsCreateModalOpen(true)
-          }}
-          className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow shrink-0"
-          size="lg"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Brand
-        </Button>
       </div>
 
-      <Separator />
+      <Separator className="bg-border/50" />
 
-      {/* Content */}
       {error ? (
         <ErrorState onRetry={handleRetry} />
       ) : isLoading ? (
@@ -185,15 +178,13 @@ export default function BrandsPage() {
           </div>
 
           {/* Desktop Skeleton */}
-          <Card className="hidden lg:block">
+          <Card className="hidden lg:block border-border/50">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="font-semibold">Brand</TableHead>
-                  <TableHead className="font-semibold" style={{ width: "35%" }}>
-                    Social Accounts
-                  </TableHead>
-                  <TableHead></TableHead>
+                <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/50">
+                  <TableHead className="font-semibold text-foreground">Brand</TableHead>
+                  <TableHead className="font-semibold text-foreground">Social Accounts</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -209,17 +200,17 @@ export default function BrandsPage() {
           {/* Mobile View: Cards */}
           <div className="space-y-4 lg:hidden">
             {brands?.data?.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="rounded-full bg-muted p-4 mb-4">
-                    <Plus className="h-8 w-8 text-muted-foreground" />
+              <Card className="border-dashed border-border/50 bg-secondary/20">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center px-6">
+                  <div className="rounded-full bg-primary/10 p-4 mb-4">
+                    <Sparkles className="h-8 w-8 text-primary" />
                   </div>
                   <h3 className="font-semibold text-xl mb-2">No brands yet</h3>
-                  <p className="text-muted-foreground text-sm mb-4 max-w-sm">
+                  <p className="text-muted-foreground text-sm mb-6 max-w-sm">
                     Get started by creating your first brand profile to manage your social media presence
                   </p>
-                  <Button onClick={() => setIsCreateModalOpen(true)} size="lg">
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button onClick={() => setIsCreateModalOpen(true)} size="lg" className="gap-2">
+                    <Plus className="h-4 w-4" />
                     Create Your First Brand
                   </Button>
                 </CardContent>
@@ -240,31 +231,29 @@ export default function BrandsPage() {
           </div>
 
           {/* Desktop View: Table */}
-          <Card className="hidden lg:block shadow-sm py-0">
+          <Card className="hidden lg:block shadow-sm border-border/50 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="font-semibold">Brand</TableHead>
-                  <TableHead className="font-semibold" style={{ width: "70%" }}>
-                    Social Accounts
-                  </TableHead>
-                  <TableHead></TableHead>
+                <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/50">
+                  <TableHead className="font-semibold text-foreground">Brand</TableHead>
+                  <TableHead className="font-semibold text-foreground">Social Accounts</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {brands?.data?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-64">
+                    <TableCell colSpan={3} className="h-64">
                       <div className="flex flex-col items-center justify-center text-center">
-                        <div className="rounded-full bg-muted p-4 mb-4">
-                          <Plus className="h-8 w-8 text-muted-foreground" />
+                        <div className="rounded-full bg-primary/10 p-4 mb-4">
+                          <Sparkles className="h-8 w-8 text-primary" />
                         </div>
                         <h3 className="font-semibold text-xl mb-2">No brands yet</h3>
-                        <p className="text-muted-foreground text-sm mb-4 max-w-sm">
+                        <p className="text-muted-foreground text-sm mb-6 max-w-sm">
                           Get started by creating your first brand profile to manage your social media presence
                         </p>
-                        <Button onClick={() => setIsCreateModalOpen(true)} size="lg">
-                          <Plus className="h-4 w-4 mr-2" />
+                        <Button onClick={() => setIsCreateModalOpen(true)} size="lg" className="gap-2">
+                          <Plus className="h-4 w-4" />
                           Create Your First Brand
                         </Button>
                       </div>
@@ -272,18 +261,24 @@ export default function BrandsPage() {
                   </TableRow>
                 ) : (
                   brands?.data.map((brand: BrandWithSocialAccounts) => (
-                    <TableRow key={brand.id} className="hover:bg-muted/50 transition-colors">
+                    <TableRow key={brand.id} className="hover:bg-secondary/20 transition-colors border-border/50">
                       {/* Brand */}
                       <TableCell>
-                        <div onClick={() => openDetailsModal(brand)} className="flex items-center gap-3 cursor-pointer">
-                          <Avatar className="h-10 w-10 border-2 shadow-sm rounded-lg">
+                        <div
+                          onClick={() => openDetailsModal(brand)}
+                          className="flex items-center gap-4 cursor-pointer group"
+                        >
+                          <Avatar className="h-12 w-12 border-2 border-primary/20 shadow-md rounded-lg group-hover:border-primary/40 transition-colors">
                             <AvatarImage src={brand.logo || "/placeholder.svg"} alt={brand.name} />
-                            <AvatarFallback className="font-bold rounded-lg bg-gradient-to-br from-primary/20 to-primary/5">
+                            <AvatarFallback className="font-bold rounded-lg bg-gradient-to-br from-primary/30 to-primary/10 text-primary">
                               {brand.name.substring(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-semibold">{brand.name}</p>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                              {brand.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">View details</p>
                           </div>
                         </div>
                       </TableCell>
@@ -296,12 +291,10 @@ export default function BrandsPage() {
                               <Badge
                                 key={account.id}
                                 variant="secondary"
-                                className="gap-1.5 px-3 py-1"
+                                className="gap-1.5 px-3 py-1.5 bg-secondary/50 hover:bg-secondary/70 transition-colors"
                               >
                                 {getPlatformIcon(account.platform)}
-                                <span className="text-xs font-medium">
-                                  {account.platformUsername}
-                                </span>
+                                <span className="text-xs font-medium">{account.platformUsername}</span>
                               </Badge>
                             ))}
                           </div>
@@ -310,7 +303,7 @@ export default function BrandsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => openConnectModal(brand.id, brand.name)}
-                            className="gap-2"
+                            className="gap-2 text-muted-foreground hover:text-foreground"
                           >
                             <Globe className="h-4 w-4" />
                             Add Account
@@ -323,31 +316,35 @@ export default function BrandsPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             {brand.isAdmin && (
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-secondary/50">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             )}
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => openConnectModal(brand.id, brand.name)}>
-                              <Globe className="h-4 w-4 mr-2" />
+                            <DropdownMenuItem
+                              onClick={() => openConnectModal(brand.id, brand.name)}
+                              className="gap-2 cursor-pointer"
+                            >
+                              <Globe className="h-4 w-4" />
                               Connect Accounts
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => openShareModal(brand.id, brand.name)}>
-                              <Share2 className="h-4 w-4 mr-2" />
+                              onClick={() => openShareModal(brand.id, brand.name)}
+                              className="gap-2 cursor-pointer"
+                            >
+                              <Share2 className="h-4 w-4" />
                               Share Brand
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleEdit(brand)}>
-                              <Edit className="h-4 w-4 mr-2" />
+                            <DropdownMenuItem onClick={() => handleEdit(brand)} className="gap-2 cursor-pointer">
+                              <Edit className="h-4 w-4" />
                               Edit Brand
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleDelete(brand.id)}
-                              className="text-destructive focus:text-destructive"
+                              className="text-destructive focus:text-destructive gap-2 cursor-pointer"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
+                              <Trash2 className="h-4 w-4" />
                               Delete Brand
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -375,8 +372,7 @@ export default function BrandsPage() {
       <ConnectAccountsModal
         mutate={mutate}
         accounts={
-          brands?.data.find((b: BrandWithSocialAccounts) => b.id === connectAccountsModal.brandId)
-            ?.socialAccounts ?? []
+          brands?.data.find((b: BrandWithSocialAccounts) => b.id === connectAccountsModal.brandId)?.socialAccounts ?? []
         }
         open={connectAccountsModal.open}
         onOpenChange={(open) => setConnectAccountsModal({ ...connectAccountsModal, open })}

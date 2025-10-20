@@ -275,6 +275,75 @@ export async function POST(req: NextRequest) {
 
     const createdPosts = []
 
+    // PROCESS SOCIAL ACCOUNT PAGES FIRST (FIX: This ensures pages are processed even when no accounts are selected)
+    for (const socialAccountPageId of socialAccountPageIds) {
+      const socialAccountPage = await prisma.socialAccountPage.findUnique({
+        where: { id: socialAccountPageId },
+        include: {
+          socialAccount: {
+            include: {
+              brands: {
+                include: {
+                  brand: true
+                }
+              }
+            },
+          },
+        },
+      })
+
+      if (!socialAccountPage) {
+        console.error(`Page token with ID ${socialAccountPageId} not found.`)
+        continue
+      }
+
+      // Check if the social account (which owns the page token) belongs to the current brand
+      const belongsToBrand = socialAccountPage.socialAccount.brands.some(
+        (socialAccountBrand) => socialAccountBrand.brandId === brandId
+      )
+
+      if (!belongsToBrand) {
+        console.error(`Page token with ID ${socialAccountPageId} doesn't belong to brand ${brandId}.`)
+        continue
+      }
+
+      // Determine platform and caption based on socialAccountPage platform
+      const platform = socialAccountPage.platform
+      const caption = captions[platform]
+      if (!caption) continue
+
+      const post = await prisma.post.create({
+        data: {
+          content: caption,
+          platform: platform,
+          scheduledAt: scheduledAt,
+          status: status,
+          userId: token.id,
+          brandId: brandId,
+          frequency: frequency,
+          socialAccountPageId: socialAccountPageId,
+        },
+      })
+
+      // Attach media to each post
+      if (mediaUrls.length > 0) {
+        for (const media of mediaUrls) {
+          await prisma.media.create({
+            data: {
+              postId: post.id,
+              userId: token.id,
+              brandId: brandId,
+              url: media.url,
+              type: media.type,
+            },
+          })
+        }
+      }
+
+      createdPosts.push(post)
+    }
+
+    // THEN PROCESS REGULAR SOCIAL ACCOUNTS (but skip if pages of the same platform are selected)
     for (const accountId of accounts) {
       // Get social account with its brands to check if it belongs to the current brand
       const socialAccount = await prisma.socialAccount.findUnique({
@@ -349,73 +418,6 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      if (mediaUrls.length > 0) {
-        for (const media of mediaUrls) {
-          await prisma.media.create({
-            data: {
-              postId: post.id,
-              userId: token.id,
-              brandId: brandId,
-              url: media.url,
-              type: media.type,
-            },
-          })
-        }
-      }
-
-      createdPosts.push(post)
-    }
-
-    for (const socialAccountPageId of socialAccountPageIds) {
-      const socialAccountPage = await prisma.socialAccountPage.findUnique({
-        where: { id: socialAccountPageId },
-        include: {
-          socialAccount: {
-            include: {
-              brands: {
-                include: {
-                  brand: true
-                }
-              }
-            },
-          },
-        },
-      })
-
-      if (!socialAccountPage) {
-        console.error(`Page token with ID ${socialAccountPageId} not found.`)
-        continue
-      }
-
-      // Check if the social account (which owns the page token) belongs to the current brand
-      const belongsToBrand = socialAccountPage.socialAccount.brands.some(
-        (socialAccountBrand) => socialAccountBrand.brandId === brandId
-      )
-
-      if (!belongsToBrand) {
-        console.error(`Page token with ID ${socialAccountPageId} doesn't belong to brand ${brandId}.`)
-        continue
-      }
-
-      // Determine platform and caption based on socialAccountPage platform
-      const platform = socialAccountPage.platform
-      const caption = captions[platform]
-      if (!caption) continue
-
-      const post = await prisma.post.create({
-        data: {
-          content: caption,
-          platform: platform,
-          scheduledAt: scheduledAt,
-          status: status,
-          userId: token.id,
-          brandId: brandId,
-          frequency: frequency,
-          socialAccountPageId: socialAccountPageId,
-        },
-      })
-
-      // Attach media to each post
       if (mediaUrls.length > 0) {
         for (const media of mediaUrls) {
           await prisma.media.create({
@@ -559,6 +561,19 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    const postGroup = await prisma.postGroup.create({
+      data: {
+        posts: {
+          connect: createdPosts.map(p => ({ id: p.id }))
+        }
+      }
+    })
+
+    await prisma.post.updateMany({
+      where: { id: { in: createdPosts.map(p => p.id) } },
+      data: { postGroupId: postGroup.id }
+    })
 
     return NextResponse.json({ posts: createdPosts }, { status: 201 })
   } catch (error) {

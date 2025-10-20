@@ -269,6 +269,9 @@ model Post {
   media       Media[]
   analytics   PostAnalytics[]
 
+  postGroupId String?
+  postGroup   PostGroup? @relation(fields: [postGroupId], references: [id], onDelete: Cascade)
+
   brandId     String
   brand       Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
@@ -276,6 +279,14 @@ model Post {
   socialAccountPage   SocialAccountPage? @relation(fields: [socialAccountPageId], references: [id], onDelete: Cascade)
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PostGroup {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  posts      Post[]
 }
 
 model PostAnalytics {

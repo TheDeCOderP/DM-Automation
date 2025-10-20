@@ -1,9 +1,16 @@
 'use client';
 
-import { Button } from "@/components/ui/button";
+import useSWR from "swr";
+import { useEffect, useState } from "react";
+import { Bell, CheckCircle, AlertCircle, Clock, Unlink, CreditCard } from "lucide-react";
+
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { NotificationType } from "@prisma/client";
-import { CheckCircle, AlertCircle, Clock, Unlink, CreditCard, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+import { NotificationType } from '@prisma/client';
 import { getPlatformIcon } from "@/utils/ui/icons";
 
 // Define the possible metadata types for each notification type
@@ -59,7 +66,7 @@ interface NotificationsListProps {
   notifications: Notification[];
 }
 
-export function NotificationsList({ notifications = [] }: NotificationsListProps) {
+function NotificationsList({ notifications = [] }: NotificationsListProps) {
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
       case NotificationType.POST_PUBLISHED:
@@ -103,7 +110,6 @@ export function NotificationsList({ notifications = [] }: NotificationsListProps
       "postUrl" in notification.metadata
     );
   };
-
 
   return (
     <div className="divide-y">
@@ -164,4 +170,103 @@ export function NotificationsList({ notifications = [] }: NotificationsListProps
       ))}
     </div>
   );
+}
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
+export default function NotificationDropdown() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // SWR for notifications
+  const { data: notificationData, mutate: mutateNotifications, error, isLoading } = useSWR<{
+    success: boolean;
+    data: Notification[];
+  }>(`/api/notifications?status=unread`, fetcher, {
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    shouldRetryOnError: true,
+    errorRetryInterval: 5000,
+  });
+
+  const notifications = notificationData?.data || [];
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching notifications:', error);
+      toast.error('Failed to fetch notifications');
+    }
+  }, [error]);
+
+  const handleMarkAllAsRead = async () => {
+    setIsSubmitting(true);
+    try {
+      await Promise.all(
+        notifications.map(({ id }) =>
+          fetch(`/api/notifications/${id}`, { method: 'PUT' })
+        )
+      );
+      mutateNotifications();
+      toast.success('Notifications marked as read');
+    } catch (error) {
+      toast.error('Failed to mark notifications as read');
+      console.error('Failed to mark notifications as read:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+          <Button
+              variant="ghost"
+              size="icon"
+              className="relative hover:bg-accent hover:text-accent-foreground dark:hover:bg-input/50"
+          >
+              <Bell className="w-5 h-5 dark:text-white" />
+              {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1.5 w-4 h-4 p-0 text-xs flex items-center justify-center bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+              )}
+          </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+          align="end"
+          className="w-80 md:w-96 max-h-[80vh] overflow-y-auto backdrop-blur-sm"
+      >
+          <DropdownMenuLabel className="flex justify-between items-center">
+              <span>Notifications</span>
+              <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  disabled={isSubmitting || unreadCount === 0}
+                  onClick={handleMarkAllAsRead}
+              >
+                  Mark all as read
+              </Button>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {isLoading ? (
+              <div className="p-4 flex items-center">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div className="ml-3 space-y-1 flex-1">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                  </div>
+              </div>
+          ) : notifications.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                  No new notifications
+              </div>
+          ) : (
+              <NotificationsList notifications={notifications}/>
+          )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }

@@ -19,7 +19,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -27,21 +27,22 @@ import { useSidebarSettings } from "@/hooks/useSidebarSettings";
 import type { SidebarGroup as Group, SidebarItem } from "@prisma/client";
 import { SidebarSettings } from "@prisma/client";
 import { ScrollArea } from "../ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 interface SidebarGroupWithItems extends Group {
   items: SidebarItem[];
 }
 
-  // Utility: map DB icon string -> Lucide component
-  const getIcon = (iconName: string | null | undefined): LucideIcon => {
-    if (!iconName) return LucideIcons.Circle;
+// Utility: map DB icon string -> Lucide component
+const getIcon = (iconName: string | null | undefined): LucideIcon => {
+  if (!iconName) return LucideIcons.Circle;
 
-    const key = (iconName.charAt(0).toUpperCase() + iconName.slice(1)) as keyof typeof LucideIcons;
-    const Icon = LucideIcons[key];
+  const key = (iconName.charAt(0).toUpperCase() + iconName.slice(1)) as keyof typeof LucideIcons;
+  const Icon = LucideIcons[key];
 
-    // Ensure it's actually a LucideIcon, not e.g. createLucideIcon
-    return (Icon as LucideIcon) ?? LucideIcons.Circle;
-  };
+  // Ensure it's actually a LucideIcon, not e.g. createLucideIcon
+  return (Icon as LucideIcon) ?? LucideIcons.Circle;
+};
 
 export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | null; logoUrl?: string | null }) {
   const { sidebar, isLoading: isLoadingSidebar } = useSidebar();
@@ -66,7 +67,7 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
       return { gap: `${settings.spacingPx}px` } as React.CSSProperties;
     }
     const preset = settings.spacingPreset;
-    const px = preset === "NONE" ? 0 : preset === "SM" ? 4 : preset === "LG" ? 12 : 8; // MD default 8
+    const px = preset === "NONE" ? 0 : preset === "SM" ? 8 : preset === "LG" ? 16 : 12; // MD default 12
     return { gap: `${px}px` } as React.CSSProperties;
   }, [settings]);
 
@@ -119,161 +120,212 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
   );
 
   return (
-    <Sidebar collapsible="icon" className="z-20">
-      <SidebarHeader className="flex flex-col items-center justify-center relative px-4 py-4 border-b w-full text-center">
-        {/* Logo Section */}
-        <div className="flex items-center justify-center w-full relative">
-          {logoUrl ? (
-            <Image
-              src={logoUrl}
-              alt={`${siteName} Logo`}
-              className="contain transition-all duration-300 dark:brightness-0 dark:invert"
-              width={160}
-              height={50}
-              style={{
-                opacity: 1,
-                transform: 'scale(1)',
-              }}
-            />
-          ) : (
-            <Image
-              src="/icons/logo.png"
-              alt="Default Logo"
-              className="contain transition-all duration-300 dark:brightness-0 dark:invert"
-              width={160}
-              height={50}
-              style={{
-                opacity: 1,
-                transform: 'scale(1)',
-              }}
-            />
-          )}
-        </div>
-
-        {/* Site Name - Only visible when expanded */}
-        <div className="group-data-[state=collapsed]:hidden transition-all duration-300">
-          <h1 className="font-semibold text-lg mb-1">{siteName}</h1>
-          <p className="text-xs text-muted-foreground">
-            Powered by{" "}
-            <Link
-              href="https://prabisha.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary font-medium hover:underline transition-colors"
-            >
-              Prabisha Consulting
-            </Link>
-          </p>
-        </div>
-
-        {/* Collapsed State - Show only logo */}
-        <div className="group-data-[state=expanded]:hidden absolute inset-0 flex items-center justify-center">
-          {logoUrl ? (
-            <Image
-              src={logoUrl}
-              alt={`${siteName} Logo`}
-              className="contain dark:brightness-0 dark:invert"
-              width={40}
-              height={40}
-            />
-          ) : (
-            <Image
-              src="/icons/logo.png"
-              alt="Default Logo"
-              className="contain dark:brightness-0 dark:invert"
-              width={40}
-              height={40}
-            />
-          )}
-        </div>
-
-        {/* Sidebar Trigger */}
-        <SidebarTrigger className="h-7 w-7 rounded-full absolute z-50 top-6 -right-4 bg-primary text-primary-foreground hover:bg-primary/90" />
-      </SidebarHeader>
-
-      <div className="p-4 group-data-[collapsible=icon]:px-1.5 ">
-        <Link href="/posts/create">
-          <Button className="w-full group-data-[collapsible=icon]:aspect-square group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-0">
-            <Plus className="size-4 group-data-[collapsible=icon]:size-5" />
-            <span className="ml-2 group-data-[collapsible=icon]:sr-only">Create Post</span>
-          </Button>
-        </Link>
-      </div>
-
-      <SidebarContent className="flex-1 overflow-y-auto px-2 group-data-[collapsible=icon]:px-0 " style={groupGapStyle}>
-        <ScrollArea className="h-full w-full">
-          {isLoadingSidebar ? (
-            <div className="space-y-4 px-2">
-              {/* Fake groups */}
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-3 w-24" /> {/* group label */}
-                  <div className="space-y-2">
-                    {[...Array(4)].map((_, j) => (
-                      <div key={j} className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-4 rounded-full" /> {/* icon */}
-                        <Skeleton className="h-3 w-28" /> {/* text */}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+    <TooltipProvider delayDuration={0}>
+      <Sidebar collapsible="icon" className="z-20 border-r bg-gradient-to-b from-background to-muted/5">
+        <SidebarHeader className="flex flex-col items-center justify-center relative px-4 py-5 border-b border-border/50 bg-gradient-to-r from-background to-muted/10">
+          {/* Expanded State */}
+          <div className="group-data-[state=collapsed]:hidden flex flex-col items-center justify-center w-full space-y-3 transition-all duration-300">
+            {/* Logo Section */}
+            <div className="flex items-center justify-center w-full relative">
+              {logoUrl ? (
+                <Image
+                  src={logoUrl}
+                  alt={`${siteName} Logo`}
+                  className="contain transition-all duration-300 dark:brightness-0 dark:invert hover:scale-105"
+                  width={140}
+                  height={45}
+                  style={{
+                    opacity: 1,
+                    transform: 'scale(1)',
+                  }}
+                />
+              ) : (
+                <Image
+                  src="/icons/logo.png"
+                  alt="Default Logo"
+                  className="contain transition-all duration-300 dark:brightness-0 dark:invert hover:scale-105"
+                  width={140}
+                  height={45}
+                  style={{
+                    opacity: 1,
+                    transform: 'scale(1)',
+                  }}
+                />
+              )}
             </div>
-          ) : sidebar?.length > 0 ? (
-            sidebar.map((group: SidebarGroupWithItems) => (
-              <SidebarGroup key={group.id}>
-                {group.title === "Site Settings" ? (
-                  <SidebarGroupLabel
-                    asChild
-                    className={`uppercase text-xs font-bold text-muted-foreground group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""}`}
-                  >
-                    <Link href={`/${base}/site-settings`}>{group.title}</Link>
-                  </SidebarGroupLabel>
-                ) : (
-                  <SidebarGroupLabel
-                    className={`cursor-pointer uppercase text-xs font-bold text-muted-foreground group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""}`}
-                    onClick={() => toggleGroup(group.id)}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      {group.title}
+
+            {/* Site Name */}
+            <div className="text-center space-y-1">
+              <h1 className="font-bold text-lg bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                {siteName}
+              </h1>
+              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                Powered by{" "}
+                <Link
+                  href="https://prabisha.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-medium hover:underline transition-colors flex items-center gap-1"
+                >
+                  Prabisha
+                  <Sparkles className="h-3 w-3 text-yellow-500" />
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          {/* Collapsed State */}
+          <div className="group-data-[state=expanded]:hidden absolute inset-0 flex items-center justify-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  {logoUrl ? (
+                    <Image
+                      src={logoUrl}
+                      alt={`${siteName} Logo`}
+                      className="contain dark:brightness-0 dark:invert hover:scale-110 transition-transform"
+                      width={36}
+                      height={36}
+                    />
+                  ) : (
+                    <Image
+                      src="/icons/logo.png"
+                      alt="Default Logo"
+                      className="contain dark:brightness-0 dark:invert hover:scale-110 transition-transform"
+                      width={36}
+                      height={36}
+                    />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p className="font-medium">{siteName}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Sidebar Trigger */}
+          <SidebarTrigger className="h-7 w-7 rounded-full absolute z-50 top-6 -right-4 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg border transition-all duration-300 hover:scale-110" />
+        </SidebarHeader>
+
+        {/* Create Post Button */}
+        <div className="p-4 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="/posts/create">
+                <Button className="w-full group-data-[collapsible=icon]:aspect-square group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-0 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95">
+                  <Plus className="size-4 group-data-[collapsible=icon]:size-5" />
+                  <span className="ml-2 group-data-[collapsible=icon]:sr-only font-medium">Create Post</span>
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="group-data-[collapsible=icon]:block hidden">
+              Create Post
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Navigation Groups */}
+        <SidebarContent className="flex-1 overflow-y-auto px-3 group-data-[collapsible=icon]:px-0" style={groupGapStyle}>
+          <ScrollArea className="h-full w-full pr-2">
+            {isLoadingSidebar ? (
+              <div className="space-y-6 px-1">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <Skeleton className="h-4 w-28 rounded-full mx-auto" />
+                    <div className="space-y-2">
+                      {[...Array(4)].map((_, j) => (
+                        <div key={j} className="flex items-center gap-3 px-2">
+                          <Skeleton className="h-5 w-5 rounded-full" />
+                          <Skeleton className="h-4 flex-1 rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : sidebar?.length > 0 ? (
+              sidebar.map((group: SidebarGroupWithItems) => (
+                <SidebarGroup key={group.id} className="group/sidebar-group">
+                  {group.title === "Site Settings" ? (
+                    <SidebarGroupLabel
+                      asChild
+                      className={`uppercase text-xs font-semibold text-muted-foreground tracking-wider group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""} px-2 py-2 hover:bg-accent/50 rounded-lg transition-colors`}
+                    >
+                      <Link href={`/${base}/site-settings`}>
+                        {group.title}
+                      </Link>
+                    </SidebarGroupLabel>
+                  ) : (
+                    <SidebarGroupLabel
+                      className={`cursor-pointer uppercase text-xs font-semibold text-muted-foreground tracking-wider group-data-[collapsible=icon]:hidden ${!showTitles ? "hidden" : ""} px-2 py-2 hover:bg-accent/50 rounded-lg transition-colors flex items-center justify-between`}
+                      onClick={() => toggleGroup(group.id)}
+                    >
+                      <span className="truncate">{group.title}</span>
                       <LucideIcons.ChevronDown
-                        className={`h-4 w-4 transition-transform duration-200 ${
-                          isGroupOpen(group.id) ? "rotate-180" : ""
+                        className={`h-3 w-3 transition-transform duration-300 flex-shrink-0 ${
+                          isGroupOpen(group.id) ? "rotate-180 text-primary" : "text-muted-foreground/60"
                         }`}
                       />
-                    </div>
-                  </SidebarGroupLabel>
-                )}
-                {isGroupOpen(group.id) && (
-                  <SidebarGroupContent>
-                    <SidebarMenu className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center">
-                      {group.items.map((item) => {
-                        const Icon = getIcon(item.icon);
-                        return (
-                          <SidebarMenuItem key={item.id}>
-                            <SidebarMenuButton asChild size={menuButtonSize}>
-                              <Link href={item.href}>
-                                <Icon className={iconSizeClass} />
-                                <span className="group-data-[collapsible=icon]:sr-only">
-                                  {item.label}
-                                </span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        );
-                      })}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                )}
-              </SidebarGroup>
-            ))
-          ) : (
-            <p className="text-muted-foreground text-sm px-2">No menu found</p>
-          )}
-        </ScrollArea>
-      </SidebarContent>
+                    </SidebarGroupLabel>
+                  )}
+                  
+                  {isGroupOpen(group.id) && (
+                    <SidebarGroupContent className="mt-1">
+                      <SidebarMenu className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center space-y-0.5">
+                        {group.items.map((item) => {
+                          const Icon = getIcon(item.icon);
+                          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                          
+                          return (
+                            <SidebarMenuItem key={item.id}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SidebarMenuButton 
+                                    asChild 
+                                    size={menuButtonSize}
+                                    isActive={isActive}
+                                    className="relative group/menubutton transition-all duration-200 hover:bg-accent/80 hover:scale-105 hover:shadow-sm"
+                                  >
+                                    <Link href={item.href}>
+                                      <Icon className={`${iconSizeClass} transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover/menubutton:text-foreground'}`} />
+                                      <span className="group-data-[collapsible=icon]:sr-only font-medium">
+                                        {item.label}
+                                      </span>
+                                      
+                                      {/* Active indicator */}
+                                      {isActive && (
+                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
+                                      )}
+                                    </Link>
+                                  </SidebarMenuButton>
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="group-data-[collapsible=icon]:block hidden">
+                                  <p className="font-medium">{item.label}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </SidebarMenuItem>
+                          );
+                        })}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  )}
+                </SidebarGroup>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                  <LucideIcons.Menu className="h-6 w-6 text-muted-foreground/50" />
+                </div>
+                <p className="text-muted-foreground text-sm font-medium">No menu items</p>
+                <p className="text-muted-foreground/70 text-xs mt-1">Configure your sidebar in settings</p>
+              </div>
+            )}
+          </ScrollArea>
+        </SidebarContent>
 
-      <SidebarRail />
-    </Sidebar>
+        <SidebarRail />
+      </Sidebar>
+    </TooltipProvider>
   );
 }
