@@ -20,7 +20,6 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
   const [activeTab, setActiveTab] = useState<"image" | "video">("image");
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [videoTaskId, setVideoTaskId] = useState<string | null>(null);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -141,7 +140,6 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
       const data = await response.json();
 
       if (data.success && data.taskId) {
-        setVideoTaskId(data.taskId);
         toast.success("Video generation started! This may take a few minutes...");
         pollVideoStatus(data.taskId);
       } else {
@@ -202,7 +200,6 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
         toast.error(error instanceof Error ? error.message : "Failed to check video status");
         setIsGenerating(false);
         setVideoStatus(null);
-        setVideoTaskId(null);
       }
     };
 
@@ -220,7 +217,6 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
   const handleClose = () => {
     setIsOpen(false);
     setPrompt("");
-    setVideoTaskId(null);
     setVideoStatus(null);
     setIsGenerating(false);
     handleRemoveImage();

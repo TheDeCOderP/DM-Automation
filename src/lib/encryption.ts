@@ -19,7 +19,7 @@ const defaultConfig: EncryptionConfig = {
 };
 
 // Helper function to derive a key of correct length
-function deriveKey(key: string, keyLength: number): Buffer {
+function deriveKey(key: string): Buffer {
   // For AES-256, we need a 32-byte key
   return crypto.createHash('sha256').update(key).digest();
 }
@@ -33,7 +33,7 @@ export async function encryptToken(
     
     // Generate initialization vector
     const iv = crypto.randomBytes(16);
-    const derivedKey = deriveKey(key, 32); // 32 bytes for AES-256
+    const derivedKey = deriveKey(key); // 32 bytes for AES-256
     
     if (algorithm === 'aes-256-gcm') {
       const cipher = crypto.createCipheriv(algorithm, derivedKey, iv);
@@ -80,7 +80,7 @@ export async function decryptToken(
     const { iv, encryptedData, authTag } = JSON.parse(encryptedToken) as EncryptedToken;
 
     const ivBuffer = Buffer.from(iv, 'hex');
-    const derivedKey = deriveKey(key, 32); // 32 bytes for AES-256
+    const derivedKey = deriveKey(key); // 32 bytes for AES-256
     
     if (algorithm === 'aes-256-gcm') {
       if (!authTag) {

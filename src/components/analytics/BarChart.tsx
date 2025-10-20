@@ -60,27 +60,11 @@ export default function BarChart({
       .attr('y', d => yScale(d.value))
       .attr('width', xScale.bandwidth())
       .attr('height', d => innerHeight - yScale(d.value))
-      .attr('fill', (d, _) => d.color || colorScale(d.label) as string)
+      .attr('fill', (d) => d.color || colorScale(d.label) as string)
       .attr('rx', 4)
       .style('cursor', 'pointer')
-      .on('mouseover', function(event, d) {
+      .on('mouseover', function() {
         d3.select(this).attr('opacity', 0.8);
-        
-        // Tooltip
-        const tooltip = d3.select('body')
-          .append('div')
-          .attr('class', 'tooltip')
-          .style('position', 'absolute')
-          .style('background', 'rgba(0, 0, 0, 0.8)')
-          .style('color', 'white')
-          .style('padding', '8px')
-          .style('border-radius', '4px')
-          .style('font-size', '12px')
-          .style('pointer-events', 'none')
-          .style('z-index', '1000')
-          .text(`${d.label}: ${d.value}`)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 10) + 'px');
       })
       .on('mouseout', function() {
         d3.select(this).attr('opacity', 1);

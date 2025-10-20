@@ -66,27 +66,11 @@ export default function DonutChart({
       .style('cursor', 'pointer')
       .style('stroke', 'white')
       .style('stroke-width', 2)
-      .on('mouseover', function(event, d) {
+      .on('mouseover', function() {
         d3.select(this)
           .transition()
           .duration(200)
           .attr('transform', 'scale(1.05)');
-        
-        // Tooltip
-        const tooltip = d3.select('body')
-          .append('div')
-          .attr('class', 'tooltip')
-          .style('position', 'absolute')
-          .style('background', 'rgba(0, 0, 0, 0.8)')
-          .style('color', 'white')
-          .style('padding', '8px')
-          .style('border-radius', '4px')
-          .style('font-size', '12px')
-          .style('pointer-events', 'none')
-          .style('z-index', '1000')
-          .text(`${d.data.label}: ${d.data.value} (${((d.data.value / d3.sum(data, d => d.value)) * 100).toFixed(1)}%)`)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 10) + 'px');
       })
       .on('mouseout', function() {
         d3.select(this)

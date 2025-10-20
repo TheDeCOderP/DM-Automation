@@ -25,7 +25,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useSidebarSettings } from "@/hooks/useSidebarSettings";
 import type { SidebarGroup as Group, SidebarItem } from "@prisma/client";
-import { SidebarSettings } from "@prisma/client";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 

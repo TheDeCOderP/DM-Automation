@@ -1,10 +1,11 @@
 'use client';
 
 import useSWR from 'swr';
+import Image from 'next/image';
 import { debounce } from 'lodash';
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, Loader2, Image, Building2, X, FileText } from 'lucide-react';
+import { Search, Loader2, ImageIcon, Building2, X, FileText } from 'lucide-react';
 
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -49,16 +50,18 @@ interface SearchResultItemProps {
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-function SearchResultItem({ type, icon, title, subtitle, onClick, logo }: SearchResultItemProps) {
+function SearchResultItem({ icon, title, subtitle, onClick, logo }: SearchResultItemProps) {
   return (
     <div
       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
       onClick={onClick}
     >
       {logo ? (
-        <img 
+        <Image 
           src={logo} 
           alt={title}
+          width={32}
+          height={32}
           className="h-8 w-8 rounded-full object-cover"
         />
       ) : (
@@ -283,7 +286,7 @@ export default function SearchBarDropdown({ open, onClose }: SearchBarDropdownPr
                     {searchResults?.data?.media && searchResults.data.media.length > 0 && (
                       <div className="mb-1">
                         <div className="flex items-center gap-2 px-3 py-2 mb-1">
-                          <Image className="h-4 w-4 text-muted-foreground" />
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
                           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             Media
                           </h3>
@@ -295,7 +298,7 @@ export default function SearchBarDropdown({ open, onClose }: SearchBarDropdownPr
                           <SearchResultItem
                             key={`media-${media.id}`}
                             type="media"
-                            icon={<Image className="h-5 w-5 text-primary" />}
+                            icon={<ImageIcon className="h-5 w-5 text-primary" />}
                             title={media.url.split('/').pop() || media.url.substring(0, 60)}
                             subtitle={media.type}
                             onClick={() => navigateToResult('media', media.id)}

@@ -123,28 +123,8 @@ export default function LineChart({
       .attr('r', 4)
       .style('fill', '#3b82f6')
       .style('cursor', 'pointer')
-      .on('mouseover', function(event, d) {
+      .on('mouseover', function() {
         d3.select(this).attr('r', 6);
-        
-        const tooltip = d3.select('body')
-          .append('div')
-          .attr('class', 'tooltip')
-          .style('position', 'absolute')
-          .style('background', 'rgba(0, 0, 0, 0.8)')
-          .style('color', 'white')
-          .style('padding', '8px')
-          .style('border-radius', '4px')
-          .style('font-size', '12px')
-          .style('pointer-events', 'none')
-          .style('z-index', '1000')
-          .html(`
-            <div>Date: ${d.date.toLocaleDateString()}</div>
-            <div>Total: ${d.value}</div>
-            ${d.successful !== undefined ? `<div>Successful: ${d.successful}</div>` : ''}
-            ${d.failed !== undefined ? `<div>Failed: ${d.failed}</div>` : ''}
-          `)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 10) + 'px');
       })
       .on('mouseout', function() {
         d3.select(this).attr('r', 4);

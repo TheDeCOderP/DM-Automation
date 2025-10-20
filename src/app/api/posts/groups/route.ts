@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
                     },
                 },
             }
-        }
+        },
+        skip,
+        take: limit,
     });
 
     if(!groups){

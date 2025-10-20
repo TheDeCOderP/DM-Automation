@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken || null,
         tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+        platformUserId: platformUserId,
         platformUsername: platformUsername,
       }
     });

@@ -164,19 +164,6 @@ async function uploadMediaToTwitter(media: Media, accessToken: string): Promise<
   return uploadData.data.id;
 }
 
-function getTwitterMediaType(mediaType: MediaType): string {
-    switch (mediaType) {
-        case MediaType.IMAGE:
-            return "image/jpeg";
-        case MediaType.VIDEO:
-            return "video/mp4";
-        case MediaType.CAROUSEL:
-            return "image/jpeg"; // Twitter doesn't support carousels natively
-        default:
-            return "image/jpeg";
-    }
-}
-
 async function recordSuccessfulPost(
     post: Post,
     socialAccount: SocialAccount,

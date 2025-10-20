@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import useSWR from "swr";
 import { useState } from "react";
@@ -90,6 +90,7 @@ export default function AccountsCard({
   const isPageSelected = (pageId: string) =>
     selectedPageIds.includes(pageId);
 
+  // Global select/deselect all
   const handleSelectAll = () => {
     const allAccountIds = accounts.map((account) => account.id);
     const allFacebookPageIds = facebookPages.map((page) => page.id);
@@ -103,7 +104,47 @@ export default function AccountsCard({
     setSelectedPageIds([]);
   };
 
+  // Facebook pages select/deselect all
+  const handleSelectAllFacebookPages = () => {
+    const allFacebookPageIds = facebookPages.map((page) => page.id);
+    setSelectedPageIds((prev) => {
+      const otherPages = prev.filter(
+        (id) => !facebookPages.some((page) => page.id === id)
+      );
+      return [...otherPages, ...allFacebookPageIds];
+    });
+  };
+
+  const handleDeselectAllFacebookPages = () => {
+    setSelectedPageIds((prev) =>
+      prev.filter((id) => !facebookPages.some((page) => page.id === id))
+    );
+  };
+
+  // LinkedIn pages select/deselect all
+  const handleSelectAllLinkedInPages = () => {
+    const allLinkedInPageIds = linkedinPages.map((page) => page.id);
+    setSelectedPageIds((prev) => {
+      const otherPages = prev.filter(
+        (id) => !linkedinPages.some((page) => page.id === id)
+      );
+      return [...otherPages, ...allLinkedInPageIds];
+    });
+  };
+
+  const handleDeselectAllLinkedInPages = () => {
+    setSelectedPageIds((prev) =>
+      prev.filter((id) => !linkedinPages.some((page) => page.id === id))
+    );
+  };
+
   const allSelectedCount = selectedAccounts.length + selectedPageIds.length;
+  const selectedFacebookPagesCount = selectedPageIds.filter((id) =>
+    facebookPages.some((page) => page.id === id)
+  ).length;
+  const selectedLinkedInPagesCount = selectedPageIds.filter((id) =>
+    linkedinPages.some((page) => page.id === id)
+  ).length;
 
   return (
     <>
@@ -242,13 +283,34 @@ export default function AccountsCard({
         </Card>
       ) : facebookPages.length > 0 && (
         <Card className="mt-4">
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="flex items-center gap-2">
               <span className="flex items-center justify-center size-6 rounded-full bg-blue-600 text-white text-xs font-bold">
                 {facebookPages.length}
               </span>
               <h2 className="text-lg font-semibold">Facebook Pages</h2>
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                {selectedFacebookPagesCount} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAllFacebookPages}
+                disabled={selectedFacebookPagesCount === facebookPages.length}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeselectAllFacebookPages}
+                disabled={selectedFacebookPagesCount === 0}
+              >
+                Deselect All
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
@@ -286,13 +348,13 @@ export default function AccountsCard({
       {/* LinkedIn Pages Section */}
       <Card className="mt-4">
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
               <span className="flex items-center justify-center size-6 rounded-full bg-blue-800 text-white text-xs font-bold">
                 {linkedinPages.length}
               </span>
               <h2 className="text-lg font-semibold">LinkedIn Pages</h2>
-            </div>
+            </CardTitle>
             {hasLinkedInAccount && (
               <Button 
                 onClick={handleLinkedInPageAccess}
@@ -302,7 +364,7 @@ export default function AccountsCard({
                 {linkedinPages.length > 0 ? "Refresh Pages" : "Connect Pages"}
               </Button>
             )}
-          </CardTitle>
+          </div>
           {!hasLinkedInAccount && (
             <p className="text-sm text-gray-500 mt-2">
               Connect a LinkedIn personal account first to access LinkedIn Pages
@@ -322,34 +384,57 @@ export default function AccountsCard({
               ))}
             </div>
           ) : linkedinPages.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              {linkedinPages.map((page: SocialAccountPage) => (
-                <div key={page.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={page.id}
-                    checked={isPageSelected(page.id)}
-                    onCheckedChange={(checked) =>
-                      handlePageChange(page.id, checked as boolean)
-                    }
-                  />
-                  <Avatar className="size-12 bg-blue-100">
-                    <AvatarImage
-                      src={page.pageImage || undefined}
-                      alt={page.name}
-                    />
-                    <AvatarFallback className="bg-blue-100 text-blue-800">
-                      <Linkedin className="size-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <Label
-                    htmlFor={page.id}
-                    className="text-sm font-bold cursor-pointer"
+            <>
+              <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                <span>{selectedLinkedInPagesCount} selected</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSelectAllLinkedInPages}
+                    disabled={selectedLinkedInPagesCount === linkedinPages.length}
                   >
-                    {page.name}
-                  </Label>
+                    Select All
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDeselectAllLinkedInPages}
+                    disabled={selectedLinkedInPagesCount === 0}
+                  >
+                    Deselect All
+                  </Button>
                 </div>
-              ))}
-            </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {linkedinPages.map((page: SocialAccountPage) => (
+                  <div key={page.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={page.id}
+                      checked={isPageSelected(page.id)}
+                      onCheckedChange={(checked) =>
+                        handlePageChange(page.id, checked as boolean)
+                      }
+                    />
+                    <Avatar className="size-12 bg-blue-100">
+                      <AvatarImage
+                        src={page.pageImage || undefined}
+                        alt={page.name}
+                      />
+                      <AvatarFallback className="bg-blue-100 text-blue-800">
+                        <Linkedin className="size-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <Label
+                      htmlFor={page.id}
+                      className="text-sm font-bold cursor-pointer"
+                    >
+                      {page.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : hasLinkedInAccount ? (
             <div className="text-center py-4">
               <p className="text-sm text-gray-500 mb-3">
