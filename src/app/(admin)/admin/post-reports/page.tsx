@@ -304,7 +304,7 @@ export default function PostReportsPage() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }))

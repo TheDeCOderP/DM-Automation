@@ -38,25 +38,6 @@ export default function AcceptInvitePage() {
   const invitationId = params.id as string;
   const token = searchParams.get('token');
 
-  useEffect(() => {
-    if (sessionStatus === 'loading') return;
-
-    if (!token) {
-      setMessage({ type: 'error', text: 'Invalid invitation link. Missing token.' });
-      setIsLoading(false);
-      return;
-    }
-
-    if (sessionStatus === 'unauthenticated') {
-      // Redirect to login with callback URL
-      const callbackUrl = `/invites/${invitationId}?token=${token}`;
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-      return;
-    }
-
-    fetchInvitationData();
-  }, [sessionStatus, token, invitationId, router]);
-
   const fetchInvitationData = async () => {
     try {
       const response = await fetch(`/api/invites/${invitationId}?token=${token}`);
@@ -75,6 +56,25 @@ export default function AcceptInvitePage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (sessionStatus === 'loading') return;
+
+    if (!token) {
+      setMessage({ type: 'error', text: 'Invalid invitation link. Missing token.' });
+      setIsLoading(false);
+      return;
+    }
+
+    if (sessionStatus === 'unauthenticated') {
+      // Redirect to login with callback URL
+      const callbackUrl = `/invites/${invitationId}?token=${token}`;
+      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      return;
+    }
+
+    fetchInvitationData();
+  }, [sessionStatus, token, invitationId, router, fetchInvitationData]);
 
   const handleUpdateInvitation = async (status: string) => {
     if (!token) return;

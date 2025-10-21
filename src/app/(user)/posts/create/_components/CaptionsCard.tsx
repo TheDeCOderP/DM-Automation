@@ -96,7 +96,7 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
         return newCaptions
       })
     }
-  }, [useSameCaption, commonCaption, selectedPlatforms])
+  }, [useSameCaption, commonCaption, selectedPlatforms, platformCaptions, setPlatformCaptions])
 
   const handleGenerateClick = () => {
     setIsPromptDialogOpen(true)

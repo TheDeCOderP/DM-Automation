@@ -19,7 +19,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Plus, Sparkles } from "lucide-react";
+import { CircleFadingPlus, Sparkles, Pen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/hooks/useSidebar";
@@ -207,19 +207,33 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
           <SidebarTrigger className="h-7 w-7 rounded-full absolute z-50 top-6 -right-4 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg border transition-all duration-300 hover:scale-110" />
         </SidebarHeader>
 
-        {/* Create Post Button */}
-        <div className="p-4 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
+        {/* Buttons */}
+        <div className="p-4 flex flex-col gap-2 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-3">
           <Tooltip>
             <TooltipTrigger asChild>
               <Link href="/posts/create">
                 <Button className="w-full group-data-[collapsible=icon]:aspect-square group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-0 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95">
-                  <Plus className="size-4 group-data-[collapsible=icon]:size-5" />
-                  <span className="ml-2 group-data-[collapsible=icon]:sr-only font-medium">Create Post</span>
+                  <CircleFadingPlus className="size-4 group-data-[collapsible=icon]:size-5" />
+                  <span className="ml-2 group-data-[collapsible=icon]:sr-only font-medium">Create a Post</span>
                 </Button>
               </Link>
             </TooltipTrigger>
             <TooltipContent side="right" className="group-data-[collapsible=icon]:block hidden">
-              Create Post
+              Create a Post
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="/blogs/create">
+                <Button className="w-full group-data-[collapsible=icon]:aspect-square group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-0 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95">
+                  <Pen className="size-4 group-data-[collapsible=icon]:size-5" />
+                  <span className="ml-2 group-data-[collapsible=icon]:sr-only font-medium">Write a Blog</span>
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="group-data-[collapsible=icon]:block hidden">
+              Write a Blog
             </TooltipContent>
           </Tooltip>
         </div>

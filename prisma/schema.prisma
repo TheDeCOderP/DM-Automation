@@ -25,6 +25,10 @@ enum Platform {
   FACEBOOK
   INSTAGRAM
   ZOHO_WORKDRIVE
+  WORDPRESS
+  HASHNODE
+  DEV_TO
+  CUSTOM_API
 }
 
 enum Frequency {
@@ -168,6 +172,8 @@ model Brand {
   media          Media[]
   socialAccounts SocialAccountBrand[]
   BrandInvitations BrandInvitation[]
+
+  externalBlogSites ExternalBlogSite[]
 }
 
 model UserBrand {
@@ -631,9 +637,94 @@ model Blog {
   slug      String   @unique
   content   String   @db.LongText
   tags      Json
+
+  blogPosts BlogPost[]
   author    User     @relation(fields: [authorId], references: [id])
   authorId  String
   createdAt DateTime @default(now())
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  FAILED
+  SYNCED
+}
+
+// Add new model for external blog site configurations
+// Add new models
+model ExternalBlogSite {
+  id          String   @id @default(cuid())
+  name        String
+  platform    Platform
+  baseUrl     String
+  apiEndpoint String
+  apiKey      String   @db.LongText
+  secretKey   String?  @db.LongText
+  username    String?
+  fieldMapping Json?
+  authType    String   @default("API_KEY")
+  contentType String   @default("application/json")
+  config      Json?
+  
+  // Relationships
+  brandId     String
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  
+  blogPosts   BlogPost[]
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([brandId, baseUrl, platform])
+  @@index([brandId])
+}
+
+
+// Add new model for tracking blog posts to external sites
+model BlogPost {
+  id                  String        @id @default(cuid())
+  
+  // Reference to your existing Blog model
+  blogId              Int
+  blog                Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  // Reference to external site
+  externalBlogSiteId  String
+  externalBlogSite    ExternalBlogSite @relation(fields: [externalBlogSiteId], references: [id], onDelete: Cascade)
+  
+  // External platform post ID (if published successfully)
+  externalPostId      String?
+  externalPostUrl     String?       @db.Text
+  
+  // Status tracking
+  status              BlogPostStatus @default(DRAFT)
+  scheduledAt         DateTime?
+  publishedAt         DateTime?
+  
+  // Error tracking
+  errorMessage        String?       @db.Text
+  retryCount          Int           @default(0)
+  
+  // Request/response data for debugging
+  requestPayload      Json?         // The payload that was sent
+  responseData        Json?         // The response received
+  
+  // Additional metadata
+  tags                String?       // Tags for the external platform
+  categories          String?       // Categories for the external platform
+  featuredImage      String?       // Override featured image if needed
+  
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  @@unique([blogId, externalBlogSiteId])
+  @@index([blogId])
+  @@index([externalBlogSiteId])
+  @@index([status])
+  @@index([scheduledAt])
 }
 
 model AuditLog {

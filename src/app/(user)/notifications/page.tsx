@@ -118,7 +118,7 @@ export default function NotificationsPage() {
     toast.info("Bulk delete functionality to be implemented");
   };
 
-  const handleDeleteNotification = async (id: string) => {
+  const handleDeleteNotification = async () => {
     // Implement single delete functionality
     toast.info("Delete functionality to be implemented");
   };

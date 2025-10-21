@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 import { decryptToken } from "@/lib/encryption";
-import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
+import { Post, Media, SocialAccount } from "@prisma/client";
 import type { TwitterTweetResponse, TweetBody } from "@/types/twitter";
 
 export async function publishToTwitter(
