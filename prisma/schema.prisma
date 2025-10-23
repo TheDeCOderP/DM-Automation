@@ -765,3 +765,24 @@ model AuditLog {
 
   @@index([userId, action, createdAt])
 }
+
+
+
+// banner management 
+
+
+model Banner {
+  id            String   @id @default(cuid())
+  title         String
+  type          String   // Slugified: "festive-ads", "sidebar-ads", etc.
+  typeLabel     String?  // Human-readable: "Festive Ads", "Sidebar Ads", etc.
+  imageUrl      String
+  imagePublicId String?
+  redirectUrl   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
