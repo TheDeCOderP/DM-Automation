@@ -291,10 +291,9 @@ export default function BrandsPage() {
                               <Badge
                                 key={account.id}
                                 variant="secondary"
-                                className="gap-1.5 px-3 py-1.5 bg-secondary/50 hover:bg-secondary/70 transition-colors"
+                                className="gap-1 p-2 bg-secondary/50 hover:bg-secondary/70 transition-colors"
                               >
-                                {getPlatformIcon(account.platform)}
-                                <span className="text-xs font-medium">{account.platformUsername}</span>
+                                {getPlatformIcon(account.platform, "!h-4 !w-4")}
                               </Badge>
                             ))}
                           </div>

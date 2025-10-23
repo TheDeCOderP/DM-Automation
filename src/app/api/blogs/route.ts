@@ -228,6 +228,46 @@ async function publishToExternalSite(blog: any, externalSiteId: string, userId: 
   // Make API request to external site
   const response = await makeExternalApiRequest(externalSite, payload);
 
+  console.log("WordPress API Response:", response); // Add this to debug
+
+  // For WordPress, the response is the post object directly
+  // Extract the ID and URL based on the platform
+  let externalPostId: string;
+  let externalPostUrl: string;
+
+  switch (externalSite.platform) {
+    case 'WORDPRESS':
+      // WordPress returns the post object directly
+      externalPostId = response.id.toString();
+      externalPostUrl = response.link || response.guid?.rendered || `https://www.pratyushkumar.co.uk/?p=${response.id}`;
+      break;
+    
+    case 'HASHNODE':
+      externalPostId = response.data?.createPublicationStory?.post?.id || response.id;
+      externalPostUrl = response.data?.createPublicationStory?.post?.url || response.url;
+      break;
+    
+    case 'DEV_TO':
+      externalPostId = response.id.toString();
+      externalPostUrl = response.url;
+      break;
+    
+    case 'CUSTOM_API':
+      // For custom APIs, try to extract from common patterns
+      externalPostId = response.id || response.data?.id;
+      externalPostUrl = response.url || response.data?.url || response.link || response.data?.link;
+      break;
+    
+    default:
+      externalPostId = response.id || response.data?.id;
+      externalPostUrl = response.url || response.data?.url;
+  }
+
+  // Validate that we have the required data
+  if (!externalPostId) {
+    throw new Error(`Failed to extract post ID from external API response: ${JSON.stringify(response)}`);
+  }
+
   // Create blog post record
   const blogPost = await prisma.blogPost.create({
     data: {
@@ -235,10 +275,10 @@ async function publishToExternalSite(blog: any, externalSiteId: string, userId: 
       externalBlogSiteId: externalSiteId,
       status: 'PUBLISHED',
       publishedAt: new Date(),
-      externalPostId: response.data.id,
-      externalPostUrl: response.data.url,
+      externalPostId: externalPostId,
+      externalPostUrl: externalPostUrl,
       requestPayload: payload,
-      responseData: response.data,
+      responseData: response,
     },
   });
 
@@ -246,11 +286,12 @@ async function publishToExternalSite(blog: any, externalSiteId: string, userId: 
 }
 
 function prepareBlogPayload(blog: any, externalSite: any) {
+  console.log("Blog", blog);
   const basePayload = {
     title: blog.title,
     content: blog.content,
     excerpt: blog.content.substring(0, 150) + '...',
-    status: 'publish',
+    status: 'draft',
     tags: blog.tags || [],
   };
 
@@ -259,7 +300,7 @@ function prepareBlogPayload(blog: any, externalSite: any) {
       return {
         ...basePayload,
         content: blog.content,
-        status: 'publish',
+        status: 'draft',
       };
 
     case 'HASHNODE':
@@ -302,10 +343,8 @@ function prepareBlogPayload(blog: any, externalSite: any) {
   }
 }
 
-async function makeExternalApiRequest(externalSite: any, payload: any) {
-  const headers: Record<string, string> = {
-    'Content-Type': externalSite.contentType,
-  };
+async function  makeExternalApiRequest(externalSite: any, payload: any) {
+  const headers: Record<string, string> = {};
 
   // Add authentication
   switch (externalSite.authType) {
@@ -317,6 +356,7 @@ async function makeExternalApiRequest(externalSite: any, payload: any) {
         `${externalSite.username}:${externalSite.apiKey}`
       ).toString('base64');
       headers['Authorization'] = `Basic ${credentials}`;
+      headers['Content-Type'] = 'application/json';
       break;
     case 'OAUTH2':
       headers['Authorization'] = `Bearer ${externalSite.apiKey}`;
@@ -324,6 +364,10 @@ async function makeExternalApiRequest(externalSite: any, payload: any) {
   }
 
   const url = `${externalSite.baseUrl}${externalSite.apiEndpoint}`;
+
+  console.log("url", url);
+  console.log("headers", headers);
+  console.log("payload", payload);
   
   const response = await fetch(url, {
     method: 'POST',

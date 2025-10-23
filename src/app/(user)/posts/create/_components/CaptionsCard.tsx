@@ -1,7 +1,7 @@
 "use client"
 import { toast } from "sonner";
 import * as React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Sparkles, Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react"
 
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ const socialMediaPlatforms: SocialPlatform[] = [
   { id: "LINKEDIN", name: "LinkedIn", icon: Linkedin, wordLimit: 3000 },
   { id: "TWITTER", name: "Twitter", icon: Twitter, wordLimit: 280 },
   { id: "YOUTUBE", name: "YouTube", icon: Youtube, wordLimit: 5000 },
+  { id: "PINTEREST", name: "Pinterest", icon: Sparkles, wordLimit: 5000 },
 ]
 
 interface CaptionInputProps {
@@ -40,6 +41,9 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
   const [isPromptDialogOpen, setIsPromptDialogOpen] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
+  
+  // Use ref to track if we're initializing to prevent loops
+  const isInitializing = useRef(false)
 
   const handleCaptionChange = (platformId: string, value: string) => {
     if (useSameCaption) {
@@ -60,43 +64,39 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
     }
   }
 
+  // Handle initialization and mode switching
   useEffect(() => {
-    // When switching from independent to same caption, set commonCaption to the first selected platform's caption
-    if (useSameCaption && commonCaption === "" && selectedPlatforms.length > 0) {
+    if (isInitializing.current) return
+    
+    isInitializing.current = true
+    
+    if (useSameCaption && selectedPlatforms.length > 0) {
+      // When using same caption, sync commonCaption with the first selected platform
       const firstSelectedPlatform = selectedPlatforms[0]
       const firstPlatformCaption = platformCaptions[firstSelectedPlatform] || ""
-      setCommonCaption(firstPlatformCaption)
       
-      // Also update all selected platforms with this caption
-      setPlatformCaptions((prev) => {
-        const newCaptions = { ...prev }
-        selectedPlatforms.forEach((platformId) => {
-          newCaptions[platformId] = firstPlatformCaption
+      if (commonCaption !== firstPlatformCaption) {
+        setCommonCaption(firstPlatformCaption)
+      }
+      
+      // Sync all platforms with the common caption
+      const needsUpdate = selectedPlatforms.some(
+        platformId => platformCaptions[platformId] !== firstPlatformCaption
+      )
+      
+      if (needsUpdate) {
+        setPlatformCaptions((prev) => {
+          const newCaptions = { ...prev }
+          selectedPlatforms.forEach((platformId) => {
+            newCaptions[platformId] = firstPlatformCaption
+          })
+          return newCaptions
         })
-        return newCaptions
-      })
+      }
     }
-    // When switching from same to independent, copy commonCaption to all selected platforms
-    else if (!useSameCaption && commonCaption !== "") {
-      setPlatformCaptions((prev) => {
-        const newCaptions = { ...prev }
-        selectedPlatforms.forEach((platformId) => {
-          newCaptions[platformId] = commonCaption
-        })
-        return newCaptions
-      })
-    }
-    // When useSameCaption is true and we have a commonCaption, ensure all platforms have it
-    else if (useSameCaption && commonCaption !== "" && selectedPlatforms.length > 0) {
-      setPlatformCaptions((prev) => {
-        const newCaptions = { ...prev }
-        selectedPlatforms.forEach((platformId) => {
-          newCaptions[platformId] = commonCaption
-        })
-        return newCaptions
-      })
-    }
-  }, [useSameCaption, commonCaption, selectedPlatforms, platformCaptions, setPlatformCaptions])
+    
+    isInitializing.current = false
+  }, [useSameCaption, selectedPlatforms.join(',')]) // Only depend on mode and platform list changes
 
   const handleGenerateClick = () => {
     setIsPromptDialogOpen(true)
@@ -216,7 +216,7 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
                   platformName={platform.name}
                   IconComponent={platform.icon}
                   wordLimit={platform.wordLimit}
-                  value={platformCaptions[platform.id]}
+                  value={platformCaptions[platform.id] || ""}
                   onChange={(value: string) => handleCaptionChange(platform.id, value)}
                   disabled={false}
                 />

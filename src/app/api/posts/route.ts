@@ -11,6 +11,7 @@ import type { UploadApiResponse } from "cloudinary"
 import { publishToTwitter } from "@/services/twitter.service";
 import { publishToYouTube } from "@/services/youtube.service";
 import { publishToFacebook } from "@/services/facebook.service";
+import { publishToPinterest } from "@/services/pinterest.service";
 import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.service";
 
 function generateCronExpression(schedule: ScheduleData) {
@@ -523,6 +524,8 @@ export async function POST(req: NextRequest) {
             } else {
               await publishToFacebook(post)
             }
+          } else if(post.platform === "PINTEREST") {
+            await publishToPinterest(post);
           }
 
           await prisma.post.update({
