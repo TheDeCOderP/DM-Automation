@@ -3,14 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" next build",
-    "build:memory-optimized": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192 --gc-interval=100 --expose-gc\" next build",
+    "dev": "next dev",
+    "build": "prisma generate && npm run postgenerate && next build --no-lint",
     "start": "next start",
     "lint": "next lint",
-    "studio": "prisma studio",
-    "clean": "rimraf .next",
-    "prebuild": "yarn clean"
+    "postgenerate": "prisma db push",
+    "seed": "node prisma/seed.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
