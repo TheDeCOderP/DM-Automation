@@ -44,7 +44,6 @@ interface FAQ {
 
 // Main Form Component
 function CreateBlogForm({
-  brands,
   externalSites,
   onSubmit,
   onCancel

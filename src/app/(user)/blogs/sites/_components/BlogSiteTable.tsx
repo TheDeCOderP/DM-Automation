@@ -30,7 +30,7 @@ export default function BlogSiteTable({
     setSiteToDelete(site);
   };
 
-  const handleDeleteConfirm = (siteId: string) => {
+  const handleDeleteConfirm = () => {
     onDeleteSite(siteToDelete!);
     setSiteToDelete(null);
   };

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useParams, useRouter } from 'next/navigation';
 
 interface ExternalBlogSite {
@@ -27,7 +26,6 @@ interface ExternalBlogSite {
 }
 
 export default function BlogPage() {
-  const { data: session, status } = useSession();
   const params = useParams();
   const router = useRouter();
   const [site, setSite] = useState<ExternalBlogSite | null>(null);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
+import type { Prisma } from '@prisma/client';
 
 // GET - Fetch all external blog sites for user's brands
 export async function GET(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     const userBrandIds = user.brands.map(ub => ub.brandId);
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.ExternalBlogSiteWhereInput = {
       brandId: { in: userBrandIds }
     };
 

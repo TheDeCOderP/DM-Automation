@@ -223,11 +223,11 @@ export default function NotificationDropdown() {
           <Button
               variant="ghost"
               size="icon"
-              className="relative hover:bg-accent hover:text-accent-foreground dark:hover:bg-input/50"
+              className="relative border rounded-full h-10 w-10"
           >
-              <Bell className="w-5 h-5 dark:text-white" />
+              <Bell size={20} className="dark:text-white" />
               {unreadCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1.5 w-4 h-4 p-0 text-xs flex items-center justify-center bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground">
+                  <Badge variant="warning" className="absolute -top-0.5 -right-0.5 w-4 h-4 p-0 text-xs flex items-center justify-center bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground">
                       {unreadCount > 9 ? '9+' : unreadCount}
                   </Badge>
               )}

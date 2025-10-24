@@ -83,6 +83,7 @@
     "sonner": "^2.0.7",
     "swr": "^2.3.4",
     "tailwind-merge": "^3.3.1",
+    "tinymce": "^8.2.0",
     "together-ai": "^0.22.0",
     "zod": "^4.0.15"
   },

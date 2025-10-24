@@ -3,8 +3,6 @@
 import useSWR from 'swr';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { 
   Plus, 
   RefreshCw, 
@@ -108,8 +106,6 @@ function PageHeader({ onAddSite }: { onAddSite: () => void }) {
 
 // Main Component
 export default function BlogSitesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedSite, setSelectedSite] = useState<ExternalBlogSite | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);

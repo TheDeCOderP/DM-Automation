@@ -4,6 +4,91 @@ import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 import { uploadImage } from '@/lib/cloudinary';
 
+// Type definitions
+interface BlogData {
+  title: string;
+  slug: string;
+  content: string;
+  banner: string;
+  tags: string[];
+  authorId: string;
+}
+
+interface ExternalSite {
+  id: string;
+  name: string;
+  platform: 'WORDPRESS' | 'HASHNODE' | 'DEV_TO' | 'CUSTOM_API';
+  authType: 'API_KEY' | 'BASIC_AUTH' | 'OAUTH2';
+  baseUrl: string;
+  apiEndpoint: string;
+  apiKey?: string;
+  username?: string;
+  config?: Record<string, unknown>;
+  brand?: {
+    id: string;
+  };
+}
+
+interface BlogPost {
+  id: string;
+  title: string;
+  content: string;
+  slug: string;
+  banner: string;
+  tags: string[];
+  authorId: string;
+  author?: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
+
+interface ExternalPublishingResult {
+  siteId: string;
+  success: boolean;
+  data?: unknown;
+  error?: string;
+}
+
+interface WordPressResponse {
+  id: number;
+  link?: string;
+  guid?: {
+    rendered: string;
+  };
+}
+
+interface HashnodeResponse {
+  data?: {
+    createPublicationStory?: {
+      post?: {
+        id: string;
+        url: string;
+      };
+    };
+  };
+  id?: string;
+  url?: string;
+}
+
+interface DevToResponse {
+  id: number;
+  url: string;
+}
+
+interface CustomApiResponse {
+  id?: string;
+  data?: {
+    id?: string;
+    url?: string;
+  };
+  url?: string;
+  link?: string;
+}
+
+type ApiResponse = WordPressResponse | HashnodeResponse | DevToResponse | CustomApiResponse;
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   
@@ -18,33 +103,18 @@ export async function POST(req: NextRequest) {
     const brandId = formData.get('brandId') as string;
     const title = formData.get('title') as string;
     const content = formData.get('content') as string;
-    const tags = JSON.parse(formData.get('tags') as string || '[]');
-    const externalSiteIds = JSON.parse(formData.get('externalSiteIds') as string || '[]');
+    const tags = JSON.parse(formData.get('tags') as string || '[]') as string[];
+    const externalSiteIds = JSON.parse(formData.get('externalSiteIds') as string || '[]') as string[];
     const publishImmediately = formData.get('publishImmediately') === 'true';
 
     // Get banner image
     const bannerFile = formData.get('bannerImage') as File;
 
     // Validate required fields
-    if (!brandId || !title || !content) {
+    if (!title || !content) {
       return NextResponse.json(
         { error: 'Brand, title, and content are required' },
         { status: 400 }
-      );
-    }
-
-    // Check user access to brand
-    const userBrand = await prisma.userBrand.findFirst({
-      where: {
-        user: { email: session.user.email },
-        brandId: brandId,
-      },
-    });
-
-    if (!userBrand) {
-      return NextResponse.json(
-        { error: "You don't have access to this brand" },
-        { status: 403 }
       );
     }
 
@@ -78,7 +148,7 @@ export async function POST(req: NextRequest) {
         content,
         banner: bannerUrl,
         tags,
-        authorId: userBrand.userId,
+        authorId: session.user.id,
       },
       include: {
         author: {
@@ -91,13 +161,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const results = [];
+    const results: ExternalPublishingResult[] = [];
 
     // If external sites are selected and immediate publishing is requested
-    if (externalSiteIds.length > 0) {
+    if (externalSiteIds.length > 0 && publishImmediately) {
       for (const siteId of externalSiteIds) {
         try {
-          const result = await publishToExternalSite(blog, siteId, userBrand.userId);
+          const result = await publishToExternalSite(blog, siteId, session.user.id);
           results.push({ siteId, success: true, data: result });
         } catch (error) {
           console.error(`Failed to publish to site ${siteId}:`, error);
@@ -156,7 +226,10 @@ export async function GET(request: NextRequest) {
     const userBrandIds = user.brands.map(ub => ub.brandId);
 
     // Build where clause
-    const where: any = {
+    const where: {
+      authorId: string;
+      brandId?: string;
+    } = {
       authorId: user.id
     };
 
@@ -208,7 +281,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to publish to external sites
-async function publishToExternalSite(blog: any, externalSiteId: string, userId: string) {
+async function publishToExternalSite(blog: BlogPost, externalSiteId: string, userId: string) {
   const externalSite = await prisma.externalBlogSite.findFirst({
     where: {
       id: externalSiteId,
@@ -216,7 +289,7 @@ async function publishToExternalSite(blog: any, externalSiteId: string, userId: 
     include: {
       brand: true,
     },
-  });
+  }) as ExternalSite | null;
 
   if (!externalSite) {
     throw new Error('External site not found or access denied');
@@ -228,39 +301,41 @@ async function publishToExternalSite(blog: any, externalSiteId: string, userId: 
   // Make API request to external site
   const response = await makeExternalApiRequest(externalSite, payload);
 
-  console.log("WordPress API Response:", response); // Add this to debug
+  console.log("WordPress API Response:", response);
 
-  // For WordPress, the response is the post object directly
   // Extract the ID and URL based on the platform
   let externalPostId: string;
   let externalPostUrl: string;
 
   switch (externalSite.platform) {
     case 'WORDPRESS':
-      // WordPress returns the post object directly
-      externalPostId = response.id.toString();
-      externalPostUrl = response.link || response.guid?.rendered || `https://www.pratyushkumar.co.uk/?p=${response.id}`;
+      const wpResponse = response as WordPressResponse;
+      externalPostId = wpResponse.id.toString();
+      externalPostUrl = wpResponse.link || wpResponse.guid?.rendered || `https://www.pratyushkumar.co.uk/?p=${wpResponse.id}`;
       break;
     
     case 'HASHNODE':
-      externalPostId = response.data?.createPublicationStory?.post?.id || response.id;
-      externalPostUrl = response.data?.createPublicationStory?.post?.url || response.url;
+      const hashnodeResponse = response as HashnodeResponse;
+      externalPostId = hashnodeResponse.data?.createPublicationStory?.post?.id || hashnodeResponse.id || '';
+      externalPostUrl = hashnodeResponse.data?.createPublicationStory?.post?.url || hashnodeResponse.url || '';
       break;
     
     case 'DEV_TO':
-      externalPostId = response.id.toString();
-      externalPostUrl = response.url;
+      const devToResponse = response as DevToResponse;
+      externalPostId = devToResponse.id.toString();
+      externalPostUrl = devToResponse.url;
       break;
     
     case 'CUSTOM_API':
-      // For custom APIs, try to extract from common patterns
-      externalPostId = response.id || response.data?.id;
-      externalPostUrl = response.url || response.data?.url || response.link || response.data?.link;
+      const customResponse = response as CustomApiResponse;
+      externalPostId = customResponse.id || customResponse.data?.id || '';
+      externalPostUrl = customResponse.url || customResponse.data?.url || customResponse.link || '';
       break;
     
     default:
-      externalPostId = response.id || response.data?.id;
-      externalPostUrl = response.url || response.data?.url;
+      const defaultResponse = response as CustomApiResponse;
+      externalPostId = defaultResponse.id || defaultResponse.data?.id || '';
+      externalPostUrl = defaultResponse.url || defaultResponse.data?.url || '';
   }
 
   // Validate that we have the required data
@@ -277,21 +352,19 @@ async function publishToExternalSite(blog: any, externalSiteId: string, userId: 
       publishedAt: new Date(),
       externalPostId: externalPostId,
       externalPostUrl: externalPostUrl,
-      requestPayload: payload,
-      responseData: response,
     },
   });
 
   return blogPost;
 }
 
-function prepareBlogPayload(blog: any, externalSite: any) {
+function prepareBlogPayload(blog: BlogPost, externalSite: ExternalSite) {
   console.log("Blog", blog);
   const basePayload = {
     title: blog.title,
     content: blog.content,
     excerpt: blog.content.substring(0, 150) + '...',
-    status: 'draft',
+    status: 'draft' as const,
     tags: blog.tags || [],
   };
 
@@ -300,7 +373,7 @@ function prepareBlogPayload(blog: any, externalSite: any) {
       return {
         ...basePayload,
         content: blog.content,
-        status: 'draft',
+        status: 'draft' as const,
       };
 
     case 'HASHNODE':
@@ -328,11 +401,13 @@ function prepareBlogPayload(blog: any, externalSite: any) {
 
     case 'CUSTOM_API':
       // Use custom configuration if provided
-      const customConfig = externalSite.config as any;
+      const customConfig = externalSite.config as { fieldMapping?: Record<string, string> };
       if (customConfig?.fieldMapping) {
-        const mappedPayload: any = {};
+        const mappedPayload: Record<string, unknown> = {};
         Object.keys(customConfig.fieldMapping).forEach(key => {
-          mappedPayload[customConfig.fieldMapping[key]] = basePayload[key as keyof typeof basePayload];
+          const sourceKey = key as keyof typeof basePayload;
+          const targetKey = customConfig.fieldMapping![key];
+          mappedPayload[targetKey] = basePayload[sourceKey];
         });
         return mappedPayload;
       }
@@ -343,7 +418,7 @@ function prepareBlogPayload(blog: any, externalSite: any) {
   }
 }
 
-async function  makeExternalApiRequest(externalSite: any, payload: any) {
+async function makeExternalApiRequest(externalSite: ExternalSite, payload: unknown): Promise<ApiResponse> {
   const headers: Record<string, string> = {};
 
   // Add authentication
@@ -363,6 +438,11 @@ async function  makeExternalApiRequest(externalSite: any, payload: any) {
       break;
   }
 
+  // Ensure Content-Type is set for all requests
+  if (!headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const url = `${externalSite.baseUrl}${externalSite.apiEndpoint}`;
 
   console.log("url", url);
@@ -380,5 +460,5 @@ async function  makeExternalApiRequest(externalSite: any, payload: any) {
     throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
-  return await response.json();
+  return await response.json() as ApiResponse;
 }

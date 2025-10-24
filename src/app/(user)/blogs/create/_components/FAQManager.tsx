@@ -67,7 +67,7 @@ export default function FAQManager({
       
       {faqs.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          No FAQs added yet. Click "Add FAQ" to get started.
+          No FAQs added yet. Click &quot;Add FAQ&quot; to get started.
         </p>
       )}
     </div>

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -150,6 +149,7 @@ export default function SiteForm({
       try {
         fieldMapping = JSON.parse(formData.fieldMapping);
       } catch (error) {
+        console.error('Error parsing field mapping JSON:', error);
         toast.error('Invalid field mapping JSON. Please check the format.');
         return;
       }

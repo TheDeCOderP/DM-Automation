@@ -61,12 +61,13 @@ export default function UserProfile() {
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
-                        className="flex items-center gap-2 px-2 py-1.5 h-auto hover:bg-accent/50 rounded-lg transition-colors"
+                        className="relative border rounded-full p-1 h-10 max-w-[180px]"
                     >
-                        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 ring-2 ring-border/50">
+                        <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
                             <AvatarImage 
                                 src={user?.image ?? ""} 
                                 alt={user?.name ?? user?.email ?? "User"} 
+                                className="rounded-full"
                             />
                             <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
                                 {getUserInitials() || <User className="h-4 w-4" />}
@@ -74,22 +75,16 @@ export default function UserProfile() {
                         </Avatar>
 
                         {/* User Info - Hidden on mobile, visible from sm */}
-                        <div className="hidden sm:flex flex-col items-start min-w-0">
+                        <div className="hidden sm:flex flex-col items-start min-w-0 overflow-hidden" style={{ maxWidth: '180px' }}>
                             <span className="text-sm font-medium text-foreground truncate max-w-[100px] md:max-w-[140px] lg:max-w-[180px]">
                                 {user?.name || user?.email?.split('@')[0] || 'User'}
                             </span>
                             {user?.name && user?.email && (
-                                <span className="text-xs text-muted-foreground truncate max-w-[100px] md:max-w-[140px] lg:max-w-[180px]">
-                                    {user.email}
+                                <span className="text-xs text-muted-foreground text-overflow:ellipsis">
+                                {user.email}
                                 </span>
                             )}
                         </div>
-
-                        <ChevronDown 
-                            className={`hidden sm:block h-4 w-4 text-muted-foreground transition-transform duration-400 ${
-                                isOpen ? 'rotate-180' : 'rotate-0'
-                            }`} 
-                        />
                     </Button>
                 </DropdownMenuTrigger>
 

@@ -19,7 +19,7 @@ export default function ThemeToggle() {
     <Button 
       variant="ghost" 
       size="icon" 
-      className="relative overflow-hidden group hover:bg-accent transition-all duration-300 hover:scale-110 active:scale-95"
+      className="relative border rounded-full h-10 w-10"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     > 
       {/* Sun icon with enhanced gradient */}
@@ -28,23 +28,8 @@ export default function ThemeToggle() {
           ? 'rotate-90 scale-0 opacity-0' 
           : 'rotate-0 scale-100 opacity-100'
       }`}>
-        {/* Gradient background */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-400 via-yellow-300 to-yellow-200 blur-[6px] opacity-80 animate-pulse" 
-             style={{ animationDuration: '3000ms' }} />
-        
-        {/* Dense center core */}
-        <div className="absolute inset-1 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-400 blur-[2px] opacity-90" />
-        
-        {/* Outer glow */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200/60 via-yellow-300/40 to-yellow-100/20 blur-[8px] opacity-70" />
-        
         {/* Sun icon */}
-        <Sun 
-          className="relative w-5 h-5 text-yellow-600 drop-shadow-lg"
-          style={{
-            filter: 'drop-shadow(0 0 12px rgba(251, 191, 36, 0.8))'
-          }}
-        />
+        <Sun className="relative w-5 h-5"/>
       </div>
       
       {/* Moon icon */}

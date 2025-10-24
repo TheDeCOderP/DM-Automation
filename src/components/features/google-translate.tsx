@@ -73,7 +73,7 @@ export default function GoogleTranslate() {
       <Button
         variant="ghost" 
         size="icon" 
-        className="relative hover:bg-accent hover:text-accent-foreground dark:hover:bg-input/50"
+        className="relative border rounded-full h-10 w-10"
         onClick={() => setShowDropdown(!showDropdown)}
       >
         <Languages className='w-5 h-5 dark:text-white' />

@@ -220,6 +220,7 @@ async function createPinterestPin(
   accessToken: string
 ): Promise<PinterestPinResponse> {
   try {
+    console.log("Access token:", accessToken);
     // Determine media type and content type
     const mediaType = getMediaType(media.url);
     const contentType = getContentType(media.url);
@@ -241,7 +242,7 @@ async function createPinterestPin(
       Object.entries(pinData).filter(([_, value]) => value !== undefined)
     );
 
-    const response = await fetch('https://api.pinterest.com/v5/pins', {
+    const response = await fetch('https://api-sandbox.pinterest.com/v5/pins', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

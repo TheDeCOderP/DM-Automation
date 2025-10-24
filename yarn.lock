@@ -5649,6 +5649,11 @@ tinyglobby@^0.2.13:
     fdir "^6.4.4"
     picomatch "^4.0.2"
 
+tinymce@^8.2.0:
+  version "8.2.0"
+  resolved "https://registry.yarnpkg.com/tinymce/-/tinymce-8.2.0.tgz#3fde03d91a1a8fd2d33de6a378843724e1341e2e"
+  integrity sha512-HZasRaAYQmePi+jjP4YFqHMtBJvbUaxDmjlXNf96uuyqsH6zZkGtJiFpsNi80Ec+L+snyF0OTDjrWVYDbkUrgQ==
+
 to-regex-range@^5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/to-regex-range/-/to-regex-range-5.0.1.tgz#1648c44aae7c8d988a326018ed72f5b4dd0392e4"

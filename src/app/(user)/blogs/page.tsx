@@ -1,11 +1,12 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
+import { useRouter } from 'next/navigation';
+
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
+import Image from 'next/image';
 
 interface Blog {
   id: number;
@@ -32,24 +33,11 @@ interface Blog {
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function BlogsPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
 
-  const { data, error, isLoading } = useSWR(
-    status === 'authenticated' ? '/api/blogs' : null,
-    fetcher
-  );
+  const { data } = useSWR('/api/blogs', fetcher);
 
   const blogs: Blog[] = data?.blogs || [];
-
-  if (status === 'loading' || isLoading) {
-    return <BlogsSkeleton />;
-  }
-
-  if (status === 'unauthenticated') {
-    router.push('/auth/signin');
-    return null;
-  }
 
   return (
     <>
@@ -101,7 +89,9 @@ export default function BlogsPage() {
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0 w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
                       {blog.banner ? (
-                        <img
+                        <Image
+                          width={64}
+                          height={64}
                           src={blog.banner}
                           alt={blog.title}
                           className="w-16 h-16 object-cover rounded-lg"

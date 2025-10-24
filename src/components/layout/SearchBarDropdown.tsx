@@ -199,7 +199,7 @@ export default function SearchBarDropdown({ open, onClose }: SearchBarDropdownPr
     <>
       {/* Desktop Search Dropdown */}
       {!isMobile && (
-        <div className="relative w-full max-w-md">
+        <div className="relative w-full mx-8 text-lg">
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
@@ -208,7 +208,7 @@ export default function SearchBarDropdown({ open, onClose }: SearchBarDropdownPr
               value={searchQuery}
               onChange={handleSearchChange}
               onFocus={() => onClose()}
-              className="w-full pl-11 pr-24 h-11 bg-muted/50 border-border/50 focus-visible:bg-background focus-visible:border-primary/50 rounded-xl transition-all duration-200 shadow-sm"
+              className="rounded-full p-5 px-10"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {searchQuery && (
@@ -222,7 +222,7 @@ export default function SearchBarDropdown({ open, onClose }: SearchBarDropdownPr
                 </Button>
               )}
 
-              <kbd className="pointer-events-none hidden xl:inline-flex h-6 select-none items-center gap-1 rounded-md border bg-muted px-2 font-mono text-[10px] font-medium text-muted-foreground opacity-100 group-focus-within:opacity-0 transition-opacity">
+              <kbd className="">
                 <span className="text-xs">⌘</span>K
               </kbd>
               

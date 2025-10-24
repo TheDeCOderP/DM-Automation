@@ -3,10 +3,11 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
+import type { Editor as TinyMCEEditor } from 'tinymce';
 
 interface TextEditorProps {
-  editorRef: any;
-  handleInputChange: any;
+  editorRef: React.MutableRefObject<TinyMCEEditor | null>;
+  handleInputChange: (event: { target: { name: string; value: string } }) => void;
   name: string;
   value?: string;
 }
@@ -16,7 +17,7 @@ export default function TextEditor({
   handleInputChange,
   name,
   value = "<p>Hello world!</p>",
-} : TextEditorProps) {
+}: TextEditorProps) {
   const { resolvedTheme } = useTheme(); 
   const [isMounted, setIsMounted] = useState(false);
 
