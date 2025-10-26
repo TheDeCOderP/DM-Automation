@@ -24,7 +24,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Types aligned with API response
 type SocialAccountWithPages = SocialAccount & {
-  socialAccountPages: SocialAccountPage[];
+  pages: SocialAccountPage[];
   brandId: string;
   brandName: string;
 };
@@ -91,15 +91,24 @@ export default function CreatePostPage() {
 
   const selectedPlatforms = useMemo(() => {
     const platforms = new Set<Platform>();
-
+    // Add platforms from selected regular accounts
     brandAccounts.forEach((account) => {
       if (selectedAccounts.includes(account.id)) {
         platforms.add(account.platform);
       }
     });
 
+    // Add platforms from selected pages
     if (selectedPageIds.length > 0) {
-      platforms.add("FACEBOOK");
+      brandAccounts.forEach((account) => {
+        account.pages.forEach((page) => {
+          console.log("page", page);
+          if (selectedPageIds.includes(page.id)) {
+            console.log(page);
+            platforms.add(page.platform);
+          }
+        });
+      });
     }
 
     return Array.from(platforms);
