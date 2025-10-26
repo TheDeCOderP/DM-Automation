@@ -631,7 +631,7 @@ model IdSequence {
 }
 
 model Blog {
-  id               Int        @id @default(autoincrement())
+  id               String   @id @default(cuid())
 
   // Core content
   banner           String?
@@ -713,7 +713,7 @@ model BlogPost {
   id                  String        @id @default(cuid())
   
   // Reference to your existing Blog model
-  blogId              Int
+  blogId              String
   blog                Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
   
   // Reference to external site

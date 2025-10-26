@@ -7,12 +7,21 @@ import { ExternalBlogSite } from "@prisma/client";
 
 import { getPlatformColor, getPlatformIcon } from "@/utils/ui/icons";
 
+interface ExternalBlogSiteWithBrand extends ExternalBlogSite {
+  brand: {
+    name: string;
+  };
+  _count: {
+    blogPosts: number;
+  };
+}
+
 export default function BlogSiteDetailsModal({ 
   site, 
   open, 
   onOpenChange 
 }: { 
-  site: ExternalBlogSite;
+  site: ExternalBlogSiteWithBrand;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -61,21 +70,21 @@ export default function BlogSiteDetailsModal({
               <Label className="text-sm font-medium">Authentication</Label>
               <p className="text-sm">{site.authType}</p>
             </div>
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
               <Label className="text-sm font-medium">Posts</Label>
               <p className="text-sm">{site._count.blogPosts}</p>
-            </div>
+            </div> */}
           </div>
 
           {/* Field Mappings */}
-          {site.config?.fieldMapping && (
+          {site.fieldMapping && (
             <>
               <Separator />
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Field Mappings</Label>
                 <div className="bg-muted p-4 rounded-lg">
                   <pre className="text-xs overflow-auto">
-                    {JSON.stringify(site.config.fieldMapping, null, 2)}
+                    {JSON.stringify(site.fieldMapping, null, 2)}
                   </pre>
                 </div>
               </div>

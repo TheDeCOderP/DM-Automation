@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 import { uploadImage } from '@/lib/cloudinary';
+import { Prisma } from '@prisma/client';
 
 // Type definitions
 interface BlogData {
@@ -34,8 +35,8 @@ interface BlogPost {
   title: string;
   content: string;
   slug: string;
-  banner: string;
-  tags: string[];
+  banner: string | null;
+  tags: string[] | Prisma.JsonValue;
   authorId: string;
   author?: {
     id: string;
@@ -380,10 +381,7 @@ function prepareBlogPayload(blog: BlogPost, externalSite: ExternalSite) {
       return {
         title: blog.title,
         contentMarkdown: blog.content,
-        tags: (blog.tags || []).map((tag: string) => ({
-          name: tag,
-          slug: tag.toLowerCase().replace(/\s+/g, '-'),
-        })),
+        tags: blog.tags || [],
         coverImageURL: blog.banner,
       };
 

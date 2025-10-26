@@ -21,6 +21,15 @@ import SiteForm from './_components/SiteForm';
 import BlogSiteTable from './_components/BlogSiteTable';
 import BlogSiteDetailsModal from './_components/BlogSiteDetailsModal';
 
+interface ExternalBlogSiteWithBrand extends ExternalBlogSite {
+  brand: {
+    name: string;
+  };
+  _count: {
+    blogPosts: number;
+  };
+}
+
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 // Components
@@ -107,19 +116,16 @@ function PageHeader({ onAddSite }: { onAddSite: () => void }) {
 // Main Component
 export default function BlogSitesPage() {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedSite, setSelectedSite] = useState<ExternalBlogSite | null>(null);
+  const [selectedSite, setSelectedSite] = useState<ExternalBlogSiteWithBrand | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [editingSite, setEditingSite] = useState<ExternalBlogSite | null>(null);
 
-  const { data: brandsData } = useSWR(
-    status === 'authenticated' ? '/api/brands' : null,
-    fetcher
-  );
+  const { data: brandsData } = useSWR('/api/brands', fetcher);
 
   const { data: sitesData, error, isLoading, mutate } = useSWR('/api/blogs/sites', fetcher);
 
   const brands: Brand[] = brandsData?.data || [];
-  const sites: ExternalBlogSite[] = sitesData?.externalSites || [];
+  const sites: ExternalBlogSiteWithBrand[] = sitesData?.externalSites || [];
 
   const handleSubmit = async (payload: any, isEditing?: boolean) => {
     try {
@@ -183,7 +189,7 @@ export default function BlogSitesPage() {
     });
   };
 
-  const openDetailsModal = (site: ExternalBlogSite) => {
+  const openDetailsModal = (site: ExternalBlogSiteWithBrand) => {
     setSelectedSite(site);
     setShowDetailsModal(true);
   };
@@ -197,7 +203,7 @@ export default function BlogSitesPage() {
     mutate();
   };
 
-  if (status === 'loading' || isLoading) {
+  if (isLoading) {
     return (
       <div className="space-y-8">
         <div className="flex justify-between items-center">

@@ -6,10 +6,11 @@ interface Banner {
   id: string;
   title: string;
   type: BannerType;
+  typeLabel?: string;
   imageUrl: string;
-  redirectUrl?: string | null;
+  imagePublicId?: string | null;
+  redirectUrl?: string;
   isActive: boolean;
-  createdAt: string;
 }
 
 interface BannerTableProps {
@@ -65,7 +66,7 @@ export default function BannerTable({ banners, onEdit, onDelete }: BannerTablePr
                       className={`px-2 py-1 rounded text-xs ${
                         banner.type === 'Festive Ads'
                           ? 'bg-purple-100 text-purple-800'
-                          : banner.type === 'Ads'
+                          : banner.type === 'Vertical Ads'
                           ? 'bg-green-100 text-green-800'
                           : banner.type === 'Sidebar Ads'
                           ? 'bg-blue-100 text-blue-800'

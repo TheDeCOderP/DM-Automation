@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import imagekit from '@/lib/imagekit';
+import { imagekit } from '@/lib/imagekit';
 
 async function uploadToImageKit(file: File) {
   const arrayBuffer = await file.arrayBuffer();
@@ -23,7 +23,7 @@ async function uploadToImageKit(file: File) {
 // PUT - Update a banner
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const formData = await request.formData();
@@ -33,8 +33,10 @@ export async function PUT(
     const isActive = formData.get('isActive') === 'true';
     const file = formData.get('file') as File | null;
 
+    const { id } = await context.params;
+
     const existingBanner = await prisma.banner.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingBanner) {
@@ -61,7 +63,7 @@ export async function PUT(
     }
 
     const banner = await prisma.banner.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title,
         type,
@@ -85,11 +87,12 @@ export async function PUT(
 // DELETE - Delete a banner
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const existingBanner = await prisma.banner.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingBanner) {
@@ -106,7 +109,7 @@ export async function DELETE(
     }
 
     await prisma.banner.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Banner deleted successfully' });

@@ -287,6 +287,10 @@ function getEventColor(platform: Platform): string {
     [Platform.YOUTUBE]: "#FF0000",
     [Platform.TIKTOK]: "#000000",
     [Platform.ZOHO_WORKDRIVE]: "#FF7A00",
+    [Platform.HASHNODE]: "#000000",
+    [Platform.CUSTOM_API]: "#6B7280",
+    [Platform.WORDPRESS]: "#21759B",
+    [Platform.DEV_TO]: "#000000",
   }
   return colors[platform] || "#6B7280"
 }

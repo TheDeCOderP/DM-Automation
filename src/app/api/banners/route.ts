@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import imagekit from '@/lib/imagekit';
+import { imagekit} from '@/lib/imagekit';
 
 // Utility: slugify text
 function slugify(text: string): string {

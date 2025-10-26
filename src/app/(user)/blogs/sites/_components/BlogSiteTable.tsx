@@ -11,6 +11,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ExternalBlogSite } from "@prisma/client";
 import { getPlatformIcon } from "@/utils/ui/icons";
 
+interface ExternalBlogSiteWithBrand extends ExternalBlogSite {
+  brand: {
+    name: string;
+  };
+  _count: {
+    blogPosts: number;
+  };
+}
+
 export default function BlogSiteTable({
   sites,
   onTestConnection,
@@ -18,15 +27,15 @@ export default function BlogSiteTable({
   onDeleteSite,
   onEditSite
 }: {
-  sites: ExternalBlogSite[];
+  sites: ExternalBlogSiteWithBrand[];
   onTestConnection: (siteId: string) => void;
-  onViewDetails: (site: ExternalBlogSite) => void;
-  onDeleteSite: (site: ExternalBlogSite) => void;
-  onEditSite: (site: ExternalBlogSite) => void;
+  onViewDetails: (site: ExternalBlogSiteWithBrand) => void;
+  onDeleteSite: (site: ExternalBlogSiteWithBrand) => void;
+  onEditSite: (site: ExternalBlogSiteWithBrand) => void;
 }) {
-  const [siteToDelete, setSiteToDelete] = useState<ExternalBlogSite | null>(null);
+  const [siteToDelete, setSiteToDelete] = useState<ExternalBlogSiteWithBrand | null>(null);
 
-  const handleDeleteClick = (site: ExternalBlogSite) => {
+  const handleDeleteClick = (site: ExternalBlogSiteWithBrand) => {
     setSiteToDelete(site);
   };
 
@@ -173,7 +182,7 @@ function DeleteConfirmationDialog({
   onOpenChange,
   onConfirm
 }: {
-  site: ExternalBlogSite;
+  site: ExternalBlogSiteWithBrand;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (siteId: string) => void;

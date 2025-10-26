@@ -4,14 +4,17 @@ import { useState, useEffect } from 'react';
 import BannerForm from '@/components/BannerForm';
 import BannerTable from '@/components/BannerTable';
 
+type BannerType = 'Festive Ads' | 'Sidebar Ads' | 'Horizontal Ads' | 'Vertical Ads';
+
 interface Banner {
   id: string;
   title: string;
-  type: string;
+  type: BannerType;
+  typeLabel?: string;
   imageUrl: string;
-  redirectUrl?: string | null;
+  imagePublicId?: string | null;
+  redirectUrl?: string;
   isActive: boolean;
-  createdAt: string;
 }
 
 export default function Home() {
