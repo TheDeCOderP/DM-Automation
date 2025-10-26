@@ -30,6 +30,23 @@ interface ExternalBlogSiteWithBrand extends ExternalBlogSite {
   };
 }
 
+interface SiteFormPayload {
+  name: string;
+  platform: string;
+  baseUrl: string;
+  apiEndpoint: string;
+  apiKey: string;
+  secretKey: string;
+  username: string;
+  authType: string;
+  contentType: string;
+  brandId: string;
+  config: {
+    fieldMapping: Record<string, string>;
+    contentType: string;
+  };
+}
+
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 // Components
@@ -127,7 +144,7 @@ export default function BlogSitesPage() {
   const brands: Brand[] = brandsData?.data || [];
   const sites: ExternalBlogSiteWithBrand[] = sitesData?.externalSites || [];
 
-  const handleSubmit = async (payload: any, isEditing?: boolean) => {
+  const handleSubmit = async (payload: SiteFormPayload, isEditing?: boolean) => {
     try {
       const url = isEditing ? `/api/blogs/sites/${editingSite?.id}` : '/api/blogs/sites';
       const method = isEditing ? 'PUT' : 'POST';

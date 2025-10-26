@@ -46,6 +46,17 @@ interface PinterestUserAccount {
   account_type: "BUSINESS" | "PATNER" | "PERSONAL";
 }
 
+interface PinterestAnalyticsMetric {
+  metric_type: string;
+  value: number;
+}
+
+interface PinterestAnalyticsResponse {
+  all?: {
+    metrics?: PinterestAnalyticsMetric[];
+  };
+}
+
 export async function publishToPinterest(
   post: Post & { media?: Media[] },
   boardId?: string
@@ -465,14 +476,14 @@ export async function fetchPinterestPinAnalytics(post: Post): Promise<PinterestA
     };
 
     if (analyticsResponse.ok) {
-      const analytics = await analyticsResponse.json();
+      const analytics: PinterestAnalyticsResponse = await analyticsResponse.json();
       
-      if (analytics.all && analytics.all.metrics) {
+      if (analytics.all?.metrics) {
         analyticsData.metrics = {
-          impression_count: analytics.all.metrics.find((m: any) => m.metric_type === 'IMPRESSION')?.value,
-          save_count: analytics.all.metrics.find((m: any) => m.metric_type === 'SAVE')?.value,
-          pin_click_count: analytics.all.metrics.find((m: any) => m.metric_type === 'PIN_CLICK')?.value,
-          outbound_click_count: analytics.all.metrics.find((m: any) => m.metric_type === 'OUTBOUND_CLICK')?.value,
+          impression_count: analytics.all.metrics.find((m: PinterestAnalyticsMetric) => m.metric_type === 'IMPRESSION')?.value,
+          save_count: analytics.all.metrics.find((m: PinterestAnalyticsMetric) => m.metric_type === 'SAVE')?.value,
+          pin_click_count: analytics.all.metrics.find((m: PinterestAnalyticsMetric) => m.metric_type === 'PIN_CLICK')?.value,
+          outbound_click_count: analytics.all.metrics.find((m: PinterestAnalyticsMetric) => m.metric_type === 'OUTBOUND_CLICK')?.value,
         };
 
         analyticsData.summary = {
@@ -488,7 +499,7 @@ export async function fetchPinterestPinAnalytics(post: Post): Promise<PinterestA
 
   } catch (error) {
     console.error('Error fetching Pinterest analytics:', error);
-    throw new Error(`Failed to fetch Pinterest pin analytics: ${error}`);
+    throw new Error(`Failed to fetch Pinterest pin analytics: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

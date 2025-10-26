@@ -160,9 +160,9 @@ export default function BannerForm({ editingBanner, onSuccess, onCancel }: Banne
         console.error('Server error:', data);
         setError(data.error || 'Failed to save banner');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error submitting form:', error);
-      setError(error.message || 'Network error. Please try again.');
+      setError(error as string || 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }

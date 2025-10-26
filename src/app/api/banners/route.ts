@@ -92,13 +92,13 @@ async function uploadToImageKit(file: File) {
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('ImageKit upload error details:', {
-      message: error.message,
-      stack: error.stack,
-      error: error
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      error
     });
-    throw new Error(`ImageKit upload failed: ${error.message}`);
+    throw new Error(`ImageKit upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -108,14 +108,17 @@ export async function POST(request: NextRequest) {
     console.log('=== POST request received ===');
     
     // Parse form data
-    let formData;
+    let formData: FormData;
     try {
       formData = await request.formData();
       console.log('FormData parsed successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to parse FormData:', error);
       const response = NextResponse.json(
-        { error: 'Invalid form data', details: error.message },
+        { 
+          error: 'Invalid form data', 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        },
         { status: 400 }
       );
       return setCORSHeaders(response);
@@ -186,10 +189,13 @@ export async function POST(request: NextRequest) {
     try {
       uploadResult = await uploadToImageKit(file);
       console.log('ImageKit upload successful:', uploadResult.url);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('ImageKit upload failed:', error);
       const response = NextResponse.json(
-        { error: 'Failed to upload image', details: error.message },
+        { 
+          error: 'Failed to upload image', 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        },
         { status: 500 }
       );
       return setCORSHeaders(response);
@@ -211,11 +217,11 @@ export async function POST(request: NextRequest) {
         },
       });
       console.log('Banner created successfully:', banner.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Database error:', {
-        message: error.message,
-        code: error.code,
-        meta: error.meta
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as { code?: string }).code,
+        meta: (error as { meta?: unknown }).meta
       });
       
       // If database fails, try to delete uploaded image
@@ -227,7 +233,10 @@ export async function POST(request: NextRequest) {
       }
 
       const response = NextResponse.json(
-        { error: 'Failed to save banner to database', details: error.message },
+        { 
+          error: 'Failed to save banner to database', 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        },
         { status: 500 }
       );
       return setCORSHeaders(response);
@@ -235,18 +244,18 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json(banner, { status: 201 });
     return setCORSHeaders(response);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('=== Unexpected POST Error ===');
-    console.error('Error type:', error.constructor.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
+    console.error('Error type:', error instanceof Error ? error.constructor.name : 'Unknown');
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : undefined);
     console.error('Full error:', error);
     
     const response = NextResponse.json(
       { 
         error: 'Failed to create banner', 
-        details: error.message,
-        type: error.constructor.name
+        details: error instanceof Error ? error.message : 'Unknown error',
+        type: error instanceof Error ? error.constructor.name : 'Unknown'
       },
       { status: 500 }
     );

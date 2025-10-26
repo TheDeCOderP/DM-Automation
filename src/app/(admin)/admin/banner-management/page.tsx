@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import BannerForm from '@/components/BannerForm';
-import BannerTable from '@/components/BannerTable';
+import BannerForm from './_components/BannerForm';
+import BannerTable from './_components/BannerTable';
 
 type BannerType = 'Festive Ads' | 'Sidebar Ads' | 'Horizontal Ads' | 'Vertical Ads';
 

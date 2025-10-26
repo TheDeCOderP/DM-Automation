@@ -42,20 +42,53 @@ const DEFAULT_FIELD_MAPPINGS = {
   }
 };
 
+interface SiteFormData {
+  name: string;
+  platform: string;
+  baseUrl: string;
+  apiEndpoint: string;
+  apiKey: string;
+  secretKey: string;
+  username: string;
+  authType: string;
+  contentType: string;
+  brandId: string;
+  fieldMapping: string;
+}
+
+interface SiteFormProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  brands: Brand[];
+  onSubmit: (formData: SiteFormPayload, isEditing?: boolean) => Promise<void>;
+  editingSite?: ExternalBlogSite | null;
+}
+
+interface SiteFormPayload {
+  name: string;
+  platform: string;
+  baseUrl: string;
+  apiEndpoint: string;
+  apiKey: string;
+  secretKey: string;
+  username: string;
+  authType: string;
+  contentType: string;
+  brandId: string;
+  config: {
+    fieldMapping: Record<string, string>;
+    contentType: string;
+  };
+}
+
 export default function SiteForm({
   open,
   onOpenChange,
   brands,
   onSubmit,
   editingSite
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  brands: Brand[];
-  onSubmit: (formData: any, isEditing?: boolean) => Promise<void>;
-  editingSite?: ExternalBlogSite | null;
-}) {
-  const [formData, setFormData] = useState({
+}: SiteFormProps) {
+  const [formData, setFormData] = useState<SiteFormData>({
     name: '',
     platform: 'WORDPRESS',
     baseUrl: '',
@@ -133,7 +166,7 @@ export default function SiteForm({
     }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name: keyof SiteFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -145,7 +178,7 @@ export default function SiteForm({
     setIsSubmitting(true);
 
     try {
-      let fieldMapping;
+      let fieldMapping: Record<string, string>;
       try {
         fieldMapping = JSON.parse(formData.fieldMapping);
       } catch (error) {
@@ -154,7 +187,7 @@ export default function SiteForm({
         return;
       }
 
-      const payload = {
+      const payload: SiteFormPayload = {
         ...formData,
         config: {
           fieldMapping,
