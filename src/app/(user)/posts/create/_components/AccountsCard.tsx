@@ -51,13 +51,26 @@ export default function AccountsCard({
     }
   );
 
+  const { data: pinterestData, isLoading: pinterestLoading } = useSWR(
+    `/api/accounts/pinterest/boards?platformUserId=${
+      accounts.find((acc) => acc.platform === "PINTEREST")?.platformUserId || ""
+    }`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
+  );
+
   const facebookPages: SocialAccountPage[] = facebookData?.pages || [];
   const linkedinPages: SocialAccountPage[] = linkedinData?.pages || [];
+  const pinterestPages: SocialAccountPage[] = pinterestData?.pages || [];
   
   const [rememberAccounts, setRememberAccounts] = useState(false);
 
   // Check if user has LinkedIn personal account to show connect button
   const hasLinkedInAccount = accounts.some(acc => acc.platform === "LINKEDIN");
+  const hasPinterestAccount = accounts.some(acc => acc.platform === "PINTEREST");
 
   const handleLinkedInPageAccess = () => {
     try {
@@ -69,6 +82,21 @@ export default function AccountsCard({
       window.location.href = `/api/accounts/linkedin/pages/auth?brandId=${brandId}`;
     } catch (error) {
       console.error("Error redirecting to LinkedIn auth:", error);
+    }
+  };
+
+  const handlePinterestBoardAccess = () => {
+    try {
+      if (!brandId) {
+        console.error("No brand ID available");
+        return;
+      }
+      
+      // This would trigger the API call to fetch and store Pinterest boards
+      // You might want to add a dedicated endpoint for this or rely on the SWR refresh
+      window.location.href = `/api/accounts/pinterest/pages/auth?brandId=${brandId}`;
+    } catch (error) {
+      console.error("Error redirecting to Pinterest auth:", error);
     }
   };
 
@@ -95,8 +123,9 @@ export default function AccountsCard({
     const allAccountIds = accounts.map((account) => account.id);
     const allFacebookPageIds = facebookPages.map((page) => page.id);
     const allLinkedinPageIds = linkedinPages.map((page) => page.id);
+    const allPinterestPageIds = pinterestPages.map((page) => page.id);
     setSelectedAccounts(allAccountIds);
-    setSelectedPageIds([...allFacebookPageIds, ...allLinkedinPageIds]);
+    setSelectedPageIds([...allFacebookPageIds, ...allLinkedinPageIds, ...allPinterestPageIds]);
   };
 
   const handleDeselectAll = () => {
@@ -138,12 +167,32 @@ export default function AccountsCard({
     );
   };
 
+  // Pinterest boards select/deselect all
+  const handleSelectAllPinterestBoards = () => {
+    const allPinterestBoardIds = pinterestPages.map((page) => page.id);
+    setSelectedPageIds((prev) => {
+      const otherPages = prev.filter(
+        (id) => !pinterestPages.some((page) => page.id === id)
+      );
+      return [...otherPages, ...allPinterestBoardIds];
+    });
+  };
+
+  const handleDeselectAllPinterestBoards = () => {
+    setSelectedPageIds((prev) =>
+      prev.filter((id) => !pinterestPages.some((page) => page.id === id))
+    );
+  };
+
   const allSelectedCount = selectedAccounts.length + selectedPageIds.length;
   const selectedFacebookPagesCount = selectedPageIds.filter((id) =>
     facebookPages.some((page) => page.id === id)
   ).length;
   const selectedLinkedInPagesCount = selectedPageIds.filter((id) =>
     linkedinPages.some((page) => page.id === id)
+  ).length;
+  const selectedPinterestBoardsCount = selectedPageIds.filter((id) =>
+    pinterestPages.some((page) => page.id === id)
   ).length;
 
   return (
@@ -183,7 +232,7 @@ export default function AccountsCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                disabled={accounts.length === 0 && facebookPages.length === 0 && linkedinPages.length === 0}
+                disabled={accounts.length === 0 && facebookPages.length === 0 && linkedinPages.length === 0 && pinterestPages.length === 0}
               >
                 Select All
               </Button>
@@ -448,6 +497,115 @@ export default function AccountsCard({
             <div className="text-center py-4">
               <p className="text-sm text-gray-500">
                 Connect a LinkedIn personal account to access LinkedIn Pages
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pinterest Boards Section */}
+      <Card className="mt-4">
+        <CardHeader className="pb-2">
+          <div className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-red-600 text-white text-xs font-bold">
+                {pinterestPages.length}
+              </span>
+              <h2 className="text-lg font-semibold">Pinterest Boards</h2>
+            </CardTitle>
+            {hasPinterestAccount && (
+              <Button 
+                onClick={handlePinterestBoardAccess}
+                size="sm"
+                variant="outline"
+              >
+                {pinterestPages.length > 0 ? "Refresh Boards" : "Fetch Boards"}
+              </Button>
+            )}
+          </div>
+          {!hasPinterestAccount && (
+            <p className="text-sm text-gray-500 mt-2">
+              Connect a Pinterest account first to access your boards
+            </p>
+          )}
+        </CardHeader>
+
+        <CardContent>
+          {pinterestLoading ? (
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          ) : pinterestPages.length > 0 ? (
+            <>
+              <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                <span>{selectedPinterestBoardsCount} selected</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSelectAllPinterestBoards}
+                    disabled={selectedPinterestBoardsCount === pinterestPages.length}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDeselectAllPinterestBoards}
+                    disabled={selectedPinterestBoardsCount === 0}
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {pinterestPages.map((board: SocialAccountPage) => (
+                  <div key={board.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={board.id}
+                      checked={isPageSelected(board.id)}
+                      onCheckedChange={(checked) =>
+                        handlePageChange(board.id, checked as boolean)
+                      }
+                    />
+                    <Avatar className="size-12 bg-red-100">
+                      <AvatarImage
+                        src={board.pageImage || undefined}
+                        alt={board.name}
+                      />
+                      <AvatarFallback className="bg-red-100 text-red-600">
+                        {getPlatformIcon("PINTEREST", "w-4 h-4")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Label
+                      htmlFor={board.id}
+                      className="text-sm font-bold cursor-pointer"
+                    >
+                      {board.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : hasPinterestAccount ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500 mb-3">
+                No Pinterest boards found. Click to fetch your boards.
+              </p>
+              <Button onClick={handlePinterestBoardAccess}>
+                Fetch Pinterest Boards
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500">
+                Connect a Pinterest account to access your boards
               </p>
             </div>
           )}

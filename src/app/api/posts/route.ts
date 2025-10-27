@@ -515,18 +515,7 @@ export async function POST(req: NextRequest) {
           } else if(post.platform === "YOUTUBE") {
             await publishToYouTube(post)
           } else if (post.platform === "FACEBOOK") {
-            if (post.socialAccountPageId) {
-              const socialAccountPage = await prisma.socialAccountPage.findUnique({
-                where: { id: post.socialAccountPageId },
-              })
-              if (socialAccountPage) {
-                await publishToFacebook(post)
-              } else {
-                throw new Error(`Page token not found for post ${post.id}`)
-              }
-            } else {
-              await publishToFacebook(post)
-            }
+            await publishToFacebook(post)
           } else if(post.platform === "PINTEREST") {
             await publishToPinterest(post);
           }

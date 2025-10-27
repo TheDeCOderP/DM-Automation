@@ -59,7 +59,6 @@ interface PinterestAnalyticsResponse {
 
 export async function publishToPinterest(
   post: Post & { media?: Media[] },
-  boardId?: string
 ): Promise<{ id: string }> {
   try {
     if (!post) throw new Error('Invalid input');
@@ -144,8 +143,19 @@ export async function publishToPinterest(
       throw new Error('Pinterest token is expired');
     }
 
+    if (!post.socialAccountPageId) {
+      throw new Error('Board ID is required');
+    }
+
+    const board = await prisma.socialAccountPage.findFirst({
+      where: {
+        id: post.socialAccountPageId,
+        socialAccountId: socialAccount.id,
+      },
+    });
+
     // 2. Get user's boards to select one if not provided
-    let targetBoardId = boardId;
+    let targetBoardId = board?.pageId;
     if (!targetBoardId) {
       const boards = await getUserBoards(accessToken);
       if (boards.length === 0) {
@@ -185,7 +195,7 @@ export async function publishToPinterest(
 
 export async function getUserBoards(accessToken: string): Promise<PinterestBoard[]> {
   try {
-    const response = await fetch('https://api.pinterest.com/v5/boards', {
+    const response = await fetch('https://api-sandbox.pinterest.com/v5/boards', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -206,7 +216,7 @@ export async function getUserBoards(accessToken: string): Promise<PinterestBoard
 
 export async function getUserAccount(accessToken: string): Promise<PinterestUserAccount> {
   try {
-    const response = await fetch('https://api.pinterest.com/v5/user_account', {
+    const response = await fetch('https://api-sandbox.pinterest.com/v5/user_account', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -231,13 +241,12 @@ async function createPinterestPin(
   accessToken: string
 ): Promise<PinterestPinResponse> {
   try {
-    console.log("Access token:", accessToken);
     // Determine media type and content type
     const mediaType = getMediaType(media.url);
     const contentType = getContentType(media.url);
 
     const pinData: PinterestPinData = {
-      title: post.content.substring(0, 100), // Pinterest titles are typically short
+      title: post.title || post.content.substring(0, 100), // Pinterest titles are typically short
       description: post.content,
       link: post.url || undefined, // Optional link for the pin
       board_id: boardId,
@@ -437,7 +446,7 @@ export async function fetchPinterestPinAnalytics(post: Post): Promise<PinterestA
   try {
     // Get pin details
     const pinResponse = await fetch(
-      `https://api.pinterest.com/v5/pins/${pinId}`,
+      `https://api-sandbox.pinterest.com/v5/pins/${pinId}`,
       {
         method: 'GET',
         headers: {
@@ -454,7 +463,7 @@ export async function fetchPinterestPinAnalytics(post: Post): Promise<PinterestA
 
     // Get analytics for the pin
     const analyticsResponse = await fetch(
-      `https://api.pinterest.com/v5/pins/${pinId}/analytics?metric_types=IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK`,
+      `https://api-sandbox.pinterest.com/v5/pins/${pinId}/analytics?metric_types=IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK`,
       {
         method: 'GET',
         headers: {
@@ -509,11 +518,11 @@ export async function refreshPinterestToken(refreshToken: string): Promise<{
   refresh_token?: string;
   expires_in: number;
 }> {
-  const response = await fetch('https://api.pinterest.com/v5/oauth/token', {
+  const response = await fetch('https://api-sandbox.pinterest.com/v5/oauth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${Buffer.from(`${process.env.PINTEREST_APP_ID}:${process.env.PINTEREST_APP_SECRET}`).toString('base64')}`
+      'Authorization': `Basic ${Buffer.from(`${process.env.PINTEREST_CLIENT_ID}:${process.env.PINTEREST_CLIENT_SECRET}`).toString('base64')}`
     },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
