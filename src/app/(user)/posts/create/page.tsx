@@ -52,6 +52,7 @@ export default function CreatePostPage() {
     timezoneOffset: new Date().getTimezoneOffset()
   });
 
+  const [title, setTitle] = useState<string>("");
   const [platformCaptions, setPlatformCaptions] = useState<{ [key: string]: string }>({});
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
@@ -140,7 +141,8 @@ export default function CreatePostPage() {
       uploadedFiles.forEach((file) => {
         formData.append(`files`, file);
       });
-
+      
+      formData.append("title", title);
       formData.append("brandId", selectedBrandId);
       formData.append("accounts", JSON.stringify(selectedAccounts));
       formData.append("socialAccountPageIds", JSON.stringify(selectedPageIds));
@@ -242,6 +244,8 @@ export default function CreatePostPage() {
       case "captions":
         return (
           <CaptionsCard
+            title={title}
+            setTitle={setTitle}
             platformCaptions={platformCaptions}
             selectedPlatforms={selectedPlatforms}
             setPlatformCaptions={setPlatformCaptions}
@@ -342,6 +346,8 @@ export default function CreatePostPage() {
             <TabsContent value="captions" className="mt-0">
               <div className="max-w-4xl mx-auto">
                 <CaptionsCard
+                  title={title}
+                  setTitle={setTitle}
                   platformCaptions={platformCaptions}
                   selectedPlatforms={selectedPlatforms}
                   setPlatformCaptions={setPlatformCaptions}

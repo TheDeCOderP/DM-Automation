@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import CaptionInput from "./CaptionInput";
+import { Input } from "@/components/ui/input";
 
 interface SocialPlatform {
   id: string
@@ -30,12 +31,14 @@ const socialMediaPlatforms: SocialPlatform[] = [
 ]
 
 interface CaptionInputProps {
+  title: string
+  setTitle: React.Dispatch<React.SetStateAction<string>>
   selectedPlatforms: string[]
   platformCaptions: { [key: string]: string }
   setPlatformCaptions: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>
 }
 
-export default function CaptionsCard({ selectedPlatforms = [], platformCaptions, setPlatformCaptions }: CaptionInputProps) {
+export default function CaptionsCard({ title, setTitle, selectedPlatforms = [], platformCaptions, setPlatformCaptions }: CaptionInputProps) {
   const [useSameCaption, setUseSameCaption] = useState(true)
   const [commonCaption, setCommonCaption] = useState("")
   const [isPromptDialogOpen, setIsPromptDialogOpen] = useState(false)
@@ -192,6 +195,16 @@ export default function CaptionsCard({ selectedPlatforms = [], platformCaptions,
               checked={useSameCaption} 
               onCheckedChange={setUseSameCaption} 
               disabled={selectedPlatforms.length === 0}
+            />
+          </div>
+
+          <div>
+            <Label> Title </Label>
+            <Input 
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-2"
             />
           </div>
 

@@ -194,11 +194,12 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData()
 
     // Parse JSON data from FormData
-    const brandId = formData.get("brandId") as string
-    const accounts = JSON.parse(formData.get("accounts") as string)
-    const socialAccountPageIds = JSON.parse((formData.get("socialAccountPageIds") as string) || "[]")
-    const captions = JSON.parse(formData.get("captions") as string)
-    const schedule = JSON.parse((formData.get("schedule") as string) || "null")
+    const title = formData.get("title") as string;
+    const brandId = formData.get("brandId") as string;
+    const accounts = JSON.parse(formData.get("accounts") as string);
+    const socialAccountPageIds = JSON.parse((formData.get("socialAccountPageIds") as string) || "[]");
+    const captions = JSON.parse(formData.get("captions") as string);
+    const schedule = JSON.parse((formData.get("schedule") as string) || "null");
 
     const userBrand = await prisma.userBrand.findFirst({
       where: {
@@ -315,6 +316,7 @@ export async function POST(req: NextRequest) {
 
       const post = await prisma.post.create({
         data: {
+          title: title,
           content: caption,
           platform: platform,
           scheduledAt: scheduledAt,
@@ -409,6 +411,7 @@ export async function POST(req: NextRequest) {
 
       const post = await prisma.post.create({
         data: {
+          title: title,
           content: caption,
           platform: socialAccount.platform,
           scheduledAt: scheduledAt,

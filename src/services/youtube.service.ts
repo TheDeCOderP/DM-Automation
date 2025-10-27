@@ -95,6 +95,7 @@ export async function publishToYouTube(
     try {
         // Upload video to YouTube
         const videoId = await uploadVideoToYouTube(
+            post.title || extractVideoTitle(post.content), 
             videoMedia, 
             accessToken, 
             post.content,
@@ -108,7 +109,7 @@ export async function publishToYouTube(
         return {
             videoId,
             videoUrl,
-            title: extractVideoTitle(post.content)
+            title: post.title || extractVideoTitle(post.content)
         };
 
     } catch (error) {
@@ -121,6 +122,7 @@ export async function publishToYouTube(
 }
 
 async function uploadVideoToYouTube(
+    title: string,
     media: Media, 
     accessToken: string, 
     description: string,
@@ -133,7 +135,7 @@ async function uploadVideoToYouTube(
         const videoId = await uploadVideoFile(media, accessToken);
         
         // 2. Then, update the video metadata
-        await updateVideoMetadata(videoId, accessToken, description, scheduledFor);
+        await updateVideoMetadata(title, videoId, accessToken, description, scheduledFor);
         
         console.log('YouTube upload completed successfully:', videoId);
         return videoId;
@@ -228,6 +230,7 @@ async function uploadVideoFile(
 }
 
 async function updateVideoMetadata(
+    title: string,
     videoId: string,
     accessToken: string,
     description: string,
@@ -237,7 +240,7 @@ async function updateVideoMetadata(
     
     const videoMetadata: VideoUploadBody = {
         snippet: {
-            title: extractVideoTitle(description),
+            title: title || extractVideoTitle(description),
             description: description,
             tags: extractTags(description),
             categoryId: "22", // People & Blogs
@@ -317,7 +320,7 @@ async function recordSuccessfulPost(
                 userId: post.userId,
                 type: "POST_PUBLISHED",
                 title: "Video Published on YouTube",
-                message: `Your video "${extractVideoTitle(post.content)}" has been published on YouTube`,
+                message: `Your video "${post.title || extractVideoTitle(post.content)}" has been published on YouTube`,
                 metadata: {
                     postId: post.id,
                     platform: "YOUTUBE",
