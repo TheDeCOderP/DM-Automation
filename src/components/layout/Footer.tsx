@@ -38,19 +38,13 @@ export default function Footer() {
         <div className="grid lg:grid-cols-6 md:grid-cols-2 gap-12 mb-16">
           {/* Brand Section */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center space-x-3">
-              <Image
-                src="/icons/logo.png"
-                alt="logo"
-                height={60}
-                width={60}
-                unoptimized
-                className="border border-border rounded-full"
-              />
-              <div>
-                <span className="text-2xl font-bold">Prabisha Consulting</span>
-              </div>
-            </div>
+            <Image
+              src="/icons/logo.png"
+              alt="logo"
+              height={60}
+              width={200}
+              unoptimized
+            />
             <p className="text-muted-foreground leading-relaxed text-lg max-w-md">
               Empowering businesses with AI-driven marketing automation solutions that deliver real results and drive
               sustainable growth.

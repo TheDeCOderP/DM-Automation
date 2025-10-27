@@ -125,23 +125,8 @@ const ListItem = ({ className, title, href, ...props }: { className?: string; ti
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasScrolled, setHasScrolled] = useState(false);
 
-  // Function to close the main mobile menu
-  const closeMobileMenu = () => setIsOpen(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setHasScrolled(true);
-      } else {
-        setHasScrolled(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const closeMobileMenu = () => setIsOpen(false)
 
   // Framer Motion variants for the overall mobile menu
   const mobileMenuVariants = {
@@ -150,7 +135,6 @@ export default function Header() {
     exit: { opacity: 0, height: 0, transition: { duration: 0.2 } },
   };
 
-  // Centralized menu data
   const menuItems: MenuItem[] = [
     {
       title: "Services",
@@ -200,61 +184,41 @@ export default function Header() {
   ];
 
   return (
-    <nav
-      className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-300 bg-background border-b",
-        hasScrolled ? "shadow-md" : "" // Added a shadow when scrolled for better visual cue
-      )}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex h-20 items-center justify-between">
+    <nav className="fixed top-4 left-4 right-4 z-50 border bg-background rounded-full">
+      <div className="p-4 flex items-center justify-between">
+        {/* Logo Section with Navigation Menu */}
+        <div className="flex gap-8">
           {/* Logo Section */}
-          <div className="flex items-center gap-2 lg:gap-4">
-            <Link href="/" onClick={closeMobileMenu}> {/* Wrap logo in Link to navigate home */}
+          <div className="flex items-center gap-3">
+            <Link href="/" onClick={closeMobileMenu}>
               <Image
-                src="/icons/logo.png"
+                src="/icons/logo1.png"
                 alt="Logo"
-                width={120}
+                width={40}
                 height={40}
-                className="w-auto h-auto"
-                priority // Added priority to logo image for better LCP
+                className="w-10 h-10 rounded-full"
+                priority
               />
             </Link>
-            {/* Site Name - Hidden on mobile, visible on desktop */}
-            <div className="hidden lg:block text-lg lg:text-xl font-semibold text-primary">
+            {/* Site Name */}
+            <div className="text-lg font-bold text-primary">
               <span className="font-bold">DM</span>-Automation
-              <span className="hidden text-sm font-medium text-muted-foreground lg:block">
-                Powered by&nbsp;
-                <Link 
-                  target="_blank"
-                  rel="noopener noreferrer" 
-                  className="underline" 
-                  href="https://prabisha.com/"
-                > 
-                  Prabisha Consulting 
-                </Link>
-              </span>
             </div>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-4">
             <NavigationMenu>
               <NavigationMenuList>
-                {/* Filter out 'Legal' from the main desktop nav bar if it's meant to be in the footer/separate section */}
                 {menuItems.map((item) => (
                   <NavigationMenuItem key={item.title}>
-                    <NavigationMenuTrigger className="text-sm font-medium">
+                    <NavigationMenuTrigger className="text-sm font-medium text-muted-foreground hover:text-foreground">
                       {item.title}
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
                       <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
                         {item.items.map((subItem) => (
-                          <ListItem
-                            key={subItem.title}
-                            href={subItem.href}
-                            title={subItem.title}
-                          />
+                          <ListItem key={subItem.title} href={subItem.href} title={subItem.title} />
                         ))}
                       </ul>
                     </NavigationMenuContent>
@@ -263,8 +227,9 @@ export default function Header() {
               </NavigationMenuList>
             </NavigationMenu>
           </div>
+        </div>
 
-          {/* Desktop CTA Buttons & Theme Toggle */}
+        {/* Desktop CTA Buttons & Theme Toggle */}
           <div className="flex items-center gap-2">
             {/* Theme Toggle */}
             <ThemeToggle />
@@ -273,7 +238,7 @@ export default function Header() {
               <Button variant="ghost" asChild>
                 <Link href="/login">Login</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="rounded-full">
                 <Link href="/register">Get Started</Link>
               </Button>
             </div>
@@ -282,52 +247,51 @@ export default function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden ml-2" // Added margin for separation from ThemeToggle
+              className="lg:hidden ml-2"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
-        </div>
-
-        {/* Mobile Navigation - Now collapsible (accordion-style) */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              className="lg:hidden border-t bg-background absolute left-0 w-full shadow-lg max-h-[80vh] overflow-y-auto" // Added 'absolute left-0 w-full' to span full width and a max-height
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={mobileMenuVariants}
-            >
-              {/* Menu items will now be collapsible inside MobileMenuItem */}
-              <div className="divide-y divide-border">
-                {menuItems.map((item) => (
-                  <MobileMenuItem 
-                    key={item.title} 
-                    item={item} 
-                    onCloseMenu={closeMobileMenu} 
-                  />
-                ))}
-              </div>
-
-              {/* Mobile CTA buttons */}
-              <div className="container p-4 space-y-2 border-t">
-                <Button className="w-full" asChild>
-                  <Link href="/register" onClick={closeMobileMenu}>
-                    Get Started
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/login" onClick={closeMobileMenu}>
-                    Login
-                  </Link>
-                </Button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+      
+      {/* Mobile Navigation - Now collapsible (accordion-style) */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="lg:hidden mt-1 border bg-background absolute left-0 w-full shadow-lg max-h-[80vh] overflow-y-auto rounded-2xl"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={mobileMenuVariants}
+          >
+            {/* Menu items will now be collapsible inside MobileMenuItem */}
+            <div className="divide-y divide-border">
+              {menuItems.map((item) => (
+                <MobileMenuItem 
+                  key={item.title} 
+                  item={item} 
+                  onCloseMenu={closeMobileMenu} 
+                />
+              ))}
+            </div>
+
+            {/* Mobile CTA buttons */}
+            <div className="container p-4 space-y-2 border-t">
+              <Button className="w-full" asChild>
+                <Link href="/register" onClick={closeMobileMenu}>
+                  Get Started
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/login" onClick={closeMobileMenu}>
+                  Login
+                </Link>
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
-  );
+  )
 }
