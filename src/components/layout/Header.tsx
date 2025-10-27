@@ -184,10 +184,10 @@ export default function Header() {
   ];
 
   return (
-    <nav className="fixed top-4 left-4 right-4 z-50 border bg-background rounded-full">
-      <div className="p-4 flex items-center justify-between">
+    <nav className="fixed top-4 left-4 right-4 z-50 ">
+      <div className="flex items-center justify-between">
         {/* Logo Section with Navigation Menu */}
-        <div className="flex gap-8">
+        <div className="flex gap-8 p-3 lg:p-4 border bg-background rounded-full">
           {/* Logo Section */}
           <div className="flex items-center gap-3">
             <Link href="/" onClick={closeMobileMenu}>
@@ -202,7 +202,8 @@ export default function Header() {
             </Link>
             {/* Site Name */}
             <div className="text-lg font-bold text-primary">
-              <span className="font-bold">DM</span>-Automation
+              <span className="block lg:hidden">DMA</span>
+              <span className="hidden lg:block">DM-Automation</span>
             </div>
           </div>
 
@@ -230,29 +231,29 @@ export default function Header() {
         </div>
 
         {/* Desktop CTA Buttons & Theme Toggle */}
-          <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <ThemeToggle />
+        <div className="p-3 lg:p-4 flex items-center gap-2 border bg-background rounded-full">
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
-            <div className="hidden lg:flex items-center gap-2">
-              <Button variant="ghost" asChild>
-                <Link href="/login">Login</Link>
-              </Button>
-              <Button asChild className="rounded-full">
-                <Link href="/register">Get Started</Link>
-              </Button>
-            </div>
-            
-            {/* Mobile Menu Button - Moved to the far right for better layout */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden ml-2"
-              onClick={() => setIsOpen(!isOpen)}
-            >
-              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <div className="hidden lg:flex items-center gap-2">
+            <Button variant="ghost" asChild>
+              <Link href="/login">Login</Link>
+            </Button>
+            <Button asChild size="lg" className="rounded-full">
+              <Link href="/register">Get Started</Link>
             </Button>
           </div>
+          
+          {/* Mobile Menu Button - Moved to the far right for better layout */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden ml-2"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
       
       {/* Mobile Navigation - Now collapsible (accordion-style) */}
