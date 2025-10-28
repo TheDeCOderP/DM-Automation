@@ -7,38 +7,26 @@ import { NextResponse } from "next/server";
 export async function POST() {
   try {
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-   console.log("Current time:", now.toISOString());
-    console.log("One hour ago:", oneHourAgo.toISOString());
-    // Add 5 minute buffer to catch edge cases
-    const bufferMs = 5 * 60 * 1000;
-    const windowStart = new Date(oneHourAgo.getTime() - bufferMs);
-    const windowEnd = new Date(now.getTime() + bufferMs);
+    
+    // Get start and end of today in UTC
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
 
-    console.log("Time window:", windowStart.toISOString(), "to", windowEnd.toISOString());
+    console.log("Current UTC time:", now.toISOString());
+    console.log("Today's UTC range:", todayStart.toISOString(), "to", todayEnd.toISOString());
 
-    // Find posts that should be published now
+    // Find posts that are scheduled for today (any time)
     const posts = await prisma.post.findMany({
       where: {
         AND: [
           {
-            scheduledAt: {
-              lte: windowEnd
-            }
+            status: "SCHEDULED"
           },
           {
-            OR: [
-              {
-                // One-time scheduled posts
-                status: "SCHEDULED",
-                frequency: "ONCE"
-              },
-              {
-                // Recurring posts that need to be reposted
-                status: "SCHEDULED",
-                frequency: { not: "ONCE" }
-              }
-            ]
+            scheduledAt: {
+              gte: todayStart,
+              lte: todayEnd
+            }
           }
         ]
       },
@@ -52,7 +40,7 @@ export async function POST() {
       }
     });
 
-    console.log(`Found ${posts.length} posts to process`);
+    console.log(`Found ${posts.length} posts scheduled for today to process`);
 
     // Process the posts
     for (const post of posts) {
@@ -111,11 +99,11 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: "Cron job executed successfully",
+      message: "Daily cron job executed successfully",
       processedPosts: posts.length,
       timeWindow: {
-        start: windowStart.toISOString(),
-        end: windowEnd.toISOString()
+        start: todayStart.toISOString(),
+        end: todayEnd.toISOString()
       }
     });
 
