@@ -46,7 +46,8 @@ export default function GoogleDrivePicker({ onFileSelect }: GoogleDrivePickerPro
 
       if(!res.ok) {
         if(setIsConnected) setIsConnected(false);
-        throw new Error("Failed to fetch Google account");
+        return;
+        //throw new Error("Failed to fetch Google account");
       }
 
       const data = await res.json();

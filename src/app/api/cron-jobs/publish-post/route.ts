@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { publishToFacebook } from "@/services/facebook.service";
-import { publishToLinkedin } from "@/services/linkedin.service";
+import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.service";
 import { publishToTwitter } from "@/services/twitter.service";
 import { NextResponse } from "next/server";
 
@@ -60,7 +60,11 @@ export async function POST() {
         console.log(`Processing post ${post.id} scheduled for ${post.scheduledAt}`);
         
         if (post.platform === "LINKEDIN") {
-          await publishToLinkedin(post);
+          if(post.socialAccountPageId) {
+            await publishToLinkedInPage(post);
+          } else {
+            await publishToLinkedin(post);
+          }
         } else if (post.platform === "TWITTER") {
           await publishToTwitter(post);
         } else if (post.platform === "FACEBOOK") {

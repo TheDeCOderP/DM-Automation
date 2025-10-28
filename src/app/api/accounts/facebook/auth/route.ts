@@ -18,7 +18,15 @@ export async function GET(req: NextRequest) {
     userId,
     brandId,
   });
-  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${process.env.FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=pages_show_list,business_management,pages_read_engagement,pages_manage_posts&state=${state}`;
+
+  const facebookScope = [
+    'pages_show_list',
+    'business_management',
+    'pages_read_engagement',
+    'pages_manage_posts',
+  ].join(',');
+
+  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${process.env.FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${facebookScope}&state=${state}`;
   
   return NextResponse.redirect(authUrl);
 }
