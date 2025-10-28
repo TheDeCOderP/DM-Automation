@@ -4,7 +4,7 @@ import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.se
 import { publishToTwitter } from "@/services/twitter.service";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+export async function GET() {
   try {
     const now = new Date();
     
