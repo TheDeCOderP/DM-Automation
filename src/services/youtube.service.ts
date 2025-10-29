@@ -1,4 +1,5 @@
 // lib/youtube-service.ts
+import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { decryptToken } from "@/lib/encryption";
 import { isTokenExpired, refreshAccessToken } from "@/utils/token";
@@ -502,4 +503,110 @@ export async function testYouTubeConnection(accessToken: string): Promise<boolea
         console.error('YouTube connection test failed:', error);
         throw error;
     }
+}
+
+export async function getYouTubeAnalytics(socialAccount: SocialAccount) {
+  // Create auth client using stored tokens
+  const access_token = await decryptToken(socialAccount.accessToken);
+  const refresh_token = socialAccount.refreshToken ? await decryptToken(socialAccount.refreshToken) : undefined;
+
+  const authClient = new google.auth.OAuth2();
+  authClient.setCredentials({
+    access_token: access_token,
+    refresh_token: refresh_token,
+    expiry_date: socialAccount.tokenExpiresAt?.getTime(),
+  });
+
+  try {
+    // First, fetch the channel ID using YouTube Data API
+    const youtube = google.youtube({
+      version: 'v3',
+      auth: authClient
+    });
+
+    const channelResponse = await youtube.channels.list({
+      part: ['id'],
+      mine: true
+    });
+
+    if (!channelResponse.data.items || channelResponse.data.items.length === 0) {
+      throw new Error('No YouTube channel found for this account');
+    }
+
+    const channelId = channelResponse.data.items[0].id;
+    if (!channelId) {
+      throw new Error('Failed to retrieve channel ID');
+    }
+
+    // Setup YouTube Analytics client
+    const youtubeAnalytics = google.youtubeAnalytics({
+      version: 'v2',
+      auth: authClient
+    });
+
+    // Calculate date range (last 30 days)
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const response = await youtubeAnalytics.reports.query({
+      ids: `channel=${channelId}`,
+      startDate: startDate,
+      endDate: endDate,
+      metrics: 'views,estimatedMinutesWatched,subscribersGained,likes,comments,shares',
+      dimensions: 'day',
+      sort: 'day'
+    });
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching YouTube analytics:', error);
+    
+    // Handle token expiration
+    if (error.code === 401) {
+      throw new Error('YouTube access token expired. Please reconnect your account.');
+    }
+    
+    throw error;
+  }
+}
+
+export async function getChannelStatistics(socialAccount: SocialAccount) {
+  // Create auth client using stored tokens
+  const access_token = await decryptToken(socialAccount.accessToken);
+  const refresh_token = socialAccount.refreshToken ? await decryptToken(socialAccount.refreshToken) : undefined;
+
+  const authClient = new google.auth.OAuth2();
+  authClient.setCredentials({
+    access_token: access_token,
+    refresh_token: refresh_token,
+    expiry_date: socialAccount.tokenExpiresAt?.getTime(),
+  });
+
+  // Setup YouTube Data API client
+  const youtube = google.youtube({
+    version: 'v3',
+    auth: authClient
+  });
+
+  try {
+    const response = await youtube.channels.list({
+      part: ['snippet', 'statistics', 'contentDetails', 'brandingSettings'],
+      mine: true
+    });
+
+    if (!response.data.items || response.data.items.length === 0) {
+      throw new Error('No YouTube channel found for this account');
+    }
+
+    return response.data.items[0];
+  } catch (error: any) {
+    console.error('Error fetching channel statistics:', error);
+    
+    // Handle token expiration
+    if (error.code === 401) {
+      throw new Error('YouTube access token expired. Please reconnect your account.');
+    }
+    
+    throw error;
+  }
 }

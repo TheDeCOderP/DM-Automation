@@ -514,10 +514,6 @@ export async function POST(req: NextRequest) {
             await publishToTwitter(post)
           } else if(post.platform === "YOUTUBE") {
             await publishToYouTube(post)
-          } else if (post.platform === "FACEBOOK") {
-            await publishToFacebook(post)
-          } else if(post.platform === "PINTEREST") {
-            await publishToPinterest(post);
           }
 
           await prisma.post.update({

@@ -21,10 +21,11 @@ interface MediaFile {
 }
 
 interface MediaUploadProps {
+  layoutType: "wizard" | "advanced";
   onFilesChange: (files: File[]) => void;
 }
 
-export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
+export default function MediaUpload({ layoutType, onFilesChange }: MediaUploadProps) {
   const imagePreviewRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [uploadedFiles, setUploadedFiles] = useState<MediaFile[]>([]);
@@ -322,7 +323,7 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
 
         {/* Footer - Responsive */}
         <CardFooter className="flex flex-col gap-3 p-3 sm:p-4 border-t">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full">
+          <div className={`grid grid-cols-1 gap-2 w-full ${layoutType === 'wizard' ? 'sm:grid-cols-2 lg:grid-cols-3' : ''}`}>
             <GoogleDrivePicker onFileSelect={handleFileAdd} />
             <ZohoWorkDrivePicker onFileSelect={handleFileAdd} />
             <AIGenerator onFileSelect={handleFileAdd} />

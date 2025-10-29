@@ -1,6 +1,6 @@
 "use client"
+
 import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -25,20 +25,18 @@ export default function BrandsCard({
       <Label className="block text-sm font-medium"> 
         <strong className="mr-2 text-xl">Step 1:</strong>Select Brand
       </Label>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            {isLoading ? (
-              <Skeleton className="size-6 rounded-full" />
-            ) : (
-              <span className="flex items-center justify-center size-6 rounded-full bg-black text-white text-xs font-bold">
-                {brands.length}
-              </span>
-            )}
-            <h2 className="text-lg font-semibold">Brands</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="border rounded-lg p-4">
+        <div className="flex items-center gap-2 pb-3">
+          {isLoading ? (
+            <Skeleton className="size-6 rounded-full" />
+          ) : (
+            <span className="flex items-center justify-center size-6 rounded-full bg-muted text-muted-foreground text-xs font-bold">
+              {brands.length}
+            </span>
+          )}
+          <h2 className="text-lg font-semibold">Brands</h2>
+        </div>
+        <div>
           {isLoading ? (
             // Skeleton loading state with horizontal layout
             <div className="flex gap-4 overflow-x-auto pb-2">
@@ -67,7 +65,7 @@ export default function BrandsCard({
                   />
                   <label 
                     htmlFor={brand.id} 
-                    className="flex items-center cursor-pointer p-3 rounded-lg border-2 border-transparent hover:border-gray-200 peer-data-[state=checked]:border-blue-400 peer-data-[state=checked]:bg-blue-50 transition-colors"
+                    className="flex items-center cursor-pointer p-3 rounded-lg border-2 border-transparent hover:border-border peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-accent transition-colors"
                   >
                     <Avatar className="mr-3 w-8 h-8">
                       <AvatarImage 
@@ -84,8 +82,8 @@ export default function BrandsCard({
               ))}
             </RadioGroup>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </>
   )
 }

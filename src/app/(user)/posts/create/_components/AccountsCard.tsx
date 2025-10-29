@@ -254,7 +254,7 @@ export default function AccountsCard({
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {accounts
-                .filter((account) => account.platform !== "GOOGLE")
+              .filter((account) => account.platform === "LINKEDIN" || account.platform === "TWITTER")
                 .map((account) => (
                   <div key={account.id} className="flex items-center gap-2">
                     <Checkbox
@@ -308,91 +308,6 @@ export default function AccountsCard({
           )}
         </CardContent>
       </Card>
-
-      {/* Facebook Pages Section */}
-      {facebookLoading ? (
-        <Card className="mt-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <Skeleton className="h-6 w-6 rounded-full" />
-              <Skeleton className="h-5 w-32" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-4 rounded" />
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : facebookPages.length > 0 && (
-        <Card className="mt-4">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <span className="flex items-center justify-center size-6 rounded-full bg-blue-600 text-white text-xs font-bold">
-                {facebookPages.length}
-              </span>
-              <h2 className="text-lg font-semibold">Facebook Pages</h2>
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
-                {selectedFacebookPagesCount} selected
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSelectAllFacebookPages}
-                disabled={selectedFacebookPagesCount === facebookPages.length}
-              >
-                Select All
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDeselectAllFacebookPages}
-                disabled={selectedFacebookPagesCount === 0}
-              >
-                Deselect All
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {facebookPages.map((page: SocialAccountPage) => (
-                <div key={page.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={page.id}
-                    checked={isPageSelected(page.id)}
-                    onCheckedChange={(checked) =>
-                      handlePageChange(page.id, checked as boolean)
-                    }
-                  />
-                  <Avatar className="size-12 bg-blue-100">
-                    <AvatarImage
-                      src={`https://graph.facebook.com/${page.pageId}/picture?type=large`}
-                      alt={page.name}
-                    />
-                    <AvatarFallback className="bg-blue-100 text-blue-600">
-                      <Facebook className="size-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <Label
-                    htmlFor={page.id}
-                    className="text-sm font-bold cursor-pointer"
-                  >
-                    {page.name}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* LinkedIn Pages Section */}
       <Card className="mt-4">
@@ -503,37 +418,18 @@ export default function AccountsCard({
         </CardContent>
       </Card>
 
-      {/* Pinterest Boards Section */}
-      <Card className="mt-4">
-        <CardHeader className="pb-2">
-          <div className="flex flex-row items-center justify-between">
+      {/* Facebook Pages Section */}
+      {facebookLoading ? (
+        <Card className="mt-4">
+          <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
-              <span className="flex items-center justify-center size-6 rounded-full bg-red-600 text-white text-xs font-bold">
-                {pinterestPages.length}
-              </span>
-              <h2 className="text-lg font-semibold">Pinterest Boards</h2>
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="h-5 w-32" />
             </CardTitle>
-            {hasPinterestAccount && (
-              <Button 
-                onClick={handlePinterestBoardAccess}
-                size="sm"
-                variant="outline"
-              >
-                {pinterestPages.length > 0 ? "Refresh Boards" : "Fetch Boards"}
-              </Button>
-            )}
-          </div>
-          {!hasPinterestAccount && (
-            <p className="text-sm text-gray-500 mt-2">
-              Connect a Pinterest account first to access your boards
-            </p>
-          )}
-        </CardHeader>
-
-        <CardContent>
-          {pinterestLoading ? (
+          </CardHeader>
+          <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              {[...Array(2)].map((_, i) => (
+              {[...Array(3)].map((_, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Skeleton className="h-4 w-4 rounded" />
                   <Skeleton className="h-12 w-12 rounded-full" />
@@ -541,76 +437,156 @@ export default function AccountsCard({
                 </div>
               ))}
             </div>
-          ) : pinterestPages.length > 0 ? (
-            <>
-              <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                <span>{selectedPinterestBoardsCount} selected</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSelectAllPinterestBoards}
-                    disabled={selectedPinterestBoardsCount === pinterestPages.length}
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDeselectAllPinterestBoards}
-                    disabled={selectedPinterestBoardsCount === 0}
-                  >
-                    Deselect All
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {pinterestPages.map((board: SocialAccountPage) => (
-                  <div key={board.id} className="flex items-center gap-2">
-                    <Checkbox
-                      id={board.id}
-                      checked={isPageSelected(board.id)}
-                      onCheckedChange={(checked) =>
-                        handlePageChange(board.id, checked as boolean)
-                      }
-                    />
-                    <Avatar className="size-12 bg-red-100">
-                      <AvatarImage
-                        src={board.pageImage || undefined}
-                        alt={board.name}
-                      />
-                      <AvatarFallback className="bg-red-100 text-red-600">
-                        {getPlatformIcon("PINTEREST", "w-4 h-4")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <Label
-                      htmlFor={board.id}
-                      className="text-sm font-bold cursor-pointer"
-                    >
-                      {board.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : hasPinterestAccount ? (
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-500 mb-3">
-                No Pinterest boards found. Click to fetch your boards.
-              </p>
-              <Button onClick={handlePinterestBoardAccess}>
-                Fetch Pinterest Boards
+          </CardContent>
+        </Card>
+      ) : facebookPages.length > 0 && (
+        <Card className="mt-4">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 px-0">
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-blue-600 text-white text-xs font-bold">
+                {facebookPages.length}
+              </span>
+              <h2 className="text-lg font-semibold">Facebook Pages</h2>
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                {selectedFacebookPagesCount} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAllFacebookPages}
+                disabled={selectedFacebookPagesCount === facebookPages.length}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeselectAllFacebookPages}
+                disabled={selectedFacebookPagesCount === 0}
+              >
+                Deselect All
               </Button>
             </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-500">
-                Connect a Pinterest account to access your boards
-              </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 px-0">
+              {facebookPages.map((page: SocialAccountPage) => (
+                <div key={page.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={page.id}
+                    checked={isPageSelected(page.id)}
+                    onCheckedChange={(checked) =>
+                      handlePageChange(page.id, checked as boolean)
+                    }
+                  />
+                  <Avatar className="size-12 bg-blue-100">
+                    <AvatarImage
+                      src={`https://graph.facebook.com/${page.pageId}/picture?type=large`}
+                      alt={page.name}
+                    />
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                      <Facebook className="size-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <Label
+                    htmlFor={page.id}
+                    className="text-sm font-bold cursor-pointer"
+                  >
+                    {page.name}
+                  </Label>
+                </div>
+              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pinterest Boards Section */}
+      {pinterestLoading ? (
+        <Card className="mt-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="h-5 w-32" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : pinterestPages.length > 0 && (
+        <Card className="mt-4">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 px-0">
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-red-600 text-white text-xs font-bold">
+                {pinterestPages.length}
+              </span>
+              <h2 className="text-lg font-semibold">Pinterest Boards</h2>
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                {selectedPinterestBoardsCount} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAllPinterestBoards}
+                disabled={selectedPinterestBoardsCount === pinterestPages.length}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeselectAllPinterestBoards}
+                disabled={selectedPinterestBoardsCount === 0}
+              >
+                Deselect All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 px-0">
+              {pinterestPages.map((board: SocialAccountPage) => (
+                <div key={board.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={board.id}
+                    checked={isPageSelected(board.id)}
+                    onCheckedChange={(checked) =>
+                      handlePageChange(board.id, checked as boolean)
+                    }
+                  />
+                  <Avatar className="size-12 bg-red-100">
+                    <AvatarImage
+                      src={board.pageImage || undefined}
+                      alt={board.name}
+                    />
+                    <AvatarFallback className="bg-red-100 text-red-600">
+                      {getPlatformIcon("PINTEREST", "w-4 h-4")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Label
+                    htmlFor={board.id}
+                    className="text-sm font-bold cursor-pointer"
+                  >
+                    {board.name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

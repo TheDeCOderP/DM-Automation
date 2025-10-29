@@ -169,7 +169,7 @@ export default function CaptionsCard({ title, setTitle, selectedPlatforms = [], 
     <>
       <Label className="block text-sm font-medium mb-2"> <strong className="mr-2 text-xl">Step 3:</strong>Enter/Generate Captions</Label>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 px-0">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center size-6 rounded-full bg-black text-white text-xs font-bold">
               {selectedPlatforms.length}
@@ -185,7 +185,7 @@ export default function CaptionsCard({ title, setTitle, selectedPlatforms = [], 
             Generate AI Captions
           </Button>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-4 px-0">
           <div className="flex items-center justify-between">
             <Label htmlFor="same-caption" className="text-sm font-normal">
               Use same caption for all platforms

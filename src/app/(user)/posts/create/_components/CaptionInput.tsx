@@ -2,7 +2,6 @@
 
 import type * as React from "react"
 import { Info } from "lucide-react"
-import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 
 interface CaptionInputProps {
@@ -18,11 +17,11 @@ export default function CaptionInput({ platformName, IconComponent, wordLimit, v
   const currentLength = value.length
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <div className="w-full">
+      <div className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-2">
           <IconComponent className="size-5" />
-          <CardDescription className="text-sm font-medium">{platformName}</CardDescription>
+          <span className="text-sm font-medium text-gray-600">{platformName}</span>
         </div>
         <div className="flex items-center gap-1 text-sm text-gray-600">
           <span>
@@ -30,17 +29,15 @@ export default function CaptionInput({ platformName, IconComponent, wordLimit, v
           </span>
           <Info className="size-4" />
         </div>
-      </CardHeader>
-      <CardContent>
-        <Textarea
-          placeholder={`Write your caption for ${platformName}...`}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          maxLength={wordLimit}
-          className="min-h-[120px] resize-y"
-          disabled={disabled}
-        />
-      </CardContent>
-    </Card>
+      </div>
+      <Textarea
+        placeholder={`Write your caption for ${platformName}...`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={wordLimit}
+        className="min-h-[120px] resize-y"
+        disabled={disabled}
+      />
+    </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { useEffect, useState } from "react";
-import { Bell, CheckCircle, AlertCircle, Clock, Unlink, CreditCard } from "lucide-react";
+import { Bell, CheckCircle, AlertCircle, Clock, Unlink, CreditCard, RefreshCcw } from "lucide-react";
 
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -176,6 +176,7 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function NotificationDropdown() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // SWR for notifications
   const { data: notificationData, mutate: mutateNotifications, error, isLoading } = useSWR<{
@@ -217,6 +218,18 @@ export default function NotificationDropdown() {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Use the mutate function with revalidation
+      await mutateNotifications(undefined, { revalidate: true });
+    } catch (error) {
+      console.error('Failed to refresh notifications:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -239,15 +252,27 @@ export default function NotificationDropdown() {
       >
           <DropdownMenuLabel className="flex justify-between items-center">
               <span>Notifications</span>
-              <Button
+              <div className="flex items-center gap-1">
+                <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 text-xs"
+                  className="h-8 px-2 text-xs flex items-center gap-1"
+                  disabled={isLoading || isSubmitting || isRefreshing}
+                  onClick={handleRefresh}
+                >
+                  <RefreshCcw className={`h-3 w-3 ${isLoading || isSubmitting || isRefreshing ? 'animate-spin' : ''}`}/>
+                  Refresh
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
                   disabled={isSubmitting || unreadCount === 0}
                   onClick={handleMarkAllAsRead}
-              >
+                >
                   Mark all as read
-              </Button>
+                </Button>
+              </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 

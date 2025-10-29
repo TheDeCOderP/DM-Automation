@@ -1,42 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getYouTubeAnalytics } from "@/services/youtube.service";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-
-export async function GET(req: NextRequest) {
-  const token = await getToken({ req });
-
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const socialAccount = await prisma.socialAccount.findFirst({
-      where: {
-        platform: "YOUTUBE",
-        users: {
-          some: {
-            userId: token.id,
-          },
-        }
-      },
-      include: {
-        users: true,
-      },
-    });
-console.log("Found social account:", socialAccount);
-    if (!socialAccount) {
-      return NextResponse.json({ message: "Social account not found." }, { status: 404 });
-    }
-
-    const analysis = await getYouTubeAnalytics(socialAccount);
-    console.log(analysis);
-    return NextResponse.json({ data: analysis }, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching YouTube analytics:", error);
-    return NextResponse.json({ message: "Internal server error." }, { status: 500 });
-  }
-}
 
 export async function DELETE(req: NextRequest) {
   const token = await getToken({ req });
@@ -58,7 +22,7 @@ export async function DELETE(req: NextRequest) {
       where: {
         brandId,
         socialAccount: {
-          platform: "YOUTUBE",
+          platform: "PINTEREST",
         },
       },
     });

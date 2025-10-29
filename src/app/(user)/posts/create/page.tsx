@@ -252,7 +252,7 @@ export default function CreatePostPage() {
           />
         );
       case "media":
-        return <MediaUpload onFilesChange={handleFilesChange} />;
+        return <MediaUpload layoutType={mode} onFilesChange={handleFilesChange} />;
       default:
         return null;
     }
@@ -357,7 +357,7 @@ export default function CreatePostPage() {
 
             <TabsContent value="media" className="mt-0">
               <div className="max-w-6xl mx-auto">
-                <MediaUpload onFilesChange={handleFilesChange} />
+                <MediaUpload layoutType={mode} onFilesChange={handleFilesChange} />
               </div>
             </TabsContent>
           </Tabs>
