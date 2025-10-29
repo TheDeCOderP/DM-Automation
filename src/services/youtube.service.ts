@@ -558,14 +558,8 @@ export async function getYouTubeAnalytics(socialAccount: SocialAccount) {
     });
 
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching YouTube analytics:', error);
-    
-    // Handle token expiration
-    if (error.code === 401) {
-      throw new Error('YouTube access token expired. Please reconnect your account.');
-    }
-    
     throw error;
   }
 }
@@ -599,14 +593,8 @@ export async function getChannelStatistics(socialAccount: SocialAccount) {
     }
 
     return response.data.items[0];
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching channel statistics:', error);
-    
-    // Handle token expiration
-    if (error.code === 401) {
-      throw new Error('YouTube access token expired. Please reconnect your account.');
-    }
-    
     throw error;
   }
 }
