@@ -12,6 +12,7 @@ import { Toaster } from "sonner";
 import Script from "next/script";
 import type { Metadata } from "next";
 
+import GoogleOneTap from "@/components/features/GoogleLoginButton";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { SessionProvider } from "@/providers/session-provider";
 import { DynamicThemeProvider } from "@/providers/dynamic-theme-provider";  
@@ -30,6 +31,7 @@ export default async function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="https://prabisha.com/wp-content/uploads/2023/10/Favicon-2.png" type="image/png" />
+        <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
         <Script async src={`https://www.google.com/recaptcha/api.js?render=${process.env.GOOGLE_CAPTCHA_SITE_KEY}`}></Script>
       </head>
       <body
@@ -40,6 +42,7 @@ export default async function RootLayout({
             <DynamicThemeProvider>
               <Toaster richColors position="top-right" closeButton />
               {children}
+              <GoogleOneTap />
             </DynamicThemeProvider>
           </SessionProvider>
         </ThemeProvider>

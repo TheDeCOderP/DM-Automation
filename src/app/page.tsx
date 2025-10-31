@@ -20,13 +20,13 @@ import {
 } from "lucide-react"
 import Header from "@/components/layout/Header"
 import Footer from "@/components/layout/Footer"
+import GoogleLoginButton from "@/components/features/GoogleLoginButton"
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <Header />
-
       {/* Hero Section */}
       <div className="h-auto md:min-h-screen w-full relative">
         {/* Top Fade Grid Background */}
