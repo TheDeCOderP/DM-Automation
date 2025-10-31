@@ -3,6 +3,36 @@ import { useEffect, useCallback, useState, useRef } from "react";
 import { signIn, useSession } from "next-auth/react";
 import Script from "next/script";
 
+// Define proper TypeScript interfaces
+interface CredentialResponse {
+  credential: string;
+  select_by?: string;
+}
+
+interface GoogleAccounts {
+  id: {
+    initialize: (config: {
+      client_id: string;
+      callback: (response: CredentialResponse) => void;
+      context?: string;
+      ux_mode?: string;
+      auto_select?: boolean;
+      use_fedcm_for_prompt?: boolean;
+    }) => void;
+    prompt: (notificationCallback?: (notification: PromptNotification) => void) => void;
+    cancel: () => void;
+  };
+}
+
+interface PromptNotification {
+  isNotDisplayed: () => boolean;
+  isSkippedMoment: () => boolean;
+  isDismissedMoment: () => boolean;
+  getNotDisplayedReason: () => string;
+  getSkippedReason: () => string;
+  getDismissedReason: () => string;
+}
+
 export default function GoogleOneTap() {
   const { data: session } = useSession();
   const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
@@ -11,11 +41,11 @@ export default function GoogleOneTap() {
 
   console.log("Session:", session);
 
-  const handleCredentialResponse = useCallback((response: any) => {
+  const handleCredentialResponse = useCallback((response: CredentialResponse) => {
     signIn("google", {
       credential: response.credential,
       redirect: false,
-    }).catch((error) => {
+    }).catch((error: Error) => {
       console.error("Error signing in:", error);
     });
   }, []);
@@ -38,7 +68,7 @@ export default function GoogleOneTap() {
         use_fedcm_for_prompt: true,
       });
 
-      window.google.accounts.id.prompt((notification: any) => {
+      window.google.accounts.id.prompt((notification: PromptNotification) => {
         if (notification.isNotDisplayed()) {
           console.log(
             "One Tap was not displayed:",
