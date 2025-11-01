@@ -9,21 +9,6 @@ interface CredentialResponse {
   select_by?: string;
 }
 
-interface GoogleAccounts {
-  id: {
-    initialize: (config: {
-      client_id: string;
-      callback: (response: CredentialResponse) => void;
-      context?: string;
-      ux_mode?: string;
-      auto_select?: boolean;
-      use_fedcm_for_prompt?: boolean;
-    }) => void;
-    prompt: (notificationCallback?: (notification: PromptNotification) => void) => void;
-    cancel: () => void;
-  };
-}
-
 interface PromptNotification {
   isNotDisplayed: () => boolean;
   isSkippedMoment: () => boolean;

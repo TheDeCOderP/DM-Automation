@@ -510,6 +510,8 @@ export async function POST(req: NextRequest) {
               // This is a LinkedIn personal post
               await publishToLinkedin(post)
             }
+          } else if(post.platform === "FACEBOOK") {
+            await publishToFacebook(post)
           } else if (post.platform === "TWITTER") {
             await publishToTwitter(post)
           } else if(post.platform === "YOUTUBE") {

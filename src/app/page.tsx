@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import Header from "@/components/layout/Header"
 import Footer from "@/components/layout/Footer"
-import GoogleLoginButton from "@/components/features/GoogleLoginButton"
+import GoogleLoginButton from "@/components/features/GoogleOneTap"
 
 export default function LandingPage() {
   return (

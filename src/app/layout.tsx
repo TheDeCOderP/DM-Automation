@@ -12,7 +12,7 @@ import { Toaster } from "sonner";
 import Script from "next/script";
 import type { Metadata } from "next";
 
-import GoogleOneTap from "@/components/features/GoogleLoginButton";
+import GoogleOneTap from "@/components/features/GoogleOneTap";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { SessionProvider } from "@/providers/session-provider";
 import { DynamicThemeProvider } from "@/providers/dynamic-theme-provider";  
