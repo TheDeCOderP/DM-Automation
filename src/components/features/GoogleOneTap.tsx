@@ -24,8 +24,6 @@ export default function GoogleOneTap() {
   const initialized = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  console.log("Session:", session);
-
   const handleCredentialResponse = useCallback((response: CredentialResponse) => {
     signIn("google", {
       credential: response.credential,
