@@ -42,7 +42,7 @@ export default function GoogleDrivePicker({ onFileSelect }: GoogleDrivePickerPro
 
   useEffect(() => {
     async function fetchToken() {
-      const res = await fetch("/api/accounts/google");
+      const res = await fetch("/api/accounts/google/drive");
 
       if(!res.ok) {
         if(setIsConnected) setIsConnected(false);
@@ -88,18 +88,10 @@ export default function GoogleDrivePicker({ onFileSelect }: GoogleDrivePickerPro
 
   const handleGoogleDriveConnect = async () => {
     try {
-      const res = await fetch("/api/accounts/google/auth");
-      if (res.ok) {
-        const data = await res.json();
-        setAccessToken(data.account.accessToken);
-        setIsConnected(true);
-        toast.success("Connected to Google Drive successfully");
-      } else {
-        throw new Error("Failed to connect to Google Drive");
-      }
+      window.location.href = `/api/accounts/google/auth`;
     } catch (error) {
-      console.error("Error connecting to Google Drive:", error);
-      toast.error("Failed to connect to Google Drive");
+      console.error("Connection failed:", error);
+      toast.error("Failed to initiate connection");
     }
   };
 

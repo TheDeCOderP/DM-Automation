@@ -1,15 +1,16 @@
 // app/api/social-accounts/google/callback/route.ts
 import { prisma } from "@/lib/prisma";
+import { getToken } from "next-auth/jwt";
 import { encryptToken } from "@/lib/encryption";
 import { NextRequest, NextResponse } from "next/server";
 
 const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/google/callback`;
 
 export async function GET(request: NextRequest) {
+  const token = await getToken({ req: request });
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const state = searchParams.get('state');
-  const { userId, brandId } = JSON.parse(decodeURIComponent(state!));
 
   if (!code) {
     const errorUrl = new URL('/auth/error', request.nextUrl.origin);
@@ -49,8 +50,12 @@ export async function GET(request: NextRequest) {
 
     const profile = await profileRes.json();
 
+    const brand = await prisma.userBrand.findFirst({
+      where: { userId: token?.id }
+    });
+
     // 3. Save to DB
-    if (userId && brandId) {
+    if (token?.id) {
       try {
         // Encrypt tokens before saving
         const encryptedAccessToken = await encryptToken(tokenData.access_token);
@@ -87,13 +92,13 @@ export async function GET(request: NextRequest) {
         await prisma.socialAccountBrand.upsert({
           where: {
             brandId_socialAccountId: {
-              brandId,
+              brandId: brand?.id!,
               socialAccountId: account.id,
             },
           },
           update: {},
           create: {
-            brandId,
+            brandId: brand?.id!,
             socialAccountId: account.id,
           },
         });
@@ -101,13 +106,13 @@ export async function GET(request: NextRequest) {
         await prisma.userSocialAccount.upsert({
           where: {
             userId_socialAccountId: {
-              userId,
+              userId: token.id,
               socialAccountId: account.id
             },
           },
           update: {},
           create: {
-            userId,
+            userId: token.id,
             socialAccountId: account.id
           }
         });
