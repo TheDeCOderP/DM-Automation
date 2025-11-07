@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // 1. Exchange code for access token
-    const tokenRes = await fetch('https://api-sandbox.pinterest.com/v5/oauth/token', {
+    const tokenRes = await fetch('https://api.pinterest.com/v5/oauth/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -40,7 +40,7 @@ console.log('Pinterest token data:', tokenData);
     }
 
     // 2. Fetch Pinterest user account info
-    const profileRes = await fetch('https://api-sandbox.pinterest.com/v5/user_account', {
+    const profileRes = await fetch('https://api.pinterest.com/v5/user_account', {
       headers: {
         'Authorization': `Bearer ${tokenData.access_token}`,
       },

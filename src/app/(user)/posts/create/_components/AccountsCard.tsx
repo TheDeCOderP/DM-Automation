@@ -254,7 +254,7 @@ export default function AccountsCard({
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {accounts
-              .filter((account) => account.platform === "LINKEDIN" || account.platform === "TWITTER")
+              .filter((account) => account.platform === "LINKEDIN" || account.platform === "TWITTER" || account.platform === "YOUTUBE")
                 .map((account) => (
                   <div key={account.id} className="flex items-center gap-2">
                     <Checkbox

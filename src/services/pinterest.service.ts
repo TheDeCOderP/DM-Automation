@@ -195,7 +195,7 @@ export async function publishToPinterest(
 
 export async function getUserBoards(accessToken: string): Promise<PinterestBoard[]> {
   try {
-    const response = await fetch('https://api-sandbox.pinterest.com/v5/boards', {
+    const response = await fetch('https://api.pinterest.com/v5/boards', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -216,7 +216,7 @@ export async function getUserBoards(accessToken: string): Promise<PinterestBoard
 
 export async function getUserAccount(accessToken: string): Promise<PinterestUserAccount> {
   try {
-    const response = await fetch('https://api-sandbox.pinterest.com/v5/user_account', {
+    const response = await fetch('https://api.pinterest.com/v5/user_account', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -262,7 +262,7 @@ async function createPinterestPin(
       Object.entries(pinData).filter(([_, value]) => value !== undefined)
     );
 
-    const response = await fetch('https://api-sandbox.pinterest.com/v5/pins', {
+    const response = await fetch('https://api.pinterest.com/v5/pins', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -446,7 +446,7 @@ export async function fetchPinterestPinAnalytics(post: Post): Promise<PinterestA
   try {
     // Get pin details
     const pinResponse = await fetch(
-      `https://api-sandbox.pinterest.com/v5/pins/${pinId}`,
+      `https://api.pinterest.com/v5/pins/${pinId}`,
       {
         method: 'GET',
         headers: {
@@ -463,7 +463,7 @@ export async function fetchPinterestPinAnalytics(post: Post): Promise<PinterestA
 
     // Get analytics for the pin
     const analyticsResponse = await fetch(
-      `https://api-sandbox.pinterest.com/v5/pins/${pinId}/analytics?metric_types=IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK`,
+      `https://api.pinterest.com/v5/pins/${pinId}/analytics?metric_types=IMPRESSION,SAVE,PIN_CLICK,OUTBOUND_CLICK`,
       {
         method: 'GET',
         headers: {
@@ -518,7 +518,7 @@ export async function refreshPinterestToken(refreshToken: string): Promise<{
   refresh_token?: string;
   expires_in: number;
 }> {
-  const response = await fetch('https://api-sandbox.pinterest.com/v5/oauth/token', {
+  const response = await fetch('https://api.pinterest.com/v5/oauth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

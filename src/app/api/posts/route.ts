@@ -505,7 +505,7 @@ export async function POST(req: NextRequest) {
           if (post.platform === "LINKEDIN") {
             if (post.socialAccountPageId) {
               // This is a LinkedIn Page post
-              await publishToLinkedInPage(post, post.socialAccountPageId)
+              await publishToLinkedInPage(post);
             } else {
               // This is a LinkedIn personal post
               await publishToLinkedin(post)

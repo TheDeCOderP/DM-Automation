@@ -2,6 +2,7 @@
 
 import useSwr from "swr";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRightToLine, Globe, LayoutDashboard, Share2 } from "lucide-react";
 
@@ -32,6 +33,7 @@ type SocialAccountWithPages = SocialAccount & {
 type LayoutMode = "wizard" | "advanced";
 
 export default function CreatePostPage() {
+  const router = useRouter();
   const { data, isLoading } = useSwr("/api/accounts", fetcher);
   const accounts: SocialAccountWithPages[] = data?.data || [];
   const brands: Brand[] = data?.brands || [];
@@ -177,8 +179,8 @@ export default function CreatePostPage() {
       }
 
       const responseData = await response.json();
-      console.log("Post created successfully:", responseData);
       toast.success("Post Created Successfully");
+      router.push(`/posts/success`);
     } catch (error) {
       console.error("Error creating post:", error);
       toast.error("Failed to create post");

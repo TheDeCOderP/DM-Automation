@@ -205,16 +205,15 @@ export async function publishToLinkedin(
 }
 
 export async function publishToLinkedInPage(
-  post: Post & { media?: Media[] },
-  socialAccountPageId?: string
+  post: Post & { media?: Media[] }
 ): Promise<{ id: string }> {
   try {
-    if (!post) throw new Error('Invalid input');
+    if (!post.socialAccountPageId) throw new Error('Invalid input');
 
     // 1. Get LinkedIn Page token
     const socialAccountPage = await prisma.socialAccountPage.findFirst({
       where: {
-        id: socialAccountPageId,
+        id: post.socialAccountPageId,
         platform: 'LINKEDIN',
         isActive: true,
       },

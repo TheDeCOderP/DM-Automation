@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const accessToken = await decryptToken(account.accessToken);
 
     const pinterestResponse = await fetch(
-      `https://api-sandbox.pinterest.com/v5/boards`,
+      `https://api.pinterest.com/v5/boards`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
