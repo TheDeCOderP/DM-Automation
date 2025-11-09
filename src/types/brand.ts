@@ -1,4 +1,4 @@
-import type { SocialAccount, Brand } from "@prisma/client";
+import type { SocialAccount, Brand, BrandInvitation, User } from "@prisma/client";
 
 export interface BrandMember {
   id: string;
@@ -9,9 +9,14 @@ export interface BrandMember {
   isCurrentUser?: boolean;
 }
 
+export interface BrandInvitationWithUser extends BrandInvitation {
+  invitedTo: User;
+}
+
 export interface BrandWithSocialAccounts extends Brand {
   isAdmin: boolean
   userRole?: string
   socialAccounts: SocialAccount[]
   members?: BrandMember[]
+  brandInvitations?: BrandInvitationWithUser[]
 }

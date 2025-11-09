@@ -3,6 +3,7 @@ import { getToken } from "next-auth/jwt";
 import cloudinary from "@/lib/cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 import { UploadApiResponse } from "cloudinary";
+import { InvitationStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
     const token = await getToken({ req });
@@ -52,6 +53,23 @@ export async function GET(req: NextRequest) {
                                         name: true,
                                     }
                                 },
+                            }
+                        },
+                        brandInvitations: {
+                            where: {
+                                status: {
+                                    in: [InvitationStatus.PENDING, InvitationStatus.REJECTED]
+                                }
+                            },
+                            include: {
+                                invitedTo: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                        image: true,
+                                    }
+                                }
                             }
                         }
                     }

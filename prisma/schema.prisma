@@ -171,7 +171,7 @@ model Brand {
   posts          Post[]
   media          Media[]
   socialAccounts SocialAccountBrand[]
-  BrandInvitations BrandInvitation[]
+  brandInvitations BrandInvitation[]
 
   externalBlogSites ExternalBlogSite[]
 }

@@ -32,7 +32,7 @@ export default function ShareBrandModal({
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
   const [isSharing, setIsSharing] = useState(false)
 
-  const { data, isLoading } = useSWR(open ? "/api/users" : null, fetcher);
+  const { data, isLoading } = useSWR(open ? `/api/brands/${brandId}/invite/users` : null, fetcher);
   
   // Fix: Access the data directly, not through usersData.data
   const usersData = data?.users || [];

@@ -279,6 +279,72 @@ export default function BrandDetailsModal({
                   )}
                 </CardContent>
               </Card>
+
+              {/* Brand Invites */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Brand Invites ({brand.brandInvitations?.length || 0})
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {brand.brandInvitations && brand.brandInvitations.length > 0 ? (
+                    <div className="space-y-3">
+                      {brand.brandInvitations.map((invite) => (
+                        <div
+                          key={invite.id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-muted/20"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 border">
+                              <AvatarImage src={invite.invitedTo?.image || undefined} />
+                              <AvatarFallback className="text-xs">
+                                {invite.invitedTo?.name?.charAt(0).toUpperCase() ||
+                                  invite.invitedTo?.email?.charAt(0).toUpperCase() ||
+                                  "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">
+                                {invite.invitedTo?.name || "Unknown User"}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {invite.invitedTo?.email}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1 text-right">
+                            <Badge
+                              variant={
+                                invite.status === "PENDING"
+                                  ? "secondary"
+                                  : invite.status === "ACCEPTED"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="capitalize text-xs px-2 py-0.5"
+                            >
+                              {invite.status.toLowerCase()}
+                            </Badge>
+                            <span className="text-[11px] text-muted-foreground">
+                              Expires {format(new Date(invite.expiresAt), "MMM d, yyyy")}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No pending or active invites</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </ScrollArea>
         </DialogContent>
