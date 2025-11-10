@@ -61,11 +61,11 @@ export default function SuccessPage() {
           </Button>
           <Button
             variant="ghost"
-            onClick={() => router.push('/posts')}
+            onClick={() => router.push('/accounts')}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Posts
+            Add Account
           </Button>
         </div>
       </div>

@@ -183,7 +183,7 @@ export async function publishToPinterest(
     );
 
     // 5. Record successful post
-    await recordSuccessfulPinterestPost(post, socialAccount.id, pinData.id, pinData.url);
+    await recordSuccessfulPinterestPost(post, pinData.id, pinData.url);
     
     return { id: pinData.id };
   } catch (error) {
@@ -239,7 +239,7 @@ async function createPinterestPin(
   media: Media,
   boardId: string,
   accessToken: string
-): Promise<PinterestPinResponse> {
+): Promise<{id: string; url: string}> {
   try {
     // Determine media type and content type
     const mediaType = getMediaType(media.url);
@@ -278,7 +278,12 @@ async function createPinterestPin(
       throw new Error(`Pinterest API error: ${responseData.message || JSON.stringify(responseData)}`);
     }
 
-    return responseData;
+    const pinUrl = `https://www.pinterest.com/pin/${responseData.id}/`;
+
+    return {
+      id: responseData.id,
+      url: pinUrl
+    };
   } catch (error) {
     console.error('Error creating Pinterest pin:', error);
     throw error;
@@ -325,7 +330,6 @@ function getContentType(url: string): string {
 
 async function recordSuccessfulPinterestPost(
   post: Post,
-  socialAccountId: string,
   pinId: string,
   pinUrl: string
 ) {
