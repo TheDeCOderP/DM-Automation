@@ -4,6 +4,27 @@ import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
+interface RedditSubreddit {
+  data: {
+    id: string;
+    display_name: string;
+    title: string;
+    url: string;
+    subscribers: number;
+    public_description: string;
+    created_utc: number;
+    over18: boolean;
+    community_icon?: string | null;
+    icon_img?: string | null;
+  };
+}
+
+interface RedditSubredditResponse {
+  data: {
+    children: RedditSubreddit[];
+  };
+}
+
 export async function GET(req: NextRequest) {
   const token = await getToken({ req });
   if (!token || !token.sub) return new Response("Unauthorized", { status: 401 });
@@ -57,7 +78,7 @@ export async function GET(req: NextRequest) {
 
     // Process Reddit subreddits and store them as pages
     const pages = await Promise.all(
-      redditData.data.children.map(async (sub: any) => {
+      redditData.data.children.map(async (sub: RedditSubreddit) => {
         const subreddit = sub.data;
         const pageId = `t5_${subreddit.id}`; // Reddit uses t5_ prefix for subreddit IDs
         

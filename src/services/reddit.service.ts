@@ -31,6 +31,23 @@ interface RedditPostData {
   sendReplies?: boolean;
 }
 
+interface RedditSubredditChild {
+  data: {
+    display_name: string;
+    title: string;
+    subscribers: number;
+    public_description: string;
+    user_is_moderator: boolean;
+  };
+}
+
+interface RedditSubredditResponse {
+  data: {
+    children: RedditSubredditChild[];
+  };
+}
+
+
 export async function publishToReddit(
   post: Post & { media?: Media[] }
 ): Promise<RedditPostResponse> {
@@ -518,7 +535,7 @@ export async function getRedditSubreddits(
     }
 
     const data = await response.json();
-    return data.data.children.map((sub: any) => ({
+    return data.data.children.map((sub: RedditSubredditChild) => ({
       id: sub.data.display_name,
       name: sub.data.display_name,
       title: sub.data.title,
