@@ -22,7 +22,7 @@ export async function DELETE(req: NextRequest) {
       where: {
         brandId,
         socialAccount: {
-          platform: "INSTAGRAM",
+          platform: "REDDIT",
         },
       },
     });

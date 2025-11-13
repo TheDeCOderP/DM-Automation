@@ -28,6 +28,7 @@ const socialMediaPlatforms: SocialPlatform[] = [
   { id: "TWITTER", name: "Twitter", icon: Twitter, wordLimit: 280 },
   { id: "YOUTUBE", name: "YouTube", icon: Youtube, wordLimit: 5000 },
   { id: "PINTEREST", name: "Pinterest", icon: Sparkles, wordLimit: 5000 },
+  { id: "REDDIT", name: "Reddit", icon: Sparkles, wordLimit: 5000 },
 ]
 
 interface CaptionInputProps {

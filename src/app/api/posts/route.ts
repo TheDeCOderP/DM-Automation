@@ -13,6 +13,7 @@ import { publishToYouTube } from "@/services/youtube.service";
 import { publishToFacebook } from "@/services/facebook.service";
 import { publishToPinterest } from "@/services/pinterest.service";
 import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.service";
+import { publishToReddit } from "@/services/reddit.service"
 
 function generateCronExpression(schedule: ScheduleData) {
   // Convert the user's local date/time + offset to UTC components for cron
@@ -518,6 +519,8 @@ export async function POST(req: NextRequest) {
             await publishToYouTube(post)
           } else if(post.platform === "PINTEREST") {
             await publishToPinterest(post)
+          } else if(post.platform === "REDDIT") {
+            await publishToReddit(post);
           }
 
           await prisma.post.update({

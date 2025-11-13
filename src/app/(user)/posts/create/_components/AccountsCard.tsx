@@ -62,6 +62,18 @@ export default function AccountsCard({
     }
   );
 
+  const { data: redditData, isLoading: redditLoading } = useSWR(
+    `/api/accounts/reddit/subreddits?platformUserId=${
+      accounts.find((acc) => acc.platform === "REDDIT")?.platformUserId || ""
+    }`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+    }
+  );
+
+  const redditPages: SocialAccountPage[] = redditData?.pages || [];
   const facebookPages: SocialAccountPage[] = facebookData?.pages || [];
   const linkedinPages: SocialAccountPage[] = linkedinData?.pages || [];
   const pinterestPages: SocialAccountPage[] = pinterestData?.pages || [];
@@ -193,6 +205,9 @@ export default function AccountsCard({
   ).length;
   const selectedPinterestBoardsCount = selectedPageIds.filter((id) =>
     pinterestPages.some((page) => page.id === id)
+  ).length;
+  const selectedRedditSubredditsCount = selectedPageIds.filter((id) =>
+    redditPages.some((subreddit) => subreddit.id === id)
   ).length;
 
   return (
@@ -580,6 +595,91 @@ export default function AccountsCard({
                     className="text-sm font-bold cursor-pointer"
                   >
                     {board.name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reddit Subreddits Section */}
+      {redditLoading ? (
+        <Card className="mt-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="h-5 w-32" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : redditPages.length > 0 && (
+        <Card className="mt-4">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 px-0">
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-red-600 text-white text-xs font-bold">
+                {redditPages.length}
+              </span>
+              <h2 className="text-lg font-semibold">Reddit Subreddits</h2>
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                {selectedRedditSubredditsCount} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => console.log("Select All")}
+                disabled={selectedRedditSubredditsCount === redditPages.length}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => console.log("Deselect All")}
+                disabled={selectedRedditSubredditsCount === 0}
+              >
+                Deselect All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 px-0">
+              {redditPages.map((subreddit: SocialAccountPage) => (
+                <div key={subreddit.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={subreddit.id}
+                    checked={isPageSelected(subreddit.id)}
+                    onCheckedChange={(checked) =>
+                      handlePageChange(subreddit.id, checked as boolean)
+                    }
+                  />
+                  <Avatar className="size-12 bg-red-100">
+                    <AvatarImage
+                      src={subreddit.pageImage || undefined}
+                      alt={subreddit.name}
+                    />
+                    <AvatarFallback className="bg-red-100 text-red-600">
+                      {getPlatformIcon("REDDIT", "w-4 h-4")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Label
+                    htmlFor={subreddit.id}
+                    className="text-sm font-bold cursor-pointer"
+                  >
+                    {subreddit.name}
                   </Label>
                 </div>
               ))}

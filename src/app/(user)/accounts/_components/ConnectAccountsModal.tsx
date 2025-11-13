@@ -32,6 +32,7 @@ const platforms = [
   { id: "LINKEDIN", name: "LinkedIn", color: "bg-blue-700" },
   { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500" },
   { id: "FACEBOOK", name: "Facebook", color: "bg-blue-600" },
+  { id: "REDDIT", name: "Reddit", color: "bg-green-600" },
   { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500" },
 ];
 
