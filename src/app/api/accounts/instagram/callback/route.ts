@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
   const error = searchParams.get('error');
 
-  console.log('Instagram Business Login callback received:', {
+  console.log('Instagram callback received:', {
     hasCode: !!code,
     hasState: !!state,
     error,
@@ -42,16 +42,12 @@ export async function GET(request: NextRequest) {
   }
 
   // Validate environment variables
-  if (!process.env.INSTAGRAM_CLIENT_ID) {
-    return redirectWithError(request, 'Instagram App ID not configured');
-  }
-
-  if (!process.env.INSTAGRAM_CLIENT_SECRET) {
-    return redirectWithError(request, 'Instagram App Secret not configured');
+  if (!process.env.INSTAGRAM_CLIENT_ID || !process.env.INSTAGRAM_CLIENT_SECRET) {
+    return redirectWithError(request, 'Instagram integration not configured');
   }
 
   try {
-    // Step 2: Exchange the Code For a Token (Instagram Business Login)
+    // Step 1: Exchange authorization code for access token
     console.log('Exchanging authorization code for access token...');
     
     const tokenParams = new URLSearchParams({
@@ -62,8 +58,13 @@ export async function GET(request: NextRequest) {
       code: code,
     });
 
-    console.log('Making token request to Instagram Business Login endpoint...');
-    
+    console.log('Making token request with params:', {
+      client_id: process.env.INSTAGRAM_CLIENT_ID.substring(0, 8) + '...',
+      redirect_uri: redirectUri,
+      code_length: code.length,
+      grant_type: 'authorization_code'
+    });
+
     const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
       method: 'POST',
       headers: { 
@@ -73,66 +74,73 @@ export async function GET(request: NextRequest) {
     });
 
     const responseText = await tokenRes.text();
-    console.log('Token exchange response:', {
-      status: tokenRes.status,
-      statusText: tokenRes.statusText,
-      responseLength: responseText.length,
-      responsePreview: responseText.substring(0, 500)
-    });
+    console.log('=== INSTAGRAM API RESPONSE ===');
+    console.log('Status:', tokenRes.status, tokenRes.statusText);
+    console.log('Response:', responseText);
+    console.log('=== END RESPONSE ===');
 
-    // Handle response according to Business Login format
     let tokenData;
     try {
       tokenData = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('Failed to parse token response as JSON:', responseText);
-      
-      // Provide specific error messages
-      if (responseText.includes('Matching code was not found')) {
-        throw new Error('Authorization code is invalid or has expired. Please try connecting again.');
-      } else if (responseText.includes('redirect_uri')) {
-        throw new Error('Redirect URI mismatch. Please check your Instagram app configuration.');
-      } else {
-        throw new Error(`Instagram API returned: ${responseText}`);
-      }
+      console.error('Failed to parse JSON response:', responseText);
+      throw new Error(`Instagram API returned invalid response: ${responseText}`);
     }
 
     if (!tokenRes.ok) {
       console.error('Token exchange failed:', tokenData);
-      
       const errorMessage = 
         tokenData.error_message || 
         tokenData.error?.message ||
+        tokenData.error_description ||
         `Token exchange failed with status ${tokenRes.status}`;
       
       throw new Error(errorMessage);
     }
 
-    // Business Login returns data in a "data" array
-    if (!tokenData.data || !tokenData.data[0]) {
-      throw new Error('Invalid response format from Instagram Business Login');
-    }
+    // Handle different response formats
+    let shortLivedAccessToken: string;
+    let instagramUserId: string;
+    let user: any = null;
 
-    const responseData = tokenData.data[0];
-    const shortLivedAccessToken = responseData.access_token;
-    const instagramUserId = responseData.user_id;
-    const permissions = responseData.permissions;
+    // Format 1: Business Login (data array format)
+    if (tokenData.data && tokenData.data[0]) {
+      console.log('Detected Business Login format');
+      const responseData = tokenData.data[0];
+      shortLivedAccessToken = responseData.access_token;
+      instagramUserId = responseData.user_id;
+      user = responseData.user;
+    }
+    // Format 2: Basic Display API (direct fields)
+    else if (tokenData.access_token && tokenData.user_id) {
+      console.log('Detected Basic Display API format');
+      shortLivedAccessToken = tokenData.access_token;
+      instagramUserId = tokenData.user_id;
+      user = tokenData.user;
+    }
+    // Format 3: Alternative format
+    else if (tokenData.access_token) {
+      console.log('Detected alternative format');
+      shortLivedAccessToken = tokenData.access_token;
+      instagramUserId = tokenData.user_id;
+      user = tokenData.user;
+    }
+    else {
+      console.error('Unrecognized response format:', tokenData);
+      throw new Error('Unrecognized response format from Instagram API');
+    }
 
     if (!shortLivedAccessToken) {
       throw new Error('No access token received from Instagram');
     }
 
-    if (!instagramUserId) {
-      throw new Error('No user ID received from Instagram');
-    }
-
-    console.log('Successfully obtained short-lived token via Business Login:', {
+    console.log('Successfully obtained short-lived token:', {
       userId: instagramUserId,
-      permissions: permissions,
-      tokenLength: shortLivedAccessToken.length
+      tokenLength: shortLivedAccessToken?.length,
+      hasUser: !!user
     });
 
-    // Step 3: Get a long-lived access token (60 days)
+    // Step 2: Exchange for long-lived token
     console.log('Exchanging for long-lived token...');
     
     const longLivedTokenUrl = `https://graph.instagram.com/access_token?` +
@@ -140,14 +148,12 @@ export async function GET(request: NextRequest) {
       `client_secret=${process.env.INSTAGRAM_CLIENT_SECRET}&` +
       `access_token=${shortLivedAccessToken}`;
 
-    console.log('Long-lived token URL:', longLivedTokenUrl.replace(process.env.INSTAGRAM_CLIENT_SECRET!, '***'));
-    
     const longLivedTokenRes = await fetch(longLivedTokenUrl);
     const longLivedTokenText = await longLivedTokenRes.text();
     
     console.log('Long-lived token response:', {
       status: longLivedTokenRes.status,
-      responsePreview: longLivedTokenText.substring(0, 200)
+      response: longLivedTokenText.substring(0, 500)
     });
 
     let longLivedTokenData;
@@ -167,99 +173,72 @@ export async function GET(request: NextRequest) {
     }
 
     const longLivedAccessToken = longLivedTokenData.access_token;
-    const expiresIn = longLivedTokenData.expires_in || 5184000; // 60 days in seconds
+    const expiresIn = longLivedTokenData.expires_in || 5184000;
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
 
     if (!longLivedAccessToken) {
-      throw new Error('Missing long-lived access token in response');
+      throw new Error('Missing long-lived access token');
     }
 
     console.log('Successfully obtained long-lived token');
 
-    // Get Instagram Business Account details
-    console.log('Fetching Instagram Business account details...');
+    // Step 3: Get user profile information
+    console.log('Fetching user profile...');
     
-    // For Business accounts, we need to get the linked Facebook Page and Instagram Business Account
-    const accountUrl = `https://graph.instagram.com/v19.0/${instagramUserId}?` +
-      `fields=id,username,account_type,name,profile_picture_url,media_count&` +
+    const profileUrl = `https://graph.instagram.com/me?` +
+      `fields=id,username,account_type,media_count&` +
       `access_token=${longLivedAccessToken}`;
 
-    const accountRes = await fetch(accountUrl);
-    const accountText = await accountRes.text();
-    let instagramAccount;
+    const profileRes = await fetch(profileUrl);
+    const profileText = await profileRes.text();
+    let profileData;
 
     try {
-      instagramAccount = JSON.parse(accountText);
+      profileData = JSON.parse(profileText);
     } catch (parseError) {
-      console.error('Failed to parse account response:', accountText);
-      throw new Error(`Failed to get account details: ${accountText}`);
+      console.error('Failed to parse profile response:', profileText);
+      throw new Error(`Failed to get profile: ${profileText}`);
     }
 
-    if (!accountRes.ok) {
-      console.error('Failed to get Instagram account details:', instagramAccount);
+    if (!profileRes.ok) {
+      console.error('Failed to get profile:', profileData);
       throw new Error(
-        instagramAccount.error?.message || 
-        `Failed to get account details with status ${accountRes.status}`
+        profileData.error?.message || 
+        `Failed to get profile with status ${profileRes.status}`
       );
     }
 
-    console.log('Retrieved Instagram account:', {
-      id: instagramAccount.id,
-      username: instagramAccount.username,
-      account_type: instagramAccount.account_type,
-      name: instagramAccount.name
-    });
+    console.log('Retrieved Instagram profile:', profileData);
 
-    // Verify this is a Business account
-    if (instagramAccount.account_type !== 'BUSINESS') {
-      throw new Error(
-        'This integration requires an Instagram Business account. ' +
-        'Please convert your account to a Business account in Instagram settings and try again.'
-      );
-    }
-
-    // Get connected Facebook Page information (required for Business accounts)
-    let connectedPage = null;
-    try {
-      const pagesUrl = `https://graph.instagram.com/v19.0/${instagramUserId}/accounts?` +
-        `access_token=${longLivedAccessToken}`;
-      
-      const pagesRes = await fetch(pagesUrl);
-      if (pagesRes.ok) {
-        const pagesData = await pagesRes.json();
-        if (pagesData.data && pagesData.data.length > 0) {
-          connectedPage = pagesData.data[0];
-          console.log('Found connected Facebook Page:', connectedPage.id);
-        }
-      }
-    } catch (pageError) {
-      console.warn('Could not fetch connected Facebook pages:', pageError);
-      // This might not be critical for all operations
+    // Check if this is a Business account (if using Business API)
+    if (profileData.account_type && profileData.account_type !== 'BUSINESS' && profileData.account_type !== 'CREATOR') {
+      console.warn('Account is not a Business/Creator account:', profileData.account_type);
+      // Don't throw error here, just warn - basic accounts can still be connected
     }
 
     // Save to database
-    console.log('Saving Instagram Business account to database...');
+    console.log('Saving to database...');
     try {
       const account = await prisma.socialAccount.upsert({
         where: {
           platform_platformUserId: {
             platform: 'INSTAGRAM',
-            platformUserId: instagramAccount.id
+            platformUserId: profileData.id
           }
         },
         update: {
           accessToken: longLivedAccessToken,
           refreshToken: null,
-          platformUserId: instagramAccount.id,
-          platformUsername: instagramAccount.username,
+          platformUserId: profileData.id,
+          platformUsername: profileData.username,
           tokenExpiresAt: tokenExpiresAt,
         },
         create: {
           platform: 'INSTAGRAM',
           accessToken: longLivedAccessToken,
           refreshToken: null,
-          platformUserId: instagramAccount.id,
-          platformUsername: instagramAccount.username,
+          platformUserId: profileData.id,
+          platformUsername: profileData.username,
           tokenExpiresAt: tokenExpiresAt,
         }
       });
@@ -278,7 +257,7 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      console.log(`Successfully connected Instagram Business account: ${instagramAccount.username}`);
+      console.log(`Successfully connected Instagram account: ${profileData.username}`);
 
     } catch (dbError) {
       console.error('Database error:', dbError);
@@ -288,20 +267,18 @@ export async function GET(request: NextRequest) {
     // Redirect to success page
     const successUrl = new URL('/accounts', request.nextUrl.origin);
     successUrl.searchParams.set('instagram', 'connected');
-    successUrl.searchParams.set('username', instagramAccount.username);
-    successUrl.searchParams.set('account_type', 'business');
+    successUrl.searchParams.set('username', profileData.username);
     return NextResponse.redirect(successUrl.toString());
 
   } catch (error) {
-    console.error('Instagram Business Login callback error:', error);
+    console.error('Instagram callback error:', error);
     return redirectWithError(
       request,
-      error instanceof Error ? error.message : 'Failed to connect Instagram Business account'
+      error instanceof Error ? error.message : 'Failed to connect Instagram account'
     );
   }
 }
 
-// Helper function for error redirects
 function redirectWithError(request: NextRequest, message: string) {
   const errorUrl = new URL('/accounts', request.nextUrl.origin);
   errorUrl.searchParams.set('error', 'instagram_connection_failed');
