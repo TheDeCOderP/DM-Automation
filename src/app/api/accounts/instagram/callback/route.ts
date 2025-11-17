@@ -8,7 +8,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const { userId, brandId } = JSON.parse(state!);
   const error = searchParams.get('error');
 
   if (error) {
@@ -19,138 +18,191 @@ export async function GET(request: NextRequest) {
     return redirectWithError(request, 'Authorization code missing');
   }
 
+  if (!state) {
+    return redirectWithError(request, 'State parameter missing');
+  }
+
+  let userId: string;
+  let brandId: string;
+
   try {
-    // 1. Exchange code for short-lived access token (Instagram endpoint)
-    const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.INSTAGRAM_APP_ID!, // Use Instagram App ID
-        client_secret: process.env.INSTAGRAM_APP_SECRET!, // Use Instagram App Secret
-        grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
-        code: code,
-      }),
+    const stateData = JSON.parse(state);
+    userId = stateData.userId;
+    brandId = stateData.brandId;
+  } catch (stateError) {
+    return redirectWithError(request, 'Invalid state parameter');
+  }
+
+  try {
+    // 1. Exchange code for short-lived access token
+    const tokenParams = new URLSearchParams({
+      client_id: process.env.INSTAGRAM_APP_ID!,
+      client_secret: process.env.INSTAGRAM_APP_SECRET!,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri,
+      code: code,
     });
 
-    const tokenData = await tokenRes.json();
+    console.log('Exchanging code for token...');
+    const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
+      body: tokenParams,
+    });
+
+    // Handle non-JSON responses
+    const responseText = await tokenRes.text();
+    let tokenData;
     
+    try {
+      tokenData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse token response as JSON:', responseText);
+      throw new Error(`Instagram API returned invalid JSON: ${responseText}`);
+    }
+
     if (!tokenRes.ok) {
-      console.error('Token exchange failed:', tokenData);
-      throw new Error(`Token exchange failed: ${tokenData.error_message || tokenData.error?.message || 'Unknown error'}`);
+      console.error('Token exchange failed:', {
+        status: tokenRes.status,
+        statusText: tokenRes.statusText,
+        data: tokenData
+      });
+      
+      throw new Error(
+        tokenData.error_message || 
+        tokenData.error?.message || 
+        `Token exchange failed with status ${tokenRes.status}`
+      );
     }
 
     const shortLivedAccessToken = tokenData.access_token;
-    const userId = tokenData.user_id; // Instagram User ID from the token response
+    const instagramUserId = tokenData.user_id;
+
+    if (!shortLivedAccessToken || !instagramUserId) {
+      throw new Error('Missing access token or user ID in response');
+    }
 
     // 2. Exchange short-lived token for long-lived token (60 days)
-    const longLivedTokenRes = await fetch(
-      `https://graph.instagram.com/access_token?` +
+    console.log('Exchanging for long-lived token...');
+    const longLivedTokenUrl = `https://graph.instagram.com/access_token?` +
       `grant_type=ig_exchange_token&` +
       `client_secret=${process.env.INSTAGRAM_APP_SECRET}&` +
-      `access_token=${shortLivedAccessToken}`
-    );
-    
-    const longLivedTokenData = await longLivedTokenRes.json();
-    
+      `access_token=${shortLivedAccessToken}`;
+
+    const longLivedTokenRes = await fetch(longLivedTokenUrl);
+    const longLivedTokenText = await longLivedTokenRes.text();
+    let longLivedTokenData;
+
+    try {
+      longLivedTokenData = JSON.parse(longLivedTokenText);
+    } catch (parseError) {
+      console.error('Failed to parse long-lived token response:', longLivedTokenText);
+      throw new Error(`Long-lived token exchange returned invalid JSON: ${longLivedTokenText}`);
+    }
+
     if (!longLivedTokenRes.ok) {
       console.error('Long-lived token exchange failed:', longLivedTokenData);
-      throw new Error(`Long-lived token failed: ${longLivedTokenData.error?.message || 'Unknown error'}`);
+      throw new Error(
+        longLivedTokenData.error?.message || 
+        `Long-lived token failed with status ${longLivedTokenRes.status}`
+      );
     }
 
     const longLivedAccessToken = longLivedTokenData.access_token;
     const expiresIn = longLivedTokenData.expires_in || 5184000; // 60 days in seconds
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
 
-    // 3. Get Instagram Business Account details using the long-lived token
-    const accountRes = await fetch(
-      `https://graph.instagram.com/v19.0/${userId}?` +
-      `fields=id,username,account_type,name,profile_picture_url,media_count,media{id,caption,media_type,media_url,permalink,timestamp}&` +
-      `access_token=${longLivedAccessToken}`
-    );
-
-    const instagramAccount = await accountRes.json();
-    
-    if (!accountRes.ok) {
-      console.error('Failed to get Instagram account details:', instagramAccount);
-      throw new Error(`Failed to get Instagram details: ${instagramAccount.error?.message || 'Unknown error'}`);
+    if (!longLivedAccessToken) {
+      throw new Error('Missing long-lived access token in response');
     }
 
-    // 4. Verify this is a Business or Creator account (required for publishing)
+    // 3. Get Instagram account details
+    console.log('Fetching account details...');
+    const accountUrl = `https://graph.instagram.com/v19.0/${instagramUserId}?` +
+      `fields=id,username,account_type,name,profile_picture&` +
+      `access_token=${longLivedAccessToken}`;
+
+    const accountRes = await fetch(accountUrl);
+    const accountText = await accountRes.text();
+    let instagramAccount;
+
+    try {
+      instagramAccount = JSON.parse(accountText);
+    } catch (parseError) {
+      console.error('Failed to parse account response:', accountText);
+      throw new Error(`Account details returned invalid JSON: ${accountText}`);
+    }
+
+    if (!accountRes.ok) {
+      console.error('Failed to get Instagram account details:', instagramAccount);
+      throw new Error(
+        instagramAccount.error?.message || 
+        `Failed to get account details with status ${accountRes.status}`
+      );
+    }
+
+    // 4. Verify this is a Business or Creator account
     if (instagramAccount.account_type !== 'BUSINESS' && instagramAccount.account_type !== 'CREATOR') {
       throw new Error(
         'Instagram account must be a Business or Creator account to enable publishing. ' +
-        'Please convert your account in Instagram settings.'
+        'Please convert your account in Instagram settings and try again.'
       );
     }
 
-    // 5. Get connected Facebook Page information (required for some operations)
-    let connectedPage = null;
+    // 5. Save to database
+    console.log('Saving to database...');
     try {
-      const pagesRes = await fetch(
-        `https://graph.instagram.com/v19.0/${userId}/accounts?` +
-        `access_token=${longLivedAccessToken}`
-      );
-      
-      const pagesData = await pagesRes.json();
-      if (pagesRes.ok && pagesData.data && pagesData.data.length > 0) {
-        connectedPage = pagesData.data[0];
-      }
-    } catch (pageError) {
-      console.warn('Could not fetch connected pages:', pageError);
-      // This is not critical for basic operations
-    }
-
-    // 6. Save to database
-    if (userId) {
-      try {
-        // First, create or update the social account
-        const account = await prisma.socialAccount.upsert({
-          where: {
-            platform_platformUserId: {
-              platform: 'INSTAGRAM',
-              platformUserId: instagramAccount.id
-            }
-          },
-          update: {
-            accessToken: longLivedAccessToken,
-            platformUserId: instagramAccount.id,
-            platformUsername: instagramAccount.username,
-            tokenExpiresAt: tokenExpiresAt,
-          },
-          create: {
+      // First, create or update the social account
+      const account = await prisma.socialAccount.upsert({
+        where: {
+          platform_platformUserId: {
             platform: 'INSTAGRAM',
-            accessToken: longLivedAccessToken,
-            platformUserId: instagramAccount.id,
-            platformUsername: instagramAccount.username,
-            tokenExpiresAt: tokenExpiresAt,
+            platformUserId: instagramAccount.id
           }
-        });
+        },
+        update: {
+          accessToken: longLivedAccessToken,
+          refreshToken: null, // Instagram uses long-lived tokens
+          platformUserId: instagramAccount.id,
+          platformUsername: instagramAccount.username,
+          tokenExpiresAt: tokenExpiresAt,
+        },
+        create: {
+          platform: 'INSTAGRAM',
+          accessToken: longLivedAccessToken,
+          refreshToken: null,
+          platformUserId: instagramAccount.id,
+          platformUsername: instagramAccount.username,
+          tokenExpiresAt: tokenExpiresAt,
+        }
+      });
 
-        // Then link to brand
-        await prisma.socialAccountBrand.upsert({
-          where: {
-            brandId_socialAccountId: {
-              brandId,
-              socialAccountId: account.id
-            }
-          },
-          update: {},
-          create: {
+      // Then link to brand
+      await prisma.socialAccountBrand.upsert({
+        where: {
+          brandId_socialAccountId: {
             brandId,
             socialAccountId: account.id
           }
-        });
+        },
+        update: {},
+        create: {
+          brandId,
+          socialAccountId: account.id
+        }
+      });
 
-        console.log(`Successfully connected Instagram account: ${instagramAccount.username}`);
+      console.log(`Successfully connected Instagram account: ${instagramAccount.username}`);
 
-      } catch (dbError) {
-        console.error('Database error:', dbError);
-        throw new Error('Failed to save account to database');
-      }
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      throw new Error('Failed to save account to database');
     }
 
-    // 7. Redirect to success page
+    // 6. Redirect to success page
     const successUrl = new URL('/accounts', request.nextUrl.origin);
     successUrl.searchParams.set('instagram', 'connected');
     successUrl.searchParams.set('username', instagramAccount.username);
