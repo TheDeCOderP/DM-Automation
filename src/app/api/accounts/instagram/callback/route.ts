@@ -4,6 +4,12 @@ import { NextResponse, NextRequest } from 'next/server';
 
 const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/instagram/callback`;
 
+interface InstagramUser {
+  id: string;
+  username: string;
+  account_type?: string;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
@@ -101,7 +107,7 @@ export async function GET(request: NextRequest) {
     // Handle different response formats
     let shortLivedAccessToken: string;
     let instagramUserId: string;
-    let user: any = null;
+    let user: InstagramUser | null = null;
 
     // Format 1: Business Login (data array format)
     if (tokenData.data && tokenData.data[0]) {
