@@ -42,11 +42,11 @@ export async function GET(request: NextRequest) {
   }
 
   // Validate environment variables
-  if (!process.env.INSTAGRAM_APP_ID) {
+  if (!process.env.INSTAGRAM_CLIENT_ID) {
     return redirectWithError(request, 'Instagram App ID not configured');
   }
 
-  if (!process.env.INSTAGRAM_APP_SECRET) {
+  if (!process.env.INSTAGRAM_CLIENT_SECRET) {
     return redirectWithError(request, 'Instagram App Secret not configured');
   }
 
@@ -55,8 +55,8 @@ export async function GET(request: NextRequest) {
     console.log('Exchanging authorization code for access token...');
     
     const tokenParams = new URLSearchParams({
-      client_id: process.env.INSTAGRAM_APP_ID,
-      client_secret: process.env.INSTAGRAM_APP_SECRET,
+      client_id: process.env.INSTAGRAM_CLIENT_ID,
+      client_secret: process.env.INSTAGRAM_CLIENT_SECRET,
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
       code: code,
@@ -137,10 +137,10 @@ export async function GET(request: NextRequest) {
     
     const longLivedTokenUrl = `https://graph.instagram.com/access_token?` +
       `grant_type=ig_exchange_token&` +
-      `client_secret=${process.env.INSTAGRAM_APP_SECRET}&` +
+      `client_secret=${process.env.INSTAGRAM_CLIENT_SECRET}&` +
       `access_token=${shortLivedAccessToken}`;
 
-    console.log('Long-lived token URL:', longLivedTokenUrl.replace(process.env.INSTAGRAM_APP_SECRET!, '***'));
+    console.log('Long-lived token URL:', longLivedTokenUrl.replace(process.env.INSTAGRAM_CLIENT_SECRET!, '***'));
     
     const longLivedTokenRes = await fetch(longLivedTokenUrl);
     const longLivedTokenText = await longLivedTokenRes.text();
