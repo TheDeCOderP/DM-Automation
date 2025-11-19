@@ -263,6 +263,19 @@ export async function GET(request: NextRequest) {
         }
       });
 
+      await prisma.userSocialAccount.upsert({
+        where: {
+          userId_socialAccountId: {
+            userId,
+            socialAccountId: account.id
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          socialAccountId: account.id
+        }
+      });
       console.log(`Successfully connected Instagram account: ${profileData.username}`);
 
     } catch (dbError) {
