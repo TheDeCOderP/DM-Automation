@@ -180,7 +180,7 @@ export default function CreatePostPage() {
 
       const responseData = await response.json();
       toast.success("Post Created Successfully");
-      router.push(`/posts/success`);
+      //router.push(`/posts/success`);
     } catch (error) {
       console.error("Error creating post:", error);
       toast.error("Failed to create post");
@@ -254,14 +254,14 @@ export default function CreatePostPage() {
           />
         );
       case "media":
-        return <MediaUpload layoutType={mode} onFilesChange={handleFilesChange} />;
+        return <MediaUpload onFilesChange={handleFilesChange} />;
       default:
         return null;
     }
   };
 
   // Wizard tabs list
-  const wizardTabs = ["brand", "accounts", "captions", "media"] as const;
+  const wizardTabs = ["brand", "accounts", "content"] as const;
   type WizardTab = typeof wizardTabs[number];
 
   const nextWizardTab = () => {
@@ -311,12 +311,11 @@ export default function CreatePostPage() {
               <TabsTrigger value="brand">1. Brand</TabsTrigger>
               <TabsTrigger value="accounts" disabled={!selectedBrandId}>2. Accounts</TabsTrigger>
               <TabsTrigger
-                value="captions"
+                value="content"
                 disabled={!selectedBrandId || (selectedAccounts.length === 0 && selectedPageIds.length === 0)}
               >
-                3. Captions
+                3. Content
               </TabsTrigger>
-              <TabsTrigger value="media">4. Media</TabsTrigger>
             </TabsList>
 
             <Separator className="my-4" />
@@ -333,35 +332,40 @@ export default function CreatePostPage() {
             </TabsContent>
 
             <TabsContent value="accounts" className="mt-0">
-              <div className="max-w-5xl mx-auto">
-                <AccountsCard
-                  brandId={selectedBrandId}
-                  accounts={brandAccounts}
-                  selectedAccounts={selectedAccounts}
-                  setSelectedAccounts={setSelectedAccounts}
-                  selectedPageIds={selectedPageIds}
-                  setSelectedPageIds={setSelectedPageIds}
-                />
+              <AccountsCard
+                brandId={selectedBrandId}
+                accounts={brandAccounts}
+                selectedAccounts={selectedAccounts}
+                setSelectedAccounts={setSelectedAccounts}
+                selectedPageIds={selectedPageIds}
+                setSelectedPageIds={setSelectedPageIds}
+              />
+            </TabsContent>
+
+            <TabsContent value="content">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-0">
+
+                {/* Left: Captions */}
+                <div className="lg:col-span-7 space-y-6">
+                  <CaptionsCard
+                    title={title}
+                    setTitle={setTitle}
+                    platformCaptions={platformCaptions}
+                    selectedPlatforms={selectedPlatforms}
+                    setPlatformCaptions={setPlatformCaptions}
+                  />
+                </div>
+
+                {/* Right: Media Upload */}
+                <div className="lg:col-span-5 space-y-6">
+                  <MediaUpload
+                    onFilesChange={handleFilesChange}
+                  />
+                </div>
+
               </div>
             </TabsContent>
 
-            <TabsContent value="captions" className="mt-0">
-              <div className="max-w-4xl mx-auto">
-                <CaptionsCard
-                  title={title}
-                  setTitle={setTitle}
-                  platformCaptions={platformCaptions}
-                  selectedPlatforms={selectedPlatforms}
-                  setPlatformCaptions={setPlatformCaptions}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="media" className="mt-0">
-              <div className="max-w-6xl mx-auto">
-                <MediaUpload layoutType={mode} onFilesChange={handleFilesChange} />
-              </div>
-            </TabsContent>
           </Tabs>
 
           {/* Wizard navigation */}

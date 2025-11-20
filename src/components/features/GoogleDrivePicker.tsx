@@ -154,7 +154,6 @@ export default function GoogleDrivePicker({ onFileSelect }: GoogleDrivePickerPro
           className="flex items-center gap-2 bg-transparent"
         >
           {getPlatformIcon("GOOGLE DRIVE", "h-5 w-5")}
-          {isLoading ? "Importing..." : "Import from Google Drive"}
         </Button>
       ) : (
         <Button
@@ -164,7 +163,6 @@ export default function GoogleDrivePicker({ onFileSelect }: GoogleDrivePickerPro
           className="flex items-center gap-2 bg-transparent"
         >
           {getPlatformIcon("GOOGLE DRIVE", "h-5 w-5")}
-          Connect to Google Drive
         </Button>
       )}
     </>

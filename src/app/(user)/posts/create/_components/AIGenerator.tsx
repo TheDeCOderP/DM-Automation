@@ -226,7 +226,6 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
     <>
       <Button onClick={() => setIsOpen(true)} className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 w-full sm:w-auto">
         <Sparkles className="size-4 mr-2" />
-        Generate with AI
       </Button>
 
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
