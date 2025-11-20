@@ -196,7 +196,7 @@ export default function PagesCard({
                     backgroundColor: avatarBgColor + '20', 
                     color: avatarTextColor 
                   }}>
-                    {getPlatformIcon(platform as any, "w-4 h-4")}
+                    {getPlatformIcon(platform, "w-4 h-4")}
                   </AvatarFallback>
                 </Avatar>
                 <Label
