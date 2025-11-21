@@ -34,6 +34,7 @@ const platforms = [
   { id: "FACEBOOK", name: "Facebook", color: "bg-blue-600" },
   { id: "REDDIT", name: "Reddit", color: "bg-green-600" },
   { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500" },
+  { id: "TIKTOK", name: "TikTok", color: "bg-black" },
 ];
 
 export default function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {
