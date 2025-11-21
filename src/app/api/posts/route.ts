@@ -15,6 +15,7 @@ import { publishToPinterest } from "@/services/pinterest.service";
 import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.service";
 import { publishToReddit } from "@/services/reddit.service"
 import { publishToInstagram } from "@/services/instagram.service"
+import { publishToTikTok } from "@/services/tiktok.service"
 
 function generateCronExpression(schedule: ScheduleData) {
   // Convert the user's local date/time + offset to UTC components for cron
@@ -524,6 +525,8 @@ export async function POST(req: NextRequest) {
             await publishToReddit(post);
           } else if(post.platform === "INSTAGRAM") {
             await publishToInstagram(post);
+          } else if(post.platform === "TIKTOK") {
+            await publishToTikTok(post);
           }
 
           await prisma.post.update({
