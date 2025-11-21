@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     });
 
     const tokenData = await tokenRes.json();
-
+console.log("token data", tokenData)
     if (!tokenRes.ok || tokenData.error_code !== 'ok') {
       throw new Error(`Token exchange failed: ${tokenData.error_description || tokenData.error}`);
     }
