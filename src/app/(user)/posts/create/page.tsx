@@ -180,7 +180,7 @@ export default function CreatePostPage() {
 
       const responseData = await response.json();
       toast.success("Post Created Successfully");
-      //router.push(`/posts/success`);
+      router.push(`/posts/success`);
     } catch (error) {
       console.error("Error creating post:", error);
       toast.error("Failed to create post");
