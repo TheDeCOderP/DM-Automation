@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
     const zohoScope = [
       'WorkDrive.team.READ', 
       'WorkDrive.users.READ',          // Read access to WorkDrive
-      'WorkDrive.files.READ',           // All file operations
+      'WorkDrive.files.READ', 
+      'WorkDrive.files.CREATE',          // All file operations
       'WorkDrive.teamfolders.READ',     // All team folder operations (includes team listing)
       'ZohoFiles.files.READ',
       'aaaserver.profile.READ'
