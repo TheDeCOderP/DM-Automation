@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
       'WorkDrive.files.READ', 
       'WorkDrive.files.CREATE',          // All file operations
       'WorkDrive.teamfolders.READ',     // All team folder operations (includes team listing)
+      'WorkDrive.teamfolders.CREATE',
+      'WorkDrive.files.sharing.CREATE',
       'ZohoFiles.files.READ',
       'aaaserver.profile.READ'
     ].join(',');
