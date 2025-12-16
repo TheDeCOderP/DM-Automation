@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
       zohoUserId = `zoho_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       console.log('Generated fallback user ID:', zohoUserId);
     }
-
+console.log("Access Token:", access_token, "Refresh Token:", refresh_token);
     // Encrypt tokens before saving
     const encryptedAccessToken = await encryptToken(access_token);
     const encryptedRefreshToken = await encryptToken(refresh_token);
