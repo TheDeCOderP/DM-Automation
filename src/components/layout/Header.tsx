@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { Menu, X, ChevronDown, ChevronsRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
@@ -17,7 +17,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "../features/ThemeToggle";
 
-// --- Types for better readability and safety ---
+/* ---------------- TYPES ---------------- */
+
 interface SubItem {
   title: string;
   href: string;
@@ -28,66 +29,54 @@ interface MenuItem {
   items: SubItem[];
 }
 
-const MobileMenuItem = ({ item, onCloseMenu }: { item: MenuItem; onCloseMenu: () => void }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false); // Initially closed
-  
-  // Toggle function for the collapse
+/* ---------------- MOBILE MENU ITEM ---------------- */
+
+const MobileMenuItem = ({
+  item,
+  onCloseMenu,
+}: {
+  item: MenuItem;
+  onCloseMenu: () => void;
+}) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   const toggleCollapse = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent default link behavior
-    setIsCollapsed(!isCollapsed);
-  };
-  
-  // Variant for the Framer Motion animation of the sub-menu
-  const subMenuVariants = {
-    hidden: { opacity: 0, height: 0 },
-    visible: { 
-      opacity: 1, 
-      height: "auto", 
-      transition: { 
-        duration: 0.2, 
-        when: "beforeChildren" 
-      } 
-    },
+    e.preventDefault();
+    setIsCollapsed((prev) => !prev);
   };
 
   return (
     <div className="border-b last:border-b-0">
-      <div 
+      <div
         className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-accent/50"
         onClick={toggleCollapse}
       >
-        <div className="text-base font-semibold text-foreground">
-          {item.title}
-        </div>
-        <ChevronDown 
+        <span className="text-base font-semibold">{item.title}</span>
+        <ChevronDown
           className={cn(
-            "h-4 w-4 transition-transform duration-200",
+            "h-4 w-4 transition-transform",
             isCollapsed && "rotate-180"
-          )} 
+          )}
         />
       </div>
-      
-      {/* Collapsible Sub-menu Content with Framer Motion */}
+
       <AnimatePresence>
         {isCollapsed && (
           <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={subMenuVariants}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
             <div className="py-2 pl-6 space-y-2 bg-accent/20">
-              {item.items.map((subItem) => (
+              {item.items.map((sub) => (
                 <Link
-                  key={subItem.title}
-                  href={subItem.href}
-                  target={subItem.href.startsWith('http') ? "_blank" : "_self"} // Open external links in new tab
-                  rel={subItem.href.startsWith('http') ? "noopener noreferrer" : undefined}
-                  className="block text-sm text-muted-foreground hover:text-primary transition-colors duration-150"
-                  onClick={onCloseMenu} // Close the whole mobile menu on sub-item click
+                  key={sub.title}
+                  href={sub.href}
+                  className="block text-sm text-muted-foreground hover:text-primary"
+                  onClick={onCloseMenu}
                 >
-                  {subItem.title}
+                  {sub.title}
                 </Link>
               ))}
             </div>
@@ -98,11 +87,17 @@ const MobileMenuItem = ({ item, onCloseMenu }: { item: MenuItem; onCloseMenu: ()
   );
 };
 
-// --- Desktop List Item Component (Kept for desktop navigation) ---
+/* ---------------- DESKTOP LIST ITEM ---------------- */
 
-const ListItem = ({ className, title, href, ...props }: { className?: string; title: string; href: string }) => {
-  // Determine if the link is external for target/rel attributes
-  const isExternal = href.startsWith('http');
+const ListItem = ({
+  title,
+  href,
+}: {
+  title: string;
+  href: string;
+}) => {
+  const isExternal = href.startsWith("http");
+
   return (
     <li>
       <NavigationMenuLink asChild>
@@ -110,30 +105,20 @@ const ListItem = ({ className, title, href, ...props }: { className?: string; ti
           href={href}
           target={isExternal ? "_blank" : "_self"}
           rel={isExternal ? "noopener noreferrer" : undefined}
-          className={cn(
-            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-            className
-          )}
-          {...props}
+          className="block rounded-md p-3 text-sm hover:bg-accent"
         >
-          <div className="text-sm font-medium leading-none">{title}</div>
+          {title}
         </Link>
       </NavigationMenuLink>
     </li>
   );
 };
 
+/* ---------------- HEADER ---------------- */
+
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
-
-  const closeMobileMenu = () => setIsOpen(false)
-
-  // Framer Motion variants for the overall mobile menu
-  const mobileMenuVariants = {
-    hidden: { opacity: 0, height: 0, transition: { duration: 0.2 } },
-    visible: { opacity: 1, height: "auto", transition: { duration: 0.2 } },
-    exit: { opacity: 0, height: 0, transition: { duration: 0.2 } },
-  };
+  const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
 
   const menuItems: MenuItem[] = [
     {
@@ -184,115 +169,105 @@ export default function Header() {
   ];
 
   return (
-    <nav className="fixed top-4 left-4 right-4 z-50 ">
+    <nav className="fixed top-4 left-4 right-4 z-50">
       <div className="flex items-center justify-between">
-        {/* Logo Section with Navigation Menu */}
-        <div className="flex gap-8 p-3 lg:p-4 border bg-background rounded-full">
-          {/* Logo Section */}
-          <div className="flex items-center gap-3">
-            <Link href="/" onClick={closeMobileMenu}>
-              <Image
-                src="/icons/logo1.png"
-                alt="Logo"
-                width={40}
-                height={40}
-                className="w-10 h-10 rounded-full"
-                priority
-              />
-            </Link>
-            {/* Site Name */}
-            <div className="text-lg font-bold text-primary">
-              <span className="block lg:hidden">DMA</span>
-              <span className="hidden lg:block">DM-Automation</span>
-            </div>
-          </div>
+        {/* LEFT */}
+        <div className="flex gap-6 p-4 border bg-background rounded-full items-center">
+          <Link href="/">
+            <Image src="/icons/logo1.png" alt="logo" width={40} height={40} />
+          </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-4">
-            <NavigationMenu>
-              <NavigationMenuList>
-                {menuItems.map((item) => (
-                  <NavigationMenuItem key={item.title}>
-                    <NavigationMenuTrigger className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                      {item.title}
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                        {item.items.map((subItem) => (
-                          <ListItem key={subItem.title} href={subItem.href} title={subItem.title} />
-                        ))}
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                ))}
-              </NavigationMenuList>
-            </NavigationMenu>
-          </div>
+          <span className="hidden lg:block font-bold text-primary">DM-Automation</span>
+
+          {/* CHEVRON */}
+          <ChevronsRight
+            onClick={() => setIsDesktopExpanded((p) => !p)}
+            className={cn(
+              "hidden lg:block h-5 w-5 cursor-pointer transition-transform",
+              isDesktopExpanded ? "rotate-180" : "rotate-0"
+            )}
+          />
+
+          {/* DESKTOP NAV */}
+          <AnimatePresence initial={false}>
+            {isDesktopExpanded && (
+              <motion.div
+                className="hidden lg:flex"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: "auto", opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <NavigationMenu>
+                  <NavigationMenuList>
+                    {menuItems.map((item) => (
+                      <NavigationMenuItem key={item.title}>
+                        <NavigationMenuTrigger>
+                          {item.title}
+                        </NavigationMenuTrigger>
+                        <NavigationMenuContent>
+                          <ul className="grid w-[500px] grid-cols-2 gap-3 p-4">
+                            {item.items.map((sub) => (
+                              <ListItem
+                                key={sub.title}
+                                title={sub.title}
+                                href={sub.href}
+                              />
+                            ))}
+                          </ul>
+                        </NavigationMenuContent>
+                      </NavigationMenuItem>
+                    ))}
+                  </NavigationMenuList>
+                </NavigationMenu>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Desktop CTA Buttons & Theme Toggle */}
-        <div className="p-3 lg:p-4 flex items-center gap-2 border bg-background rounded-full">
-          {/* Theme Toggle */}
+        {/* RIGHT */}
+        <div className="flex items-center gap-2 p-4 border bg-background rounded-full">
           <ThemeToggle />
 
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex gap-2">
             <Button variant="ghost" asChild>
               <Link href="/login">Login</Link>
             </Button>
-            <Button asChild size="lg" className="rounded-full">
+            <Button asChild className="rounded-full">
               <Link href="/register">Get Started</Link>
             </Button>
           </div>
-          
-          {/* Mobile Menu Button - Moved to the far right for better layout */}
+
           <Button
-            variant="ghost"
             size="icon"
-            className="lg:hidden ml-2"
-            onClick={() => setIsOpen(!isOpen)}
+            variant="ghost"
+            className="lg:hidden"
+            onClick={() => setIsOpen((p) => !p)}
           >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {isOpen ? <X /> : <Menu />}
           </Button>
         </div>
       </div>
-      
-      {/* Mobile Navigation - Now collapsible (accordion-style) */}
+
+      {/* MOBILE MENU */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="lg:hidden mt-1 border bg-background absolute left-0 w-full shadow-lg max-h-[80vh] overflow-y-auto rounded-2xl"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={mobileMenuVariants}
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            className="lg:hidden mt-2 bg-background border rounded-xl overflow-hidden"
           >
-            {/* Menu items will now be collapsible inside MobileMenuItem */}
-            <div className="divide-y divide-border">
-              {menuItems.map((item) => (
-                <MobileMenuItem 
-                  key={item.title} 
-                  item={item} 
-                  onCloseMenu={closeMobileMenu} 
-                />
-              ))}
-            </div>
-
-            {/* Mobile CTA buttons */}
-            <div className="container p-4 space-y-2 border-t">
-              <Button className="w-full" asChild>
-                <Link href="/register" onClick={closeMobileMenu}>
-                  Get Started
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="/login" onClick={closeMobileMenu}>
-                  Login
-                </Link>
-              </Button>
-            </div>
+            {menuItems.map((item) => (
+              <MobileMenuItem
+                key={item.title}
+                item={item}
+                onCloseMenu={() => setIsOpen(false)}
+              />
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
     </nav>
-  )
+  );
 }

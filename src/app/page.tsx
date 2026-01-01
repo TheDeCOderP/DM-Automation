@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import Header from "@/components/layout/Header"
 import Footer from "@/components/layout/Footer"
-import GoogleLoginButton from "@/components/features/GoogleOneTap"
+import AnimatedCarousel from "@/components/features/AnimatedCarousel"
 
 export default function LandingPage() {
   return (
@@ -28,6 +28,27 @@ export default function LandingPage() {
       {/* Header */}
       <Header />
       {/* Hero Section */}
+
+      <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)
+            `,
+            backgroundSize: "20px 30px",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
+            maskImage:
+              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
+          }}
+        />
+      <AnimatedCarousel 
+        title="Marketing"
+        showStats={false}
+        showControls={false}
+      />
+
       <div className="h-auto md:min-h-screen w-full relative">
         {/* Top Fade Grid Background */}
         <div
@@ -173,24 +194,23 @@ export default function LandingPage() {
       </SectionWrapper>
 
       {/* How It Works Section */}
-      <SectionWrapper className="py-16 md:py-24">
+      {/* <SectionWrapper className="py-16 md:py-24">
         <div id="how-it-works" className="container mx-auto px-4">
           <div className="text-center mb-12 md:mb-20">
             <Badge className="mb-4 border-0">
               <TrendingUp className="w-4 h-4 mr-1" />
               How It Works
             </Badge>
-            {/* FONT SIZE ADJUSTMENT */}
+
             <h2 className="text-balance text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 md:mb-6 tracking-tight">
               Intelligent automation <span className="text-primary">from start to finish</span>
             </h2>
-            {/* FONT SIZE ADJUSTMENT */}
+
             <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed px-2">
               Our intelligent system automates your entire content workflow from planning to publishing
             </p>
           </div>
 
-          {/* GRID ADJUSTMENT: Changed to default 1 column, lg:grid-cols-2 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center mb-16 md:mb-20">
             <Card className="border-2 rounded-3xl bg-card/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="p-0">
@@ -256,7 +276,6 @@ export default function LandingPage() {
             </Card>
           </div>
 
-          {/* GRID ADJUSTMENT: Changed to default 1 column, lg:grid-cols-2, and handled order change */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
             <Card className="relative order-2 lg:order-1 p-6 md:p-8 border-2 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 bg-card/80 backdrop-blur-sm">
               <CardHeader className="p-0">
@@ -320,7 +339,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </SectionWrapper>
+      </SectionWrapper> */}
 
       {/* CTA Section */}
       <div className="my-12 border container mx-auto text-center max-w-5xl h-full flex flex-col justify-center items-center bg-primary/5 rounded-3xl p-8 md:p-12 backdrop-blur-sm">
