@@ -8,7 +8,6 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 enum Platform {
@@ -267,6 +266,7 @@ model Post {
   title       String?
   content     String     @db.Text
   platform    Platform
+  autoReplyEnabled    Boolean            @default(false)
   publishedAt DateTime?
   scheduledAt DateTime?
   frequency   Frequency?
@@ -277,6 +277,7 @@ model Post {
 
   media       Media[]
   analytics   PostAnalytics[]
+  commentReplies CommentReply[]
 
   postGroupId String?
   postGroup   PostGroup? @relation(fields: [postGroupId], references: [id], onDelete: Cascade)
@@ -288,6 +289,47 @@ model Post {
   socialAccountPage   SocialAccountPage? @relation(fields: [socialAccountPageId], references: [id], onDelete: Cascade)
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CommentReply {
+  id                 String   @id @default(cuid())
+  postId             String
+  post               Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  // Original comment details
+  platformCommentId  String   // NOT unique - user can comment multiple times
+  commentAuthorId    String   // Author ID from the platform
+  commentAuthorName  String?
+  commentText        String   @db.Text
+  commentCreatedAt   DateTime
+  
+  // Our reply details
+  replyText          String   @db.Text
+  platformReplyId    String?  // The ID of our reply on the platform
+  
+  // Status tracking
+  status             String   @default("PENDING") // PENDING, SENT, FAILED
+  errorMessage       String?  @db.Text
+  
+  // Thread/context tracking
+  parentCommentId    String?  // If this comment is a reply to another comment
+  threadId           String?  // To track entire conversation threads
+  
+  // Additional metadata
+  platform           Platform
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  @@index([postId])
+  @@index([platformCommentId])
+  @@index([commentAuthorId])
+  @@index([platformReplyId])
+  @@index([status])
+  @@index([createdAt])
+  
+  // Composite unique constraint to prevent duplicate replies to the same comment
+  @@unique([postId, platformCommentId])
 }
 
 model PostGroup {

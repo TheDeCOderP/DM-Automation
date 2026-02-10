@@ -737,3 +737,231 @@ export async function checkMediaUploadStatus(assetUrn: string, accessToken: stri
     throw error;
   }
 }
+
+
+// Interface for comment
+interface LinkedInComment {
+  id: string;
+  message: string;
+  authorName?: string;
+  authorUrn: string;
+  timestamp: number;
+  parentCommentId?: string;
+}
+
+// Function to fetch comments for a LinkedIn post
+export async function fetchLinkedInComments(
+  postId: string,
+  includeReplies: boolean = false
+): Promise<LinkedInComment[]> {
+  try {
+    // 1. Get the post with both page and social account
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        socialAccountPage: {
+          include: {
+            socialAccount: true
+          }
+        },
+        // Also get the personal account if no page
+        brand: {
+          include: {
+            socialAccounts: {
+              include: {
+                socialAccount: true
+              },
+              where: {
+                socialAccount: {
+                  platform: 'LINKEDIN'
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    // 2. Determine if it's a page post or personal post
+    let accessToken: string;
+    let shareUrn: string;
+    
+    // Case 1: It's a page post
+    if (post.socialAccountPage) {
+      const page = post.socialAccountPage;
+      accessToken = await decryptToken(page.accessToken);
+      
+      if (isTokenExpired(page.tokenExpiresAt)) {
+        throw new Error("LinkedIn page token is expired");
+      }
+      
+      // Get share URN from URL
+      const urnMatch = post.url?.match(/urn:li:(share|ugcPost|activity):\d+/);
+      if (!urnMatch) {
+        throw new Error("Invalid LinkedIn post URL");
+      }
+      shareUrn = urnMatch[0];
+    } 
+    // Case 2: It's a personal profile post
+    else {
+      // Find the LinkedIn social account for this brand
+      const linkedinAccount = post.brand.socialAccounts[0]?.socialAccount;
+      
+      if (!linkedinAccount) {
+        throw new Error("No LinkedIn account found for this brand");
+      }
+      
+      accessToken = await decryptToken(linkedinAccount.accessToken);
+      
+      if (isTokenExpired(linkedinAccount.tokenExpiresAt)) {
+        throw new Error("LinkedIn personal token is expired");
+      }
+      
+      // Get share URN from URL
+      const urnMatch = post.url?.match(/urn:li:(share|ugcPost|activity):\d+/);
+      if (!urnMatch) {
+        throw new Error("Invalid LinkedIn post URL");
+      }
+      shareUrn = urnMatch[0];
+    }
+
+    // 3. Fetch comments from LinkedIn API - UPDATED TO NEW VERSIONED API
+    const headers = {
+      'Authorization': `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+      'LinkedIn-Version': '202601' // Latest version (January 2026)
+    };
+
+    // Updated endpoint - removed /v2/ and query parameters
+    const apiUrl = `https://api.linkedin.com/rest/socialActions/${encodeURIComponent(shareUrn)}/comments`;
+    
+    const response = await fetch(apiUrl, { headers });
+    console.log(`Fetching comments from LinkedIn API: ${apiUrl}`);
+    console.log(`Response status: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch comments: ${response.statusText} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    // 4. Process comments - Updated field names based on new API
+    const comments: LinkedInComment[] = [];
+    
+    for (const element of data.elements || []) {
+      const comment = {
+        id: element.commentUrn || element.id,
+        message: element.message?.text || '',
+        authorUrn: element.actor,
+        timestamp: element.created?.time || Date.now(),
+        parentCommentId: element.parentComment
+      };
+      
+      comments.push(comment);
+    }
+
+    // 5. Filter based on includeReplies parameter
+    if (!includeReplies) {
+      return comments.filter(comment => !comment.parentCommentId);
+    }
+
+    return comments;
+  } catch (error) {
+    console.error("Error fetching LinkedIn comments:", error);
+    throw error;
+  }
+}
+
+// Function to reply to a LinkedIn comment
+export async function replyToLinkedInComment(
+  postId: string,
+  parentCommentId: string,
+  replyMessage: string
+): Promise<{ success: boolean; commentId?: string }> {
+  try {
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        socialAccountPage: { include: { socialAccount: true } },
+        brand: {
+          include: {
+            socialAccounts: {
+              include: { socialAccount: true },
+              where: { socialAccount: { platform: 'LINKEDIN' } }
+            }
+          }
+        }
+      }
+    });
+
+    if (!post) throw new Error("Post not found");
+    
+    // Get access token and author URN
+    let accessToken: string;
+    let authorUrn: string;
+    if (post.socialAccountPage) {
+      accessToken = await decryptToken(post.socialAccountPage.accessToken);
+      authorUrn = `urn:li:organization:${post.socialAccountPage.pageId}`;
+    } else {
+      const acc = post.brand.socialAccounts[0]?.socialAccount;
+      accessToken = await decryptToken(acc!.accessToken);
+      authorUrn = `urn:li:person:${acc!.platformUserId}`;
+    }
+
+    // Get the Activity/Share URN from the post URL
+    const urnMatch = post.url?.match(/urn:li:(share|ugcPost|activity):\d+/);
+    if (!urnMatch) throw new Error("Invalid LinkedIn post URL");
+    const shareUrn = urnMatch[0];
+
+    // Format the parent comment URN properly
+    let parentCommentUrn = parentCommentId;
+    if (!parentCommentId.startsWith('urn:li:comment:')) {
+      const numericId = parentCommentId.match(/\d+$/)?.[0] || parentCommentId;
+      parentCommentUrn = `urn:li:comment:(${shareUrn},${numericId})`;
+    }
+
+    // **KEY FIX**: POST to the activity's comments endpoint, not the comment's
+    // URL encode the activity URN for the path
+    const encodedActivityUrn = shareUrn
+      .replace(/:/g, '%3A');
+
+    const apiUrl = `https://api.linkedin.com/rest/socialActions/${encodedActivityUrn}/comments`;
+
+    // **KEY FIX**: Include parentComment in the request body
+    const requestBody = {
+      actor: authorUrn,
+      object: shareUrn,
+      message: { text: replyMessage },
+      parentComment: parentCommentUrn  // This makes it a reply!
+    };
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202601'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Payload sent:", JSON.stringify(requestBody, null, 2));
+      console.error("URL used:", apiUrl);
+      throw new Error(`LinkedIn Error: ${response.status} - ${errorText}`);
+    }
+
+    const responseData = await response.json();
+    return { success: true, commentId: responseData.id };
+
+  } catch (error) {
+    console.error("LinkedIn Service Error:", error);
+    throw error;
+  }
+}

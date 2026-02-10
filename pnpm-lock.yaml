@@ -20,6 +20,9 @@ importers:
       '@fontsource/poppins':
         specifier: ^5.2.7
         version: 5.2.7
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -524,6 +527,10 @@ packages:
 
   '@fontsource/poppins@5.2.7':
     resolution: {integrity: sha512-6uQyPmseo4FgI97WIhA4yWRlNaoLk4vSDK/PyRwdqqZb5zAEuc+Kunt8JTMcsHYUEGYBtN15SNkMajMdqUSUmg==}
+
+  '@google/generative-ai@0.24.1':
+    resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
+    engines: {node: '>=18.0.0'}
 
   '@hello-pangea/dnd@18.0.1':
     resolution: {integrity: sha512-xojVWG8s/TGrKT1fC8K2tIWeejJYTAeJuj36zM//yEm/ZrnZUSFGS15BpO+jGZT1ybWvyXmeDJwPYb4dhWlbZQ==}
@@ -4777,6 +4784,8 @@ snapshots:
   '@fontsource/montserrat@5.2.8': {}
 
   '@fontsource/poppins@5.2.7': {}
+
+  '@google/generative-ai@0.24.1': {}
 
   '@hello-pangea/dnd@18.0.1(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
