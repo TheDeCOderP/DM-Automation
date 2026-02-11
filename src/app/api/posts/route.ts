@@ -1,12 +1,11 @@
 import cronParser from "cron-parser"
 import { getToken } from "next-auth/jwt"
 import { prisma } from "@/lib/prisma"
-import cloudinary from "@/lib/cloudinary"
+import { uploadFile } from "@/lib/upload"
 import { NextResponse, type NextRequest } from "next/server"
 import { type MediaType, Status, Frequency, type Platform } from "@prisma/client"
 
 import type { ScheduleData } from "@/types/scheduled-data"
-import type { UploadApiResponse } from "cloudinary"
 
 import { publishToTwitter } from "@/services/twitter.service";
 import { publishToYouTube } from "@/services/youtube.service";
@@ -222,27 +221,23 @@ export async function POST(req: NextRequest) {
     const mediaUrls: { url: string; type: MediaType }[] = []
     if (files && files.length > 0) {
       for (const file of files) {
-        const bytes = await file.arrayBuffer()
-        const buffer = Buffer.from(bytes)
-
-        const uploadResult = await new Promise((resolve, reject) => {
-          cloudinary.uploader
-            .upload_stream(
-              {
-                resource_type: "auto",
-              },
-              (error, result) => {
-                if (error) reject(error)
-                else resolve(result)
-              },
-            )
-            .end(buffer)
-        })
-
-        mediaUrls.push({
-          url: (uploadResult as UploadApiResponse).secure_url,
-          type: (uploadResult as UploadApiResponse).resource_type.toUpperCase() as MediaType,
-        })
+        try {
+          // Use unified upload with Local CDN as primary, Cloudinary as fallback
+          const url = await uploadFile(file, 'social-posts');
+          
+          // Determine media type from file
+          let type: MediaType = 'IMAGE';
+          if (file.type.startsWith('video/')) {
+            type = 'VIDEO';
+          } else if (file.type.startsWith('image/')) {
+            type = 'IMAGE';
+          }
+          
+          mediaUrls.push({ url, type });
+        } catch (error) {
+          console.error('Error uploading media file:', error);
+          throw new Error(`Failed to upload media: ${file.name}`);
+        }
       }
     }
 

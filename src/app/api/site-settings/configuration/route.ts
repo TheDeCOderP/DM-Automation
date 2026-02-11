@@ -1,7 +1,7 @@
 // app/api/site-settings/configuration/route.ts
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
-import cloudinary from "@/lib/cloudinary";
+import { uploadStream } from "@/lib/upload";
 import { NextResponse, NextRequest } from "next/server";
 
 // Define proper types for the configuration data
@@ -112,25 +112,13 @@ export async function PUT(request: NextRequest) {
       googleCredentialsBase64 = bytes.toString("base64");
     }
 
-    // site image upload (1200x630 recommended) -> Cloudinary URL
+    // site image upload (1200x630 recommended) -> Local CDN/Cloudinary URL
     const siteImage = formData.get("siteImage") as File | null;
     let siteImageUrl: string | undefined = undefined;
     if (siteImage && siteImage.size > 0) {
       const buf = Buffer.from(await siteImage.arrayBuffer());
-      
-      // Type for Cloudinary upload result
-      interface CloudinaryUploadResult {
-        secure_url?: string;
-      }
-      
-      const uploaded = await new Promise<CloudinaryUploadResult>((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: "site-settings", resource_type: "image" },
-          (error, result) => (error ? reject(error) : resolve(result as CloudinaryUploadResult))
-        );
-        stream.end(buf);
-      });
-      siteImageUrl = uploaded?.secure_url;
+      // Use stream upload (goes directly to Cloudinary as Local CDN doesn't support streaming)
+      siteImageUrl = await uploadStream(buf, 'site-settings');
     }
 
     const existingConfig = await prisma.siteConfig.findFirst();
@@ -186,9 +174,10 @@ export async function PUT(request: NextRequest) {
         );
       }
       if (prismaError.code === "P2002") {
-        const target = Array.isArray(prismaError.meta?.target)
-          ? prismaError.meta.target.join(", ")
-          : prismaError.meta?.target ?? "unique constraint";
+        const meta = prismaError.meta;
+        const target = meta && Array.isArray(meta.target)
+          ? (meta.target as string[]).join(", ")
+          : (meta?.target as string) ?? "unique constraint";
         return NextResponse.json(
           {
             error: "UniqueConstraintViolation",

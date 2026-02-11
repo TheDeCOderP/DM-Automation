@@ -1,4 +1,5 @@
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { uploadFile } from './upload';
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,19 +9,8 @@ cloudinary.config({
 })
 
 export const uploadImage = async (file: File, folder: string = 'profile_pics') => {
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const result =  await new Promise((resolve, reject) => {
-        cloudinary.uploader
-        .upload_stream({ folder }, (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-        })
-        .end(buffer);
-    });
-
-    return (result as UploadApiResponse).secure_url;
+    // Use unified upload with Local CDN as primary, Cloudinary as fallback
+    return await uploadFile(file, folder);
 }
 
 export default cloudinary;

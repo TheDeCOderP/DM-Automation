@@ -23,7 +23,10 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [referencePreview, setReferencePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,6 +50,28 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
     }
   };
 
+  const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setReferenceImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReferencePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast.error("Please upload a valid image file");
+    }
+  };
+
+  const handleRemoveReference = () => {
+    setReferenceImage(null);
+    setReferencePreview(null);
+    if (referenceInputRef.current) {
+      referenceInputRef.current.value = "";
+    }
+  };
+
   const handleGenerateImage = async () => {
     if (!prompt.trim()) {
       toast.error("Please enter a prompt");
@@ -55,12 +80,27 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
 
     setIsGenerating(true);
     try {
+      let referenceImageBase64 = null;
+
+      // Convert reference image to base64 if provided
+      if (referenceImage) {
+        const reader = new FileReader();
+        referenceImageBase64 = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(referenceImage);
+        });
+      }
+
       const response = await fetch("/api/ai-agent/generate-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt,
+          referenceImageBase64 
+        }),
       });
 
       if (!response.ok) {
@@ -220,6 +260,7 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
     setVideoStatus(null);
     setIsGenerating(false);
     handleRemoveImage();
+    handleRemoveReference();
   };
 
   return (
@@ -253,19 +294,70 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
             </TabsList>
 
             <TabsContent value="image" className="space-y-4 mt-4">
-              <div className="grid gap-2">
-                <Label htmlFor="image-prompt">Describe your image</Label>
-                <Textarea
-                  id="image-prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="E.g., a majestic lion roaring in the savanna at sunset, photorealistic, 4k"
-                  className="min-h-[100px]"
-                  disabled={isGenerating}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Be specific about style, mood, colors, and details for best results.
-                </p>
+              <div className="grid gap-4">
+                {/* Reference Image Upload Section */}
+                <div className="grid gap-2">
+                  <Label>Reference Image (Optional)</Label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                    {referencePreview ? (
+                      <div className="relative">
+                        <Image
+                          src={referencePreview}
+                          alt="Reference"
+                          width={200}
+                          height={200}
+                          className="w-full h-48 object-cover rounded-md"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2"
+                          onClick={handleRemoveReference}
+                          disabled={isGenerating}
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        className="flex flex-col items-center justify-center gap-2 cursor-pointer"
+                        onClick={() => referenceInputRef.current?.click()}
+                      >
+                        <Upload className="size-8 text-gray-400" />
+                        <p className="text-sm text-gray-600">
+                          Upload a reference image for size
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          AI will match the aspect ratio of your reference
+                        </p>
+                      </div>
+                    )}
+                    <input
+                      ref={referenceInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleReferenceUpload}
+                      disabled={isGenerating}
+                      aria-label="Upload reference image"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="image-prompt">Describe your image</Label>
+                  <Textarea
+                    id="image-prompt"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="E.g., a majestic lion roaring in the savanna at sunset, photorealistic, 4k"
+                    className="min-h-[100px]"
+                    disabled={isGenerating}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Be specific about style, mood, colors, and details for best results.
+                  </p>
+                </div>
               </div>
             </TabsContent>
 
@@ -315,6 +407,7 @@ export default function AIGenerator({ onFileSelect }: AIGeneratorProps) {
                       className="hidden"
                       onChange={handleImageUpload}
                       disabled={isGenerating}
+                      aria-label="Upload starting image for video"
                     />
                   </div>
                 </div>

@@ -34,6 +34,7 @@ import FAQManager from './_components/FAQManager';
 import ImageUpload from './_components/ImageUpload';
 import CreateBlogSkeleton from './_components/CreateBlogSkeleton';
 import ExternalSitesSection from './_components/ExternalSIteSection';
+import AIGenerator from '../../posts/create/_components/AIGenerator';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -151,7 +152,7 @@ function CreateBlogForm({
         }
       });
 
-      if (bannerImage) submitData.append('banner', bannerImage);
+      if (bannerImage) submitData.append('bannerImage', bannerImage);
       if (featuredImage) submitData.append('image', featuredImage);
 
       await onSubmit(submitData);
@@ -305,23 +306,43 @@ function CreateBlogForm({
                       <CardDescription>Add images to your blog post</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <ImageUpload
-                        label="Banner Image"
-                        preview={bannerPreview}
-                        onDrop={onBannerDrop}
-                        onRemove={removeBannerImage}
-                        isDragActive={false}
-                        helpText="Recommended: 1200x600px • Max: 5MB"
-                      />
+                      <div className="space-y-2">
+                        <Label>Banner Image</Label>
+                        <ImageUpload
+                          label=""
+                          preview={bannerPreview}
+                          onDrop={onBannerDrop}
+                          onRemove={removeBannerImage}
+                          isDragActive={false}
+                          helpText="Recommended: 1200x600px • Max: 5MB"
+                        />
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-sm text-muted-foreground">Or generate with AI:</span>
+                          <AIGenerator onFileSelect={(file) => {
+                            setBannerImage(file);
+                            setBannerPreview(URL.createObjectURL(file));
+                          }} />
+                        </div>
+                      </div>
 
-                      <ImageUpload
-                        label="Featured Image"
-                        preview={featuredPreview}
-                        onDrop={onFeaturedDrop}
-                        onRemove={removeFeaturedImage}
-                        isDragActive={false}
-                        helpText="Used for social sharing • Max: 5MB"
-                      />
+                      <div className="space-y-2">
+                        <Label>Featured Image</Label>
+                        <ImageUpload
+                          label=""
+                          preview={featuredPreview}
+                          onDrop={onFeaturedDrop}
+                          onRemove={removeFeaturedImage}
+                          isDragActive={false}
+                          helpText="Used for social sharing • Max: 5MB"
+                        />
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-sm text-muted-foreground">Or generate with AI:</span>
+                          <AIGenerator onFileSelect={(file) => {
+                            setFeaturedImage(file);
+                            setFeaturedPreview(URL.createObjectURL(file));
+                          }} />
+                        </div>
+                      </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="imageAlt">Image Alt Text</Label>

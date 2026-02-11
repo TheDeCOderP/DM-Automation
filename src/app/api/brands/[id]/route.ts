@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import cloudinary from "@/lib/cloudinary";
+import { uploadFile } from "@/lib/upload";
 import type { UploadApiResponse } from 'cloudinary';
 import { NextRequest, NextResponse } from "next/server";
 
@@ -44,25 +44,8 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
         let logoUrl = null;
         if (file) {
-            // Convert file to buffer
-            const bytes = await file.arrayBuffer()
-            const buffer = Buffer.from(bytes)
-            
-            // Upload to Cloudinary
-            const uploadResult = await new Promise((resolve, reject) => {
-                cloudinary.uploader
-                .upload_stream(
-                    {
-                    resource_type: "auto",
-                    },
-                    (error, result) => {
-                    if (error) reject(error)
-                    else resolve(result)
-                    },
-                )
-                .end(buffer)
-            });
-            logoUrl = (uploadResult as UploadApiResponse).secure_url
+            // Upload to Local CDN (with Cloudinary fallback)
+            logoUrl = await uploadFile(file, 'brand-logos');
         }
 
         const brand = await prisma.brand.update({

@@ -108,8 +108,9 @@ export async function POST(req: NextRequest) {
     const externalSiteIds = JSON.parse(formData.get('externalSiteIds') as string || '[]') as string[];
     const publishImmediately = formData.get('publishImmediately') === 'true';
 
-    // Get banner image
+    // Get banner image and featured image
     const bannerFile = formData.get('bannerImage') as File;
+    const featuredFile = formData.get('image') as File;
 
     // Validate required fields
     if (!title || !content) {
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest) {
     }
 
     let bannerUrl = '';
+    let featuredUrl = '';
     
     // Upload banner image if provided
     if (bannerFile && bannerFile.size > 0) {
@@ -129,6 +131,19 @@ export async function POST(req: NextRequest) {
         console.error('Error uploading banner image:', error);
         return NextResponse.json(
           { error: 'Failed to upload banner image' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Upload featured image if provided
+    if (featuredFile && featuredFile.size > 0) {
+      try {
+        featuredUrl = await uploadImage(featuredFile, 'blog_featured');
+      } catch (error) {
+        console.error('Error uploading featured image:', error);
+        return NextResponse.json(
+          { error: 'Failed to upload featured image' },
           { status: 500 }
         );
       }
@@ -148,6 +163,7 @@ export async function POST(req: NextRequest) {
         slug,
         content,
         banner: bannerUrl,
+        image: featuredUrl,
         tags,
         authorId: session.user.id,
       },

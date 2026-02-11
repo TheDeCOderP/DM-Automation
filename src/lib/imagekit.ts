@@ -17,24 +17,34 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Upload image with ImageKit as primary and Cloudinary as fallback
+// Upload image with Local CDN as primary and Cloudinary as fallback
 export async function uploadImage(file: File, folder: string = 'prompt-directory'): Promise<string> {
   try {
     // Convert File to Buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
-    // Try ImageKit first
+    // Try Local CDN first
     try {
-      const result = await imagekit.upload({
-        file: buffer,
-        fileName: `${Date.now()}_${file.name}`,
-        folder: folder,
-        useUniqueFileName: true,
+      const base64 = buffer.toString('base64');
+      const mimeType = file.type || 'application/octet-stream';
+      const base64Data = `data:${mimeType};base64,${base64}`;
+      
+      const { uploadToLocalCDN } = await import('./uploadToLocalCDN');
+      const result = await uploadToLocalCDN({
+        file: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          lastModified: file.lastModified || Date.now(),
+        },
+        base64Data,
       });
+      
+      console.log('Local CDN upload successful:', result.url);
       return result.url;
-    } catch (imagekitError) {
-      console.warn('ImageKit upload failed, trying Cloudinary:', imagekitError);
+    } catch (localError) {
+      console.warn('Local CDN upload failed, trying Cloudinary:', localError);
       
       // Fallback to Cloudinary
       const result = await new Promise((resolve, reject) => {
@@ -51,6 +61,7 @@ export async function uploadImage(file: File, folder: string = 'prompt-directory
         ).end(buffer);
       });
       
+      console.log('Cloudinary fallback successful:', (result as UploadApiResponse).secure_url);
       return (result as UploadApiResponse).secure_url;
     }
   } catch (error) {

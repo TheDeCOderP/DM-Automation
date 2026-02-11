@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
-import cloudinary from "@/lib/cloudinary";
+import { uploadStream } from "@/lib/upload";
 import { ThemeMode, Prisma } from "@prisma/client";
-import { UploadApiResponse } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 
 async function checkAuth(req: NextRequest) {
@@ -151,41 +150,13 @@ export async function PUT(req: NextRequest) {
     let faviconUrl: string | undefined;
 
     if (logoFile && logoFile.size > 0) {
-      const bytes = await logoFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const uploadResult = await new Promise((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              resource_type: "auto",
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            },
-          )
-          .end(buffer);
-      });
-      logoUrl = (uploadResult as UploadApiResponse).secure_url;
+      // Upload to Local CDN (with Cloudinary fallback)
+      logoUrl = await uploadStream(Buffer.from(await logoFile.arrayBuffer()), 'theme-assets');
     }
 
     if (faviconFile && faviconFile.size > 0) {
-      const bytes = await faviconFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const uploadResult = await new Promise((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              resource_type: "auto",
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            },
-          )
-          .end(buffer);
-      });
-      faviconUrl = (uploadResult as UploadApiResponse).secure_url;
+      // Upload to Local CDN (with Cloudinary fallback)
+      faviconUrl = await uploadStream(Buffer.from(await faviconFile.arrayBuffer()), 'theme-assets');
     }
 
     const SINGLETON_ID = "singleton";
