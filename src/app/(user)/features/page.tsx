@@ -10,7 +10,7 @@ const FeaturesPage = () => {
     {
       id: 1,
       title: "Image Generation",
-      description: "Generate high-quality images from text prompts using TogetherAI's advanced AI models.",
+      description: "Generate high-quality images from text prompts using Google Gemini's advanced multimodal AI models.",
       status: "Completed",
       icon: CheckCircle,
       category: "Content Creation",
@@ -26,7 +26,7 @@ const FeaturesPage = () => {
     {
       id: 3,
       title: "Content Generation",
-      description: "Generate high-quality written content from text prompts using TogetherAI's language models.",
+      description: "Generate high-quality written content from text prompts using Google Gemini's language models.",
       status: "Completed",
       icon: CheckCircle,
       category: "Content Creation",

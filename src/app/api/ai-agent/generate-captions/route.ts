@@ -1,11 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import { generateText } from "ai";
-import { createTogetherAI } from '@ai-sdk/togetherai';
-
-const togetherai = createTogetherAI({
-  apiKey: process.env.TOGETHER_AI_API_KEY ?? '',
-});
+import { generateText } from "@/lib/gemini";
 
 interface SocialPlatform {
   id: string
@@ -41,8 +36,6 @@ export async function POST(req: NextRequest) {
   if (!token?.id) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
-
-  const model = togetherai('meta-llama/Llama-3.3-70B-Instruct-Turbo');
   
   try {
     const data = await req.json();
@@ -64,11 +57,8 @@ export async function POST(req: NextRequest) {
       // For same caption across all platforms, use the smallest word limit
       const minWordLimit = Math.min(...selectedPlatforms.map(p => p.wordLimit));
 
-      const { text } = await generateText({
-        model,
-        temperature: 0.7,
-        maxOutputTokens: minWordLimit,
-        prompt: `
+      const text = await generateText(
+        `
           Create a single social media caption that would work well for all of these platforms: 
           ${selectedPlatforms.map(p => p.name).join(", ")}.
           
@@ -82,20 +72,21 @@ export async function POST(req: NextRequest) {
           
           Respond with ONLY the caption text, no additional commentary or formatting.
         `,
-      });
+        {
+          temperature: 0.7,
+          maxTokens: minWordLimit,
+        }
+      );
       
       return NextResponse.json({ 
-        commonCaption: text.trim() 
+        commonCaption: (text || '').trim() 
       }, { status: 200 });
       
     } else {
       // For platform-specific captions
       const platformPromises = selectedPlatforms.map(async (platform) => {
-        const { text } = await generateText({
-          model,
-          temperature: 0.7,
-          maxOutputTokens: platform.wordLimit,
-          prompt: `
+        const text = await generateText(
+          `
             Create a ${platform.name} caption with these strict requirements:
             - Exactly ${platform.wordLimit} characters or less
             - Tone: ${getPlatformTone(platform.id)}
@@ -105,8 +96,12 @@ export async function POST(req: NextRequest) {
             
             Respond with ONLY the caption text, no additional commentary or formatting.
           `,
-        });
-        return { platform: platform.id, caption: text.trim() };
+          {
+            temperature: 0.7,
+            maxTokens: platform.wordLimit,
+          }
+        );
+        return { platform: platform.id, caption: (text || '').trim() };
       });
 
       const platformResults = await Promise.all(platformPromises);
