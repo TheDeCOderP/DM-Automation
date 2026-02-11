@@ -1,6 +1,5 @@
-import { PrismaClient, IdSequence, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { IdSequence, Prisma } from '@prisma/client';
+import { prisma } from './prisma';
 
 interface GenerateSequentialIdOptions {
   padLength?: number;

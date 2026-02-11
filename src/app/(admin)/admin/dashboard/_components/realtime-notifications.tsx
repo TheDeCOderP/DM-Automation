@@ -23,7 +23,17 @@ export function RealtimeNotifications() {
     try {
       setLoading(true)
       const res = await fetch("/api/notifications?limit=10&offset=0")
-      if (!res.ok) throw new Error("Failed to load notifications")
+      
+      // Handle unauthorized silently - user might not be logged in
+      if (res.status === 401) {
+        console.log("User not authenticated for notifications")
+        return
+      }
+      
+      if (!res.ok) {
+        throw new Error(`Failed to load notifications: ${res.status}`)
+      }
+      
       const json = await res.json()
       setNotifications(json.data as NotificationItem[])
     } catch (e) {

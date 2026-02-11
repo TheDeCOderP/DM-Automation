@@ -53,7 +53,7 @@ export function MetricsOverview() {
         setError(null)
       } catch (error) {
         if (!mounted) return
-        setError(error as string || "Failed to load")
+        setError(error instanceof Error ? error.message : "Failed to load")
       } finally {
         if (mounted) setLoading(false)
       }

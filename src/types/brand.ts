@@ -1,4 +1,19 @@
-import type { SocialAccount, Brand, BrandInvitation, User } from "@prisma/client";
+import type { BrandInvitation, User } from "@prisma/client";
+
+// Define SocialAccount type locally to avoid browser import issues
+export interface SocialAccount {
+  id: string;
+  platform: string;
+  accessToken: string;
+  refreshToken: string | null;
+  tokenExpiresAt: Date | null;
+  platformUserId: string;
+  platformUsername: string;
+  platformUserImage: string | null;
+  lastSyncedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface BrandMember {
   id: string;
@@ -13,10 +28,17 @@ export interface BrandInvitationWithUser extends BrandInvitation {
   invitedTo: User;
 }
 
-export interface BrandWithSocialAccounts extends Brand {
-  isAdmin: boolean
-  userRole?: string
-  socialAccounts: SocialAccount[]
-  members?: BrandMember[]
-  brandInvitations?: BrandInvitationWithUser[]
+export interface BrandWithSocialAccounts {
+  id: string;
+  name: string;
+  description: string | null;
+  logo: string | null;
+  website: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  isAdmin: boolean;
+  userRole?: string;
+  socialAccounts: SocialAccount[];
+  members?: BrandMember[];
+  brandInvitations?: BrandInvitationWithUser[];
 }

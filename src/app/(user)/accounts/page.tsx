@@ -22,10 +22,18 @@ import ConnectAccountsModal from "./_components/ConnectAccountsModal"
 import BrandDetailsModal from "./_components/BrandDetailsModal"
 import { MobileBrandCard, MobileBrandCardSkeleton } from "./_components/MobileBrandCard"
 
-import type { SocialAccount } from "@prisma/client"
-import type { BrandWithSocialAccounts } from "@/types/brand"
+import type { BrandWithSocialAccounts, SocialAccount } from "@/types/brand"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  const data = await res.json()
+  
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch')
+  }
+  
+  return data
+}
 
 function BrandRowSkeleton() {
   return (
@@ -216,7 +224,7 @@ export default function BrandsPage() {
                 </CardContent>
               </Card>
             ) : (
-              brands?.data.map((brand: BrandWithSocialAccounts) => (
+              brands?.data?.map((brand: BrandWithSocialAccounts) => (
                 <MobileBrandCard
                   key={brand.id}
                   brand={brand}
@@ -260,7 +268,7 @@ export default function BrandsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  brands?.data.map((brand: BrandWithSocialAccounts) => (
+                  brands?.data?.map((brand: BrandWithSocialAccounts) => (
                     <TableRow key={brand.id} className="hover:bg-secondary/20 transition-colors border-border/50">
                       {/* Brand */}
                       <TableCell>

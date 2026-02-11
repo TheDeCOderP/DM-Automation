@@ -3,12 +3,11 @@ import { getToken } from "next-auth/jwt";
 import cloudinary from "@/lib/cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 import { UploadApiResponse } from "cloudinary";
-import { InvitationStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
     const token = await getToken({ req });
     if (!token?.id) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
@@ -58,7 +57,7 @@ export async function GET(req: NextRequest) {
                         brandInvitations: {
                             where: {
                                 status: {
-                                    in: [InvitationStatus.PENDING, InvitationStatus.REJECTED]
+                                    in: ["PENDING", "REJECTED"]
                                 }
                             },
                             include: {
@@ -79,17 +78,17 @@ export async function GET(req: NextRequest) {
         });
 
         // Transform the data to include role and members information
-        const brands = userBrands.map(ub => ({
+        const brands = userBrands.map((ub: any) => ({
             ...ub.brand,
             // Flatten the socialAccounts structure
-            socialAccounts: ub.brand.socialAccounts.map(sa => ({
+            socialAccounts: ub.brand.socialAccounts.map((sa: any) => ({
                 ...sa.socialAccount,
             })),
             // Include user's role for this specific brand
             userRole: ub.role.name,
             isAdmin: ub.role.name === "BrandAdmin",
             // Include all members (users who have access to this brand)
-            members: ub.brand.members.map(member => ({
+            members: ub.brand.members.map((member: any) => ({
                 id: member.user.id,
                 name: member.user.name,
                 email: member.user.email,
@@ -113,7 +112,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     const token = await getToken({ req });
     if (!token?.id) {
-        return NextResponse.redirect(new URL("/login", req.url));
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
@@ -159,6 +158,7 @@ export async function POST(req: NextRequest) {
             data: {
                 userId: token.id,
                 brandId: brand.id,
+                roleId: "PCR-0004", // BrandAdmin role
             },
         });
 

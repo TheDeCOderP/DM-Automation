@@ -10,8 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-import { NotificationType } from '@prisma/client';
 import { getPlatformIcon } from "@/utils/ui/icons";
+
+// Define NotificationType enum locally for client-side use
+enum NotificationType {
+  POST_PUBLISHED = 'POST_PUBLISHED',
+  POST_FAILED = 'POST_FAILED',
+  POST_SCHEDULED = 'POST_SCHEDULED',
+  ACCOUNT_DISCONNECTED = 'ACCOUNT_DISCONNECTED',
+  SUBSCRIPTION_RENEWAL = 'SUBSCRIPTION_RENEWAL',
+  GENERAL = 'GENERAL'
+}
 
 // Define the possible metadata types for each notification type
 type PostPublishedMetadata = {
@@ -172,7 +181,13 @@ function NotificationsList({ notifications = [] }: NotificationsListProps) {
   );
 }
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  }
+  return res.json();
+};
 
 export default function NotificationDropdown() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -186,8 +201,13 @@ export default function NotificationDropdown() {
     refreshInterval: 30000,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    shouldRetryOnError: true,
-    errorRetryInterval: 5000,
+    shouldRetryOnError: false, // Don't retry on auth errors
+    onError: (err) => {
+      // Silently handle auth errors - user might not be logged in
+      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+        console.log('User not authenticated for notifications');
+      }
+    },
   });
 
   const notifications = notificationData?.data || [];
@@ -195,8 +215,11 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     if (error) {
-      console.error('Error fetching notifications:', error);
-      toast.error('Failed to fetch notifications');
+      // Only show error toast for non-auth errors
+      if (!error.message?.includes('401') && !error.message?.includes('Unauthorized')) {
+        console.error('Error fetching notifications:', error);
+        toast.error('Failed to fetch notifications');
+      }
     }
   }, [error]);
 
