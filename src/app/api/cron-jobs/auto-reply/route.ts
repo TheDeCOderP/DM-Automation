@@ -2,11 +2,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { fetchLinkedInComments, replyToLinkedInComment } from '@/services/linkedin.service';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateWithThinking } from '@/lib/gemini';
 import { Platform, Status } from '@prisma/client';
-
-// Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 async function generateGeminiReply(commentText: string, postContent: string, brandName: string, context?: {
   commentAuthor?: string;
@@ -14,8 +11,6 @@ async function generateGeminiReply(commentText: string, postContent: string, bra
   previousReplies?: Array<{ author: string; text: string }>;
 }): Promise<string> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    
     const prompt = `
 You are an AI assistant for ${brandName}, responsible for replying to comments on social media posts.
 Your goal is to create engaging, helpful, and brand-appropriate responses.
@@ -49,9 +44,10 @@ Guidelines for your reply:
 Generate a response that follows these guidelines:
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Use thinking model for better reasoning
+    const text = await generateWithThinking(prompt, {
+      thinkingLevel: 'low' // Low thinking for faster responses
+    });
     
     // Clean up the response
     return text.trim()

@@ -18,6 +18,7 @@
     "@auth/prisma-adapter": "^2.10.0",
     "@fontsource/montserrat": "^5.2.8",
     "@fontsource/poppins": "^5.2.7",
+    "@google/genai": "^1.40.0",
     "@google/generative-ai": "^0.24.1",
     "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.1",

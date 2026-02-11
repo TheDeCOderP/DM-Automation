@@ -166,6 +166,11 @@ export default function AnimatedCarousel({
               data-name={item.name}
               onMouseEnter={() => setIsPaused(true)}
               onMouseLeave={() => setIsPaused(false)}
+              onClick={() => {
+                console.log(`Clicked on ${item.name}`)
+                // You can add navigation or modal logic here
+                alert(`Connect to ${item.name}`)
+              }}
             >
               <div className="relative w-full h-full transition-all duration-300 ease-in-out">
                 <Image
@@ -223,7 +228,7 @@ export default function AnimatedCarousel({
           left: calc(50% - 100px);
           transform-style: preserve-3d;
           transform: perspective(1000px) rotateX(-16deg);
-          z-index: 2;
+          z-index: 10;
         }
 
         /* Model Styling - Cannot be converted (complex positioning) */
@@ -239,6 +244,7 @@ export default function AnimatedCarousel({
           background-position: top center;
           transform: translate(-50%, -5%) rotateX(16deg);
           pointer-events: none;
+          z-index: 1;
         }
 
         /* Items Animation - Cannot be converted (keyframes with CSS variables) */
@@ -251,6 +257,12 @@ export default function AnimatedCarousel({
           left: 50%;
           cursor: pointer;
           animation: rotateItem var(--animation-duration) linear infinite;
+          z-index: 10;
+          transition: transform 0.3s ease;
+        }
+        
+        .carousel .item:hover {
+          transform: scale(1.1);
         }
         
         @keyframes rotateItem {
@@ -309,7 +321,7 @@ export default function AnimatedCarousel({
           flex-wrap: wrap;
           justify-content: space-between;
           align-items: center;
-          z-index: 1;
+          z-index: 0;
         }
 
         .title {
