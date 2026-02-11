@@ -1,405 +1,216 @@
-import Link from "next/link"
-import Image from "next/image"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  ArrowRight,
-  Bot,
-  Calendar,
-  ImageIcon,
-  Zap,
-  CheckCircle,
-  Users,
-  Clock,
-  Target,
-  Sparkles,
-  TrendingUp,
-  Shield,
-  Rocket,
-} from "lucide-react"
-import Header from "@/components/layout/Header"
-import Footer from "@/components/layout/Footer"
-import AnimatedCarousel from "@/components/features/AnimatedCarousel"
+"use client";
 
-export default function LandingPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <Header />
-      {/* Hero Section */}
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { Loader2, User, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { signOut } from "next-auth/react";
+import Image from "next/image";
+import Link from "next/link";
 
-      <div
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, #e2e8f0 1px, transparent 1px),
-              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)
-            `,
-            backgroundSize: "20px 30px",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
-            maskImage:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
-          }}
-        />
-      <AnimatedCarousel 
-        title="Marketing"
-        showStats={false}
-        showControls={false}
-      />
+export default function HomePage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-      <div className="h-auto md:min-h-screen w-full relative">
-        {/* Top Fade Grid Background */}
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, #e2e8f0 1px, transparent 1px),
-              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)
-            `,
-            backgroundSize: "20px 30px",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
-            maskImage:
-              "radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)",
-          }}
-        />
-        <SectionWrapper> {/* Added mobile padding */}
-          <div className="mt-30 container mx-auto text-center max-w-5xl h-full flex flex-col justify-center items-center">
-            <Badge className="border-0 px-4 py-2 text-sm font-medium backdrop-blur-sm">
-              <Sparkles className="w-4 h-4 mr-2" />
-              AI-Powered Marketing Automation
-            </Badge>
+  const handleLoginClick = () => {
+    setIsLoading(true);
+    router.push("/login");
+  };
 
-            {/* FONT SIZE ADJUSTMENT: Ensured mobile uses 4xl/5xl */}
-            <h1 className="text-balance text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 md:mb-8 leading-tight tracking-tight">
-              Schedule Once, <span className="text-primary">Publish Everywhere</span>
-            </h1>
+  const handleDashboardClick = () => {
+    setIsLoading(true);
+    const user = session?.user as any;
 
-            {/* FONT SIZE ADJUSTMENT: Ensured mobile uses base/lg */}
-            <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-8 md:mb-12 leading-relaxed max-w-3xl mx-auto font-light px-2">
-              Transform your social media strategy with AI-generated content, automated scheduling, and intelligent image
-              creation.
-              <span className="text-foreground font-medium"> Let our platform handle your digital marketing</span> while
-              you focus on growing your business.
-            </p>
+    if (user?.userType === "PLATFORM_ADMIN") {
+      router.push("/admin");
+    } else if (user?.role === "SUPERADMIN" || user?.role === "ADMIN") {
+      router.push("/admin");
+    } else {
+      router.push("/user/dashboard");
+    }
+  };
 
-            {/* BUTTON LAYOUT ADJUSTMENT: flex-col is default, sm:flex-row is for small screens and up */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 md:mb-16 w-full px-4 sm:w-auto">
-              <Button
-                size="lg"
-                className="text-lg px-8 py-4 h-auto shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-                asChild
-              >
-                <Link href="/register" className="flex items-center justify-center">
-                  Get Started
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-lg px-8 py-4 h-auto border-2 hover:bg-accent transition-all duration-200 bg-transparent"
-                asChild
-              >
-                <Link href="/login" className="flex items-center justify-center">Continue to Login</Link>
-              </Button>
-            </div>
-          </div>
-        </SectionWrapper>
-      </div>
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut({ callbackUrl: "/login?logout=success" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
-      {/* Features Section */}
-      <SectionWrapper>
-        <div id="features" className="container mx-auto p-8">
-          <div className="text-center mb-12 md:mb-20">
-            <Badge className="mb-4 bg-primary/10 text-primary border-0">
-              <Rocket className="w-4 h-4 mr-1" />
-              Powerful Features
-            </Badge>
-            {/* FONT SIZE ADJUSTMENT */}
-            <h2 className="text-balance text-3xl sm:text-4xl md:text-5xl  font-bold text-foreground mb-4 md:mb-6">
-              Everything you need for <span className="text-primary">modern marketing</span>
-            </h2>
-            {/* FONT SIZE ADJUSTMENT */}
-            <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed px-2">
-              Automate your social media presence with AI-powered intelligence and advanced automation tools
-            </p>
-          </div>
-
-          {/* GRID ADJUSTMENT: Default is 1 column, md:grid-cols-2 is for medium screens, lg:grid-cols-3 is for large screens */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {[
-              {
-                icon: Bot,
-                title: "AI Content Generation",
-                description:
-                  "Generate engaging posts automatically using advanced AI models from OpenAI, Groq, and Together.ai",
-              },
-              {
-                icon: Calendar,
-                title: "Smart Scheduling",
-                description:
-                  "Schedule posts across multiple platforms with intelligent timing optimization for maximum engagement",
-              },
-              {
-                icon: ImageIcon,
-                title: "AI Image Creation",
-                description:
-                  "Generate stunning visuals automatically to accompany your posts using state-of-the-art AI image models",
-              },
-              {
-                icon: Zap,
-                title: "Multi-Platform Publishing",
-                description:
-                  "Publish simultaneously to Facebook, Twitter, LinkedIn, Instagram, and more with platform-specific optimization",
-              },
-              {
-                icon: Target,
-                title: "Content Planning",
-                description:
-                  "Create comprehensive content strategies with automated planning and topic research capabilities",
-              },
-              {
-                icon: Users,
-                title: "Team Collaboration",
-                description:
-                  "Work together with approval workflows, role-based permissions, and collaborative content creation",
-              },
-            ].map((feature, index) => (
-              <Card
-                key={index}
-                className="group border rounded-4xl hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 bg-card/80 backdrop-blur-sm"
-              >
-                <CardHeader className="p-6 md:p-8"> 
-                  <div className="flex items-center space-x-4 mb-4 md:mb-6">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300 bg-primary/10 ring-1 ring-border rounded-lg"> 
-                      <feature.icon className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <CardTitle className="text-base sm:text-lg md:text-xl font-bold text-card-foreground m-0">
-                      {feature.title}
-                    </CardTitle>
-                  </div>
-                  
-                  {/* CardDescription is still below both */}
-                  <CardDescription className="text-muted-foreground leading-relaxed text-sm md:text-base mt-2">
-                    {feature.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </SectionWrapper>
-
-      {/* How It Works Section */}
-      {/* <SectionWrapper className="py-16 md:py-24">
-        <div id="how-it-works" className="container mx-auto px-4">
-          <div className="text-center mb-12 md:mb-20">
-            <Badge className="mb-4 border-0">
-              <TrendingUp className="w-4 h-4 mr-1" />
-              How It Works
-            </Badge>
-
-            <h2 className="text-balance text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 md:mb-6 tracking-tight">
-              Intelligent automation <span className="text-primary">from start to finish</span>
-            </h2>
-
-            <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed px-2">
-              Our intelligent system automates your entire content workflow from planning to publishing
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center mb-16 md:mb-20">
-            <Card className="border-2 rounded-3xl bg-card/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardHeader className="p-0">
-                <CardTitle className="text-2xl md:text-3xl font-bold text-foreground">
-                  System Architecture
-                </CardTitle>
-              </CardHeader>
-              <div className="space-y-3 md:space-y-4">
-                {[
-                  {
-                    title: "Web Scrapers & Research",
-                    description: "Gather trending topics and insights using SerpApi and advanced web scraping",
-                    icon: Target,
-                  },
-                  {
-                    step: "2",
-                    title: "Task Scheduling",
-                    description: "MongoDB and Agenda handle intelligent scheduling and task management",
-                    icon: Clock,
-                  },
-                  {
-                    step: "3",
-                    title: "AI Content Generation",
-                    description: "Multiple AI providers create engaging content and images automatically",
-                    icon: Sparkles,
-                  },
-                ].map((item, index) => (
-                  <Card key={index} className="border-0 shadow-none rounded-2xl bg-background/50 hover:bg-accent/5 transition-all duration-300 group">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-105 transition-transform duration-300 bg-primary/10 ring-1 ring-border">
-                        <item.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <CardTitle className="text-lg md:text-xl font-bold text-foreground">
-                            {item.title}
-                          </CardTitle>
-                        </div>
-                        <CardDescription className="text-sm md:text-base leading-relaxed">
-                          {item.description}
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </Card>
-
-            <Card className="relative order-2 p-6 md:p-8 border-2 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 bg-card/80 backdrop-blur-sm">
-              <CardHeader className="p-0">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-accent/20 rounded-2xl blur-3xl -z-10"></div>
-                  <Image
-                    width={600}
-                    height={400}
-                    unoptimized
-                    src="/images/architecture.png"
-                    alt="System Architecture Diagram"
-                    className="w-full h-auto rounded-2xl border border-border/20"
-                  />
-                </div>
-              </CardHeader>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
-            <Card className="relative order-2 lg:order-1 p-6 md:p-8 border-2 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 bg-card/80 backdrop-blur-sm">
-              <CardHeader className="p-0">
-                <div className="relative border p-4 rounded-2xl">
-                  <div className="absolute inset-0 bg-accent/20 rounded-2xl blur-3xl -z-10"></div>
-                  <Image
-                    width={600}
-                    height={400}
-                    unoptimized
-                    src="/images/workflow.png"
-                    alt="Content Workflow Diagram"
-                    className="w-full h-auto rounded-2xl"
-                  />
-                </div>
-              </CardHeader>
-            </Card>
-            
-            <div className="order-1 lg:order-2 space-y-6 md:space-y-8">
-              <Card className="border-2 rounded-3xl bg-card/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-                <CardHeader className="p-0">
-                  <CardTitle className="text-2xl md:text-3xl font-bold text-foreground">
-                    Content Workflow
-                  </CardTitle>
-                </CardHeader>
-                <div className="">
-                  {[
-                    {
-                      title: "Automated Planning",
-                      description: "Create content plans and schedule tasks with intelligent timing",
-                      icon: Clock,
-                    },
-                    {
-                      title: "Approval Workflow",
-                      description: "Built-in approval system ensures quality control before publishing",
-                      icon: CheckCircle,
-                    },
-                    {
-                      title: "Multi-Platform Publishing",
-                      description: "Automatic posting to all your social media platforms simultaneously",
-                      icon: Zap,
-                    },
-                  ].map((item, index) => (
-                    <Card key={index} className="border-0 shadow-none rounded-2xl bg-background/50 hover:bg-accent/5 transition-all duration-300 group">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-105 transition-transform duration-300 bg-primary/10 ring-1 ring-border">
-                          <item.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg md:text-xl font-bold text-foreground">
-                            {item.title}
-                          </CardTitle>
-                          <CardDescription className="text-sm md:text-base leading-relaxed">
-                            {item.description}
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </SectionWrapper> */}
-
-      {/* CTA Section */}
-      <div className="my-12 border container mx-auto text-center max-w-5xl h-full flex flex-col justify-center items-center bg-primary/5 rounded-3xl p-8 md:p-12 backdrop-blur-sm">
-        <Badge className="mb-4 md:mb-6 border-0 px-4 py-2 text-sm font-medium backdrop-blur-sm">
-          <Shield className="w-4 h-4 mr-2" />
-          Trusted & Secure
-        </Badge>
-
-        {/* FONT SIZE ADJUSTMENT */}
-        <h2 className="text-balance text-4xl sm:text-5xl md:text-5xl font-bold text-foreground mb-6 md:mb-8 leading-tight tracking-tight">
-          Ready to transform <span className="text-primary">your marketing?</span>
-        </h2>
-
-        {/* FONT SIZE ADJUSTMENT */}
-        <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-8 md:mb-12 leading-relaxed max-w-3xl mx-auto font-light px-2">
-          Join thousands of businesses already using AI to automate their social media success
-          <span className="text-foreground font-medium"> and drive real results</span> with our platform.
-        </p>
-
-        {/* BUTTON LAYOUT ADJUSTMENT: flex-col is default, sm:flex-row is for small screens and up */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center w-full px-4 sm:w-auto">
-          <Button
-            size="lg"
-            className="text-lg px-8 py-4 h-auto shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-            asChild
-          >
-            <Link href="/register" className="flex items-center justify-center">
-              Get Started
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="text-lg px-8 py-4 h-auto border-2 hover:bg-accent transition-all duration-200 bg-transparent"
-            asChild
-          >
-            <Link href="/login" className="flex items-center justify-center">Continue to Login</Link>
-          </Button>
+  if (status === "loading") {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-black/50">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-white" />
+          <p className="text-white">Loading...</p>
         </div>
       </div>
+    );
+  }
 
-      {/* Footer */}
-      <Footer />
-    </div>
-  )
-}
-
-// Added className prop to allow for external padding control (e.g., py-16)
-function SectionWrapper({ children, className = '' } : { children: React.ReactNode, className?: string }) {
   return (
-    // PADDING ADJUSTMENT: Reduced default section padding from 'p-4' to allow 'py-X' class to control it. Added a default horizontal padding for inner elements.
-    <section className={`relative overflow-hidden lg:px-4 ${className}`}>
-      {/* Background Elements (same everywhere) */}
-      <div className="absolute inset-0 bg-accent/30"></div>
-      <div className="absolute top-30 left-5 w-48 h-48 sm:w-72 sm:h-72 bg-primary/10 rounded-full blur-3xl"></div> {/* Reduced size and moved on mobile */}
-      <div className="absolute bottom-10 right-5 w-64 h-64 sm:w-96 sm:h-96 bg-secondary/10 rounded-full blur-3xl"></div> {/* Reduced size and moved on mobile */}
+    <div className="h-screen w-screen overflow-hidden relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="/banner.jpg"
+          alt="Background"
+          fill
+          className="object-cover animate-[zoom_20s_ease-in-out_infinite_alternate]"
+          priority
+          quality={100}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/70" />
+      </div>
 
       {/* Content */}
-      <div className="relative">{children}</div>
-    </section>
-  )
+      <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
+        {/* Logo - Clickable */}
+        <Link
+          href="https://prabisha.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-10 animate-[fadeInDown_1s_ease-out] hover:scale-110 transition-transform duration-300 cursor-pointer"
+        >
+          <Image
+            src="/logo.png"
+            alt="Prabisha Consulting"
+            width={300}
+            height={70}
+            className="drop-shadow-2xl"
+            priority
+          />
+        </Link>
+
+        {/* Main Content */}
+        <div className="text-center space-y-6 max-w-5xl mx-auto animate-[fadeInUp_1s_ease-out]">
+          <h1 className="text-3xl md:text-5xl  font-bold text-white drop-shadow-2xl leading-tight animate-[fadeIn_1.2s_ease-out]">
+            Prabisha DMA
+          </h1>
+
+
+          {/* User Section */}
+          {session?.user ? (
+            <div className="space-y-6 mt-10 animate-[fadeIn_1.6s_ease-out]">
+              <div className="flex flex-col items-center space-y-4 p-6 bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 shadow-2xl mx-auto max-w-md hover:bg-white/15 transition-all duration-300 hover:scale-105">
+                <Avatar className="h-16 w-16 border-2 border-white/40 shadow-xl">
+                  <AvatarImage src={session.user.image ?? ""} alt={session.user.name ?? ""} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                    {session.user.name?.charAt(0) || session.user.email?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold text-white">
+                    {session.user.name || session.user.email?.split('@')[0]}
+                  </h2>
+                  <p className="text-sm text-white/80 mt-1">{session.user.email}</p>
+                  {(session.user as any)?.role && (
+                    <p className="text-xs text-white/70 mt-2 bg-white/10 px-3 py-1 rounded-full inline-block">
+                      {(session.user as any).role}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-4 justify-center flex-wrap">
+                <Button
+                  onClick={handleDashboardClick}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 bg-white text-black hover:bg-white/90 hover:scale-105 transition-all duration-300 shadow-xl"
+                  size="lg"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                  {isLoading ? "Loading..." : "Dashboard"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="flex items-center gap-2 bg-white/10 text-white border-white/30 hover:bg-white/20 hover:scale-105 transition-all duration-300 shadow-xl backdrop-blur-sm"
+                  size="lg"
+                >
+                  {isLoggingOut ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <LogOut className="h-5 w-5" />
+                  )}
+                  {isLoggingOut ? "Logging out..." : "Logout"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-10 flex justify-center animate-[fadeIn_1.6s_ease-out]">
+              <Button
+                onClick={handleLoginClick}
+                disabled={isLoading}
+                size="lg"
+                className="relative flex items-center justify-center gap-2 bg-transparent text-white hover:bg-white/10 px-10 py-6 text-lg font-semibold rounded-full hover:scale-105 transition-all duration-300 shadow-2xl border-2 border-white/50 hover:border-white overflow-hidden group backdrop-blur-sm"
+              >
+                <span className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500"></span>
+                <span className="relative z-10 flex items-center gap-2">
+                  {isLoading && <Loader2 className="h-5 w-5 animate-spin" />}
+                  {isLoading ? "Loading..." : "Login"}
+                </span>
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fadeInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes zoom {
+          from {
+            transform: scale(1);
+          }
+          to {
+            transform: scale(1.1);
+          }
+        }
+      `}</style>
+    </div>
+  );
 }
