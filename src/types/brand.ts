@@ -1,9 +1,9 @@
-import type { BrandInvitation, User } from "@prisma/client";
+import type { BrandInvitation, User, Platform } from "@prisma/client";
 
 // Define SocialAccount type locally to avoid browser import issues
 export interface SocialAccount {
   id: string;
-  platform: string;
+  platform: Platform;
   accessToken: string;
   refreshToken: string | null;
   tokenExpiresAt: Date | null;

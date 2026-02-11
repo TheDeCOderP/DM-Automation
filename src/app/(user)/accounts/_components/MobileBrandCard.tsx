@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardTitle, CardHeader } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-import { SocialAccount } from '@prisma/client';
 import { BrandWithSocialAccounts } from '@/types/brand';
 
 import { getPlatformIcon } from '@/utils/ui/icons';
@@ -107,7 +106,7 @@ export function MobileBrandCard({
           <p className="text-xs font-semibold text-muted-foreground mb-2">Social Accounts</p>
           {brand.socialAccounts.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {brand.socialAccounts.map((account: SocialAccount) => (
+              {brand.socialAccounts.map((account) => (
                 <Badge key={account.id} variant="secondary" className="gap-1.5 px-3 py-1">
                   {getPlatformIcon(account.platform)}
                   <span className="text-xs font-medium truncate max-w-[100px]">
