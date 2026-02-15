@@ -69,14 +69,19 @@ export default function PagesCard({
 
     setRefreshing(true);
     try {
-      const response = await fetch(`/api/accounts/${platform.toLowerCase()}/pages?platformUserId=${platformUserId}`);
+      const response = await fetch(`/api/accounts/${platform.toLowerCase()}/pages?platformUserId=${platformUserId}&refresh=true`);
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
       const data = await response.json();
       setPages(data.pages || []);
-      toast.success('Successfully refreshed pages');
+      
+      if (data.newPagesCount > 0) {
+        toast.success(`Found ${data.newPagesCount} new page(s)!`);
+      } else {
+        toast.success('Pages refreshed - no new pages found');
+      }
     } catch (error) {
       console.error('Error refreshing pages:', error);
       toast.error('Failed to refresh pages');

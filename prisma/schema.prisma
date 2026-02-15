@@ -134,6 +134,7 @@ model User {
   image         String?
   password      String?
   roleId        String             @default("PCR-0002")
+  isActive      Boolean            @default(false) // User must be approved by admin
   emailVerified DateTime?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt

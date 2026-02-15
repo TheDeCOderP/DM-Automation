@@ -3,7 +3,8 @@
 import useSWR from "swr"
 import { toast } from "sonner"
 import { useState } from "react"
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2 } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -81,6 +82,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function BrandsPage() {
+  const router = useRouter()
   const { data: brands, isLoading, error, mutate } = useSWR("/api/brands", fetcher)
   const [selectedBrand, setSelectedBrand] = useState<BrandWithSocialAccounts | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -243,15 +245,16 @@ export default function BrandsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/50">
-                  <TableHead className="font-semibold text-foreground">Brand</TableHead>
-                  <TableHead className="font-semibold text-foreground">Social Accounts</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[35%]">Brand</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[30%]">Social Accounts</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[20%]">Posts</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground w-[15%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {brands?.data?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-64">
+                    <TableCell colSpan={4} className="h-64">
                       <div className="flex flex-col items-center justify-center text-center">
                         <div className="rounded-full bg-primary/10 p-4 mb-4">
                           <Sparkles className="h-8 w-8 text-primary" />
@@ -295,7 +298,7 @@ export default function BrandsPage() {
                       <TableCell>
                         {brand.socialAccounts.length > 0 ? (
                           <div className="flex flex-wrap items-center gap-2">
-                            {brand.socialAccounts.map((account: SocialAccount) => (
+                            {brand.socialAccounts.slice(0, 5).map((account: SocialAccount) => (
                               <Badge
                                 key={account.id}
                                 variant="secondary"
@@ -304,6 +307,11 @@ export default function BrandsPage() {
                                 {getPlatformIcon(account.platform, "!h-4 !w-4")}
                               </Badge>
                             ))}
+                            {brand.socialAccounts.length > 5 && (
+                              <Badge variant="secondary" className="p-2 bg-secondary/50">
+                                +{brand.socialAccounts.length - 5}
+                              </Badge>
+                            )}
                           </div>
                         ) : (
                           <Button
@@ -316,6 +324,19 @@ export default function BrandsPage() {
                             Add Account
                           </Button>
                         )}
+                      </TableCell>
+
+                      {/* Posts */}
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/posts?brand=${brand.id}`)}
+                          className="gap-2 w-full"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View Posts
+                        </Button>
                       </TableCell>
 
                       {/* Actions */}

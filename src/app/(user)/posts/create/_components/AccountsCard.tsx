@@ -82,11 +82,7 @@ export default function AccountsCard({
   };
 
   return (
-    <>
-      <Label className=" text-sm font-medium mb-4 flex items-center gap-2">
-        <strong className="text-xl">Step 2:</strong> Select Accounts
-      </Label>
-
+    <div className="space-y-6">
       <div className="grid grid-cols-12 gap-6">
         {/* LEFT PANEL — Accounts List */}
         <Card className="col-span-4 border rounded-xl shadow-sm h-fit">
@@ -205,6 +201,6 @@ export default function AccountsCard({
           />
         </div>
       </div>
-    </>
+    </div>
   );
 }

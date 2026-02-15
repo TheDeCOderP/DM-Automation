@@ -2,7 +2,7 @@
 import { toast } from "sonner";
 import * as React from "react";
 import { useEffect, useState, useRef } from "react";
-import { Sparkles, Facebook, Instagram, Linkedin, Twitter, Youtube } from "lucide-react"
+import { Sparkles, Facebook, Instagram, Linkedin, Twitter, Youtube, FileText } from "lucide-react"
 
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -169,25 +169,29 @@ export default function CaptionsCard({ title, setTitle, selectedPlatforms = [], 
 
   return (
     <>
-      <Label className="block text-sm font-medium mb-2"> <strong className="mr-2 text-xl">Step 3:</strong>Enter/Generate Captions</Label>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 px-0 h-full">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center size-6 rounded-full bg-black text-white text-xs font-bold">
-              {selectedPlatforms.length}
-            </span>
-            <CardTitle className="text-lg font-semibold">Captions</CardTitle>
+      <Card className="border-2">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+              <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Create Captions</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? 's' : ''} selected
+            </p>
           </div>
-          <Button 
-            onClick={handleGenerateClick}
-            className="bg-purple-600 text-white hover:bg-purple-700"
-            disabled={selectedPlatforms.length === 0}
-          >
-            <Sparkles className="size-4 mr-2" />
-            Generate AI Captions
-          </Button>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 px-0">
+        </div>
+        <Button 
+          onClick={handleGenerateClick}
+          className="bg-purple-600 text-white hover:bg-purple-700 gap-2"
+          disabled={selectedPlatforms.length === 0}
+        >
+          <Sparkles className="w-4 h-4" />
+          AI Generate
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <Label htmlFor="same-caption" className="text-sm font-normal">
               Use same caption for all platforms

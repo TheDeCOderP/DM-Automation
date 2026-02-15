@@ -34,6 +34,21 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      // Check if user is active
+      if (user.email) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          include: { role: true },
+        });
+
+        if (dbUser && !dbUser.isActive) {
+          // Redirect to inactive page instead of blocking
+          return '/inactive';
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       // Add user info to token on sign in
       if (user) {
@@ -49,11 +64,17 @@ export const authOptions: AuthOptions = {
         });
 
         if (dbUser) {
+          // Check if user is still active
+          if (!dbUser.isActive) {
+            throw new Error('Your account is inactive. Please contact admin for approval.');
+          }
+
           token.id = dbUser.id;
           token.name = dbUser.name;
           token.email = dbUser.email;
           token.image = dbUser.image;
           token.role = dbUser.role.name;
+          token.isActive = dbUser.isActive;
         }
       }
 
@@ -71,6 +92,7 @@ export const authOptions: AuthOptions = {
         session.user.email = token.email as string;
         session.user.image = token.image as string | null;
         session.user.role = token.role as string;
+        session.user.isActive = token.isActive as boolean;
       }
       return session;
     },
@@ -151,6 +173,11 @@ async function handleLogin(credentials: Record<"email" | "password", string> | u
 
   if (!user) {
     throw new Error('No user found with this email');
+  }
+
+  // Check if user is active
+  if (!user.isActive) {
+    throw new Error('Your account is inactive. Please contact admin for approval.');
   }
 
   if (!user.password) {

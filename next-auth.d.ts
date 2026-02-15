@@ -10,6 +10,7 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       role?: string | "user";
+      isActive?: boolean;
     } & DefaultSession["user"];
   }
 
@@ -19,6 +20,7 @@ declare module "next-auth" {
     email?: string | null;
     image?: string | null;
     role?: string | "USER";
+    isActive?: boolean;
   }
 }
 
@@ -29,5 +31,6 @@ declare module "next-auth/jwt" {
     email?: string | null;
     image?: string | null;
     role?: string | "USER";
+    isActive?: boolean;
   }
 }

@@ -37,7 +37,27 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
         if (!name) {
             return NextResponse.json(
-                { error: "Name and Website are required fields." },
+                { error: "Name is required." },
+                { status: 400 }
+            );
+        }
+
+        // Check if another brand with the same name exists (excluding current brand)
+        const existingBrand = await prisma.brand.findFirst({
+            where: {
+                name: {
+                    equals: name,
+                    mode: 'insensitive' // Case-insensitive comparison
+                },
+                NOT: {
+                    id: id as string
+                }
+            }
+        });
+
+        if (existingBrand) {
+            return NextResponse.json(
+                { error: `Brand name "${name}" already exists. Please choose a different name.` },
                 { status: 400 }
             );
         }
@@ -56,7 +76,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
                 name,
                 website,
                 description,
-                logo: logoUrl,
+                ...(logoUrl && { logo: logoUrl }),
                 updatedAt: new Date(),
             },
         });

@@ -186,8 +186,9 @@ export default function BannerForm({ editingBanner, onSuccess, onCancel }: Banne
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Title *</label>
+          <label htmlFor="banner-title" className="block text-sm font-medium mb-1">Title *</label>
           <input
+            id="banner-title"
             type="text"
             required
             value={formData.title}
@@ -198,8 +199,9 @@ export default function BannerForm({ editingBanner, onSuccess, onCancel }: Banne
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Type *</label>
+          <label htmlFor="banner-type" className="block text-sm font-medium mb-1">Type *</label>
           <select
+            id="banner-type"
             required
             value={formData.type}
             onChange={(e) => {
@@ -220,10 +222,11 @@ export default function BannerForm({ editingBanner, onSuccess, onCancel }: Banne
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label htmlFor="banner-image" className="block text-sm font-medium mb-1">
             Banner Image * {!editingBanner && '(Max 10MB)'}
           </label>
           <input
+            id="banner-image"
             type="file"
             accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
             required={!editingBanner}

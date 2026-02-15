@@ -122,6 +122,23 @@ export async function POST(req: NextRequest) {
         const description = formData.get('description') as string
         const website = formData.get('website') as string
 
+        // Check if brand name already exists
+        const existingBrand = await prisma.brand.findFirst({
+            where: {
+                name: {
+                    equals: name,
+                    mode: 'insensitive' // Case-insensitive comparison
+                }
+            }
+        });
+
+        if (existingBrand) {
+            return NextResponse.json(
+                { error: `Brand name "${name}" already exists. Please choose a different name.` },
+                { status: 400 }
+            );
+        }
+
         let logoUrl = null
         if (file) {
             // Upload to Local CDN (with Cloudinary fallback)

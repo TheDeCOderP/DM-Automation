@@ -143,68 +143,58 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
   const zoomSliderValue = zoomLevel * 50;
 
   return (
-    <>
-      <Label className="block text-sm font-medium mb-2">
-        <strong className="mr-2 text-xl">Step 4:</strong> Upload Media
-      </Label>
-      <Card className="w-full max-w-4xl mx-auto">
-        {/* Header - Responsive */}
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 border-b gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <span className="bg-gray-100 dark:bg-gray-800 rounded-full w-6 h-6 flex items-center justify-center text-xs">
-                1
-              </span>
-              Media
-            </CardTitle>
+    <Card className="border-2">
+      {/* Header */}
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+            <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <CardTitle className="text-xl">Upload Media</CardTitle>
             {uploadedFiles.length > 0 && selectedFile && (
-              <>
-                <CardDescription className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
-                  {selectedFile.type.startsWith("video/") ? (
-                    <FileVideo className="w-3 h-3 sm:w-4 sm:h-4" />
-                  ) : (
-                    <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                  )}
-                  {getDimensions(selectedFile.file)}
-                </CardDescription>
-                <CardDescription className="text-xs sm:text-sm text-gray-600">
-                  {formatFileSize(selectedFile.file.size)}
-                </CardDescription>
-              </>
+              <CardDescription className="flex items-center gap-2 text-sm mt-1">
+                {selectedFile.type.startsWith("video/") ? (
+                  <FileVideo className="w-4 h-4" />
+                ) : (
+                  <ImageIcon className="w-4 h-4" />
+                )}
+                {getDimensions(selectedFile.file)} • {formatFileSize(selectedFile.file.size)}
+              </CardDescription>
             )}
           </div>
-          {uploadedFiles.length > 0 && (
-            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-              <button
-                onClick={handleZoomOut}
-                className="cursor-pointer p-1 hover:bg-gray-100 rounded transition-colors"
-                disabled={zoomLevel <= 0.1}
-              >
-                <ZoomOut className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-              </button>
-              <Slider
-                max={200}
-                min={5}
-                step={5}
-                className="w-16 sm:w-[100px]"
-                onValueChange={(value) => setZoomLevel(value[0] / 50)}
-                value={[zoomSliderValue]}
-              />
-              <button
-                onClick={handleZoomIn}
-                className="cursor-pointer p-1 hover:bg-gray-100 rounded transition-colors"
-                disabled={zoomLevel >= 4}
-              >
-                <ZoomIn className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-              </button>
-            </div>
-          )}
-          {uploadedFiles.length === 0 && (
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-              <Info className="w-3 h-3 sm:w-4 sm:h-4" />
-            </div>
-          )}
-        </CardHeader>
+        </div>
+        {uploadedFiles.length > 0 && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleZoomOut}
+              className="p-2 hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
+              disabled={zoomLevel <= 0.1}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <Slider
+              max={200}
+              min={5}
+              step={5}
+              className="w-24"
+              onValueChange={(value) => setZoomLevel(value[0] / 50)}
+              value={[zoomSliderValue]}
+            />
+            <button
+              onClick={handleZoomIn}
+              className="p-2 hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
+              disabled={zoomLevel >= 4}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </CardHeader>
 
         {/* Content - Responsive */}
         <CardContent className="p-0">
@@ -329,6 +319,5 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
           </div>
         </CardFooter>
       </Card>
-    </>
   );
 }
