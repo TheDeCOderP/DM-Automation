@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
                     include: {
                         socialAccounts: {
                             where: {
+                                connectedByUserId: token.id, // Only show accounts connected by this user
                                 socialAccount: {
                                     platform: {
                                         not: {
@@ -29,6 +30,13 @@ export async function GET(req: NextRequest) {
                                 },
                             },
                             include: {
+                                connectedBy: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        email: true
+                                    }
+                                },
                                 socialAccount: {
                                     include: {
                                         pages: true
@@ -83,6 +91,7 @@ export async function GET(req: NextRequest) {
             // Flatten the socialAccounts structure
             socialAccounts: ub.brand.socialAccounts.map((sa: any) => ({
                 ...sa.socialAccount,
+                connectedBy: sa.connectedBy // Add who connected this account
             })),
             // Include user's role for this specific brand
             userRole: ub.role.name,
@@ -127,7 +136,7 @@ export async function POST(req: NextRequest) {
             where: {
                 name: {
                     equals: name,
-                    mode: 'insensitive' // Case-insensitive comparison
+                    
                 }
             }
         });

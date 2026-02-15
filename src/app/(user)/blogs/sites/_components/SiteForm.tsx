@@ -17,9 +17,11 @@ const DEFAULT_FIELD_MAPPINGS = {
   WORDPRESS: {
     title: 'title',
     content: 'content',
+    excerpt: 'excerpt',
     banner: 'featured_media',
     slug: 'slug',
-    tags: 'tags'
+    tags: 'tags',
+    status: 'status'
   },
   HASHNODE: {
     title: 'title',
@@ -36,6 +38,7 @@ const DEFAULT_FIELD_MAPPINGS = {
   CUSTOM_API: {
     title: 'title',
     content: 'content',
+    excerpt: 'excerpt',
     banner: 'banner_image',
     slug: 'slug',
     tags: 'tags'
@@ -96,7 +99,7 @@ export default function SiteForm({
     apiKey: '',
     secretKey: '',
     username: '',
-    authType: 'API_KEY',
+    authType: 'BASIC_AUTH', // WordPress uses Basic Auth by default
     contentType: 'application/json',
     brandId: '',
     fieldMapping: JSON.stringify(DEFAULT_FIELD_MAPPINGS.WORDPRESS, null, 2)
@@ -137,7 +140,7 @@ export default function SiteForm({
         apiKey: '',
         secretKey: '',
         username: '',
-        authType: 'API_KEY',
+        authType: 'BASIC_AUTH',
         contentType: 'application/json',
         brandId: '',
         fieldMapping: JSON.stringify(DEFAULT_FIELD_MAPPINGS.WORDPRESS, null, 2)
@@ -151,9 +154,16 @@ export default function SiteForm({
   }, [editingSite, open]);
 
   const handlePlatformChange = (platform: string) => {
+    // Set default auth type based on platform
+    let defaultAuthType = 'API_KEY';
+    if (platform === 'WORDPRESS') {
+      defaultAuthType = 'BASIC_AUTH';
+    }
+    
     setFormData(prev => ({
       ...prev,
       platform,
+      authType: defaultAuthType,
       fieldMapping: JSON.stringify(DEFAULT_FIELD_MAPPINGS[platform as keyof typeof DEFAULT_FIELD_MAPPINGS] || DEFAULT_FIELD_MAPPINGS.CUSTOM_API, null, 2)
     }));
   };
@@ -207,7 +217,7 @@ export default function SiteForm({
           apiKey: '',
           secretKey: '',
           username: '',
-          authType: 'API_KEY',
+          authType: 'BASIC_AUTH',
           contentType: 'application/json',
           brandId: '',
           fieldMapping: JSON.stringify(DEFAULT_FIELD_MAPPINGS.WORDPRESS, null, 2)
@@ -218,28 +228,96 @@ export default function SiteForm({
     }
   };
 
+  // Get platform-specific help text
+  const getPlatformHelp = () => {
+    switch (formData.platform) {
+      case 'WORDPRESS':
+        return {
+          baseUrlPlaceholder: 'https://yourdomain.com',
+          baseUrlHelp: 'Your WordPress site URL (without trailing slash)',
+          apiEndpointPlaceholder: '/wp-json/wp/v2/posts',
+          apiEndpointHelp: 'Standard WordPress REST API endpoint',
+          authLabel: 'WordPress Username',
+          authPlaceholder: 'admin',
+          authHelp: 'Your WordPress admin username',
+          tokenLabel: 'Application Password',
+          tokenPlaceholder: 'xxxx xxxx xxxx xxxx xxxx xxxx',
+          tokenHelp: 'Generate this from WordPress Users → Profile → Application Passwords',
+          defaultAuthType: 'BASIC_AUTH',
+          showAuthType: false, // Hide auth type selector for WordPress
+        };
+      case 'HASHNODE':
+        return {
+          baseUrlPlaceholder: 'https://api.hashnode.com',
+          baseUrlHelp: 'Hashnode API URL',
+          apiEndpointPlaceholder: '/graphql',
+          apiEndpointHelp: 'Hashnode GraphQL endpoint',
+          authLabel: 'Publication ID',
+          authPlaceholder: 'Your publication ID',
+          authHelp: 'Find this in your Hashnode dashboard',
+          tokenLabel: 'API Token',
+          tokenPlaceholder: 'Your Hashnode API token',
+          tokenHelp: 'Generate from Hashnode Settings → Developer',
+          defaultAuthType: 'API_KEY',
+          showAuthType: false,
+        };
+      case 'DEV_TO':
+        return {
+          baseUrlPlaceholder: 'https://dev.to',
+          baseUrlHelp: 'Dev.to API URL',
+          apiEndpointPlaceholder: '/api/articles',
+          apiEndpointHelp: 'Dev.to articles endpoint',
+          authLabel: 'Username (Optional)',
+          authPlaceholder: 'your-username',
+          authHelp: 'Your Dev.to username',
+          tokenLabel: 'API Key',
+          tokenPlaceholder: 'Your Dev.to API key',
+          tokenHelp: 'Generate from Dev.to Settings → Extensions → DEV API Keys',
+          defaultAuthType: 'API_KEY',
+          showAuthType: false,
+        };
+      default:
+        return {
+          baseUrlPlaceholder: 'https://api.example.com',
+          baseUrlHelp: 'Base URL of your API',
+          apiEndpointPlaceholder: '/posts',
+          apiEndpointHelp: 'API endpoint for creating posts',
+          authLabel: 'Username',
+          authPlaceholder: 'username',
+          authHelp: 'Username if using Basic Auth',
+          tokenLabel: 'API Key / Token',
+          tokenPlaceholder: 'Your API key or token',
+          tokenHelp: 'Authentication token for your API',
+          defaultAuthType: 'API_KEY',
+          showAuthType: true,
+        };
+    }
+  };
+
+  const platformHelp = getPlatformHelp();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
         <DialogHeader>
           <DialogTitle>{editingSite ? 'Edit External Blog Site' : 'Add External Blog Site'}</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Basic Information */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Site Name *</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-                placeholder="My WordPress Blog"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Basic Information */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Site Name *</Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+              placeholder="My WordPress Blog"
+            />
+          </div>
 
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="platform">Platform *</Label>
               <Select
@@ -276,52 +354,76 @@ export default function SiteForm({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Site Configuration */}
+          <div className="space-y-2">
+            <Label htmlFor="baseUrl">Site URL *</Label>
+            <Input
+              id="baseUrl"
+              name="baseUrl"
+              type="url"
+              value={formData.baseUrl}
+              onChange={handleInputChange}
+              required
+              placeholder={platformHelp.baseUrlPlaceholder}
+            />
+            <p className="text-xs text-muted-foreground">{platformHelp.baseUrlHelp}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="apiEndpoint">API Endpoint *</Label>
+            <Input
+              id="apiEndpoint"
+              name="apiEndpoint"
+              value={formData.apiEndpoint}
+              onChange={handleInputChange}
+              required
+              placeholder={platformHelp.apiEndpointPlaceholder}
+            />
+            <p className="text-xs text-muted-foreground">{platformHelp.apiEndpointHelp}</p>
+          </div>
+
+          {/* Authentication Section */}
+          <div className="border-t pt-4 space-y-4">
+            <h3 className="font-medium">Authentication</h3>
+            
+            {platformHelp.showAuthType && (
+              <div className="space-y-2">
+                <Label htmlFor="authType">Authentication Type *</Label>
+                <Select
+                  value={formData.authType}
+                  onValueChange={(value) => handleSelectChange('authType', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="API_KEY">API Key</SelectItem>
+                    <SelectItem value="BASIC_AUTH">Basic Auth</SelectItem>
+                    <SelectItem value="OAUTH2">OAuth2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {(formData.authType === 'BASIC_AUTH' || formData.platform === 'WORDPRESS') && (
+              <div className="space-y-2">
+                <Label htmlFor="username">{platformHelp.authLabel} *</Label>
+                <Input
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  required={formData.platform === 'WORDPRESS'}
+                  placeholder={platformHelp.authPlaceholder}
+                />
+                <p className="text-xs text-muted-foreground">{platformHelp.authHelp}</p>
+              </div>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="authType">Authentication Type *</Label>
-              <Select
-                value={formData.authType}
-                onValueChange={(value) => handleSelectChange('authType', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="API_KEY">API Key</SelectItem>
-                  <SelectItem value="BASIC_AUTH">Basic Auth</SelectItem>
-                  <SelectItem value="OAUTH2">OAuth2</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="baseUrl">Base URL *</Label>
-              <Input
-                id="baseUrl"
-                name="baseUrl"
-                type="url"
-                value={formData.baseUrl}
-                onChange={handleInputChange}
-                required
-                placeholder="https://myblog.com"
-              />
-            </div>
-
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="apiEndpoint">API Endpoint *</Label>
-              <Input
-                id="apiEndpoint"
-                name="apiEndpoint"
-                value={formData.apiEndpoint}
-                onChange={handleInputChange}
-                required
-                placeholder="/wp-json/wp/v2/posts"
-              />
-            </div>
-
-            {/* API Key with visibility toggle */}
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="apiKey">API Key / Token *</Label>
+              <Label htmlFor="apiKey">{platformHelp.tokenLabel} *</Label>
               <div className="relative">
                 <Input
                   id="apiKey"
@@ -330,7 +432,7 @@ export default function SiteForm({
                   value={formData.apiKey}
                   onChange={handleInputChange}
                   required
-                  placeholder="Your API key or token"
+                  placeholder={platformHelp.tokenPlaceholder}
                   className="pr-10"
                 />
                 <Button
@@ -347,83 +449,23 @@ export default function SiteForm({
                   )}
                 </Button>
               </div>
-            </div>
-
-            {formData.authType === 'BASIC_AUTH' && (
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  placeholder="Username for basic auth"
-                />
-              </div>
-            )}
-
-            {/* Secret Key with visibility toggle */}
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="secretKey">Secret Key (Optional)</Label>
-              <div className="relative">
-                <Input
-                  id="secretKey"
-                  name="secretKey"
-                  type={showSecretKey ? "text" : "password"}
-                  value={formData.secretKey}
-                  onChange={handleInputChange}
-                  placeholder="Your secret key if required"
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowSecretKey(!showSecretKey)}
-                >
-                  {showSecretKey ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contentType">Content Type</Label>
-              <Select
-                value={formData.contentType}
-                onValueChange={(value) => handleSelectChange('contentType', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="application/json">application/json</SelectItem>
-                  <SelectItem value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</SelectItem>
-                  <SelectItem value="multipart/form-data">multipart/form-data</SelectItem>
-                </SelectContent>
-              </Select>
+              <p className="text-xs text-muted-foreground">{platformHelp.tokenHelp}</p>
             </div>
           </div>
 
-          {/* Collapsible Field Mapping Section */}
+          {/* Advanced Settings - Collapsible */}
           <Collapsible open={showFieldMapping} onOpenChange={setShowFieldMapping}>
-            <div className="space-y-4 border rounded-lg p-4">
+            <div className="border rounded-lg">
               <CollapsibleTrigger asChild>
                 <Button 
                   type="button" 
                   variant="ghost" 
-                  className="flex items-center justify-between w-full hover:bg-transparent"
+                  className="flex items-center justify-between w-full p-4 hover:bg-transparent"
                 >
-                  <div className="flex-1 text-left min-w-0">
-                    <Label className="text-base font-medium block truncate">
-                      Field Mapping Configuration
-                    </Label>
-                    <p className="text-sm text-muted-foreground mt-1 break-words whitespace-normal">
-                      Configure how your blog fields map to the external API (Advanced)
+                  <div className="flex-1 text-left">
+                    <p className="font-medium">Advanced Settings</p>
+                    <p className="text-xs text-muted-foreground">
+                      Field mapping, content type, and other options
                     </p>
                   </div>
                   {showFieldMapping ? (
@@ -434,19 +476,67 @@ export default function SiteForm({
                 </Button>
               </CollapsibleTrigger>
               
-              <CollapsibleContent className="space-y-4 pt-4">
-                <Textarea
-                  id="fieldMapping"
-                  name="fieldMapping"
-                  value={formData.fieldMapping}
-                  onChange={handleInputChange}
-                  rows={8}
-                  className="font-mono text-sm"
-                  placeholder='{"title": "title", "content": "content", "banner": "banner_image"}'
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use JSON format to map your internal field names to external API field names.
-                </p>
+              <CollapsibleContent className="px-4 pb-4 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contentType">Content Type</Label>
+                  <Select
+                    value={formData.contentType}
+                    onValueChange={(value) => handleSelectChange('contentType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="application/json">application/json</SelectItem>
+                      <SelectItem value="application/x-www-form-urlencoded">application/x-www-form-urlencoded</SelectItem>
+                      <SelectItem value="multipart/form-data">multipart/form-data</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fieldMapping">Field Mapping (JSON)</Label>
+                  <Textarea
+                    id="fieldMapping"
+                    name="fieldMapping"
+                    value={formData.fieldMapping}
+                    onChange={handleInputChange}
+                    rows={6}
+                    className="font-mono text-xs"
+                    placeholder='{"title": "title", "content": "content"}'
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Map your blog fields to the external API fields
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="secretKey">Secret Key (Optional)</Label>
+                  <div className="relative">
+                    <Input
+                      id="secretKey"
+                      name="secretKey"
+                      type={showSecretKey ? "text" : "password"}
+                      value={formData.secretKey}
+                      onChange={handleInputChange}
+                      placeholder="Additional secret key if required"
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                    >
+                      {showSecretKey ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </CollapsibleContent>
             </div>
           </Collapsible>

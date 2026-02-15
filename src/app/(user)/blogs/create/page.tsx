@@ -14,11 +14,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { 
-  SaveIcon, 
-  EyeIcon,
-  FileTextIcon,
-  GlobeIcon,
-  AlertCircleIcon
+  Save, 
+  Eye,
+  FileText,
+  Globe,
+  AlertCircle,
+  Image as ImageIcon,
+  Tag,
+  Settings,
+  Sparkles,
+  X,
+  HelpCircle,
+  ArrowLeft,
+  Send
 } from 'lucide-react';
 
 interface Brand {
@@ -35,6 +43,7 @@ import ImageUpload from './_components/ImageUpload';
 import CreateBlogSkeleton from './_components/CreateBlogSkeleton';
 import ExternalSitesSection from './_components/ExternalSIteSection';
 import AIGenerator from '../../posts/create/_components/AIGenerator';
+import ContentEditor from './_components/ContentEditor';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -219,25 +228,52 @@ function CreateBlogForm({
   }, [bannerPreview, featuredPreview]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-5xl mx-auto px-4 py-8">
-        <div className="mb-6 space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Create Blog Post</h1>
-          <p className="text-muted-foreground">
-            Create and publish your blog content across multiple platforms
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container max-w-7xl mx-auto px-4 py-4">
+        {/* Header */}
+        <div className="mb-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => hasUnsavedChanges ? setShowCancelDialog(true) : onCancel()}
+            className="mb-4 -ml-2"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Blogs
+          </Button>
+          
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                <FileText className="w-8 h-8 text-primary" />
+                Create Blog Post
+              </h1>
+              <p className="text-muted-foreground">
+                Create and publish your blog content across multiple platforms
+              </p>
+            </div>
+            
+            {hasUnsavedChanges && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-500" />
+                <span className="text-sm text-amber-700 dark:text-amber-400">Unsaved changes</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="content" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="content">
-                <FileTextIcon className="w-4 h-4 mr-2" />
-                Content & Publishing
+            <TabsList className="grid w-full grid-cols-2 h-auto p-1">
+              <TabsTrigger value="content" className="gap-2 py-2.5">
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Content & Publishing</span>
+                <span className="sm:hidden">Content</span>
               </TabsTrigger>
-              <TabsTrigger value="seo">
-                <GlobeIcon className="w-4 h-4 mr-2" />
-                SEO & Settings
+              <TabsTrigger value="seo" className="gap-2 py-2.5">
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">SEO & Settings</span>
+                <span className="sm:hidden">SEO</span>
               </TabsTrigger>
             </TabsList>
 
@@ -245,14 +281,17 @@ function CreateBlogForm({
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content Column */}
                 <div className="lg:col-span-2 space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Blog Content</CardTitle>
-                      <CardDescription>Create your main blog content</CardDescription>
+                  <Card className="border-2">
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        Blog Content
+                      </CardTitle>
+                      <CardDescription>Write your main blog content</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <div className="space-y-2">
-                        <Label htmlFor="title">
+                        <Label htmlFor="title" className="text-base flex items-center gap-2">
                           Title <span className="text-destructive">*</span>
                         </Label>
                         <Input
@@ -260,54 +299,63 @@ function CreateBlogForm({
                           name="title"
                           value={formData.title}
                           onChange={handleInputChange}
-                          placeholder="Enter a compelling blog title"
+                          placeholder="Enter a compelling blog title..."
                           required
+                          className="text-lg h-12"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="excerpt">Excerpt</Label>
+                        <Label htmlFor="excerpt" className="text-base">Excerpt</Label>
                         <Textarea
                           id="excerpt"
                           name="excerpt"
                           value={formData.excerpt}
                           onChange={handleInputChange}
-                          placeholder="Brief summary of your blog post"
+                          placeholder="Brief summary of your blog post (optional)"
                           rows={3}
+                          className="resize-none"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          A short summary that appears in previews
+                        </p>
                       </div>
 
                       <Separator />
 
-                      <div className="space-y-2">
-                        <Label htmlFor="content">
-                          Content <span className="text-destructive">*</span>
-                        </Label>
-                        <Textarea
-                          id="content"
-                          name="content"
-                          value={formData.content}
-                          onChange={handleInputChange}
-                          placeholder="Write your blog content here... (Markdown supported)"
-                          rows={20}
-                          className="min-h-[400px] font-mono"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Markdown formatting is supported
-                        </p>
-                      </div>
+                      <ContentEditor
+                        value={formData.content}
+                        onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+                        placeholder="Write your blog content here..."
+                      />
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Media</CardTitle>
-                      <CardDescription>Add images to your blog post</CardDescription>
+                  <Card className="border-2">
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        <ImageIcon className="w-5 h-5 text-primary" />
+                        Media
+                      </CardTitle>
+                      <CardDescription>Add images to enhance your blog post</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="space-y-2">
-                        <Label>Banner Image</Label>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base">Banner Image</Label>
+                          {bannerPreview && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={removeBannerImage}
+                              className="h-8 text-destructive hover:text-destructive"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Remove
+                            </Button>
+                          )}
+                        </div>
                         <ImageUpload
                           label=""
                           preview={bannerPreview}
@@ -316,8 +364,9 @@ function CreateBlogForm({
                           isDragActive={false}
                           helpText="Recommended: 1200x600px • Max: 5MB"
                         />
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-sm text-muted-foreground">Or generate with AI:</span>
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-purple-500" />
+                          <span className="text-sm text-muted-foreground">Generate with AI:</span>
                           <AIGenerator onFileSelect={(file) => {
                             setBannerImage(file);
                             setBannerPreview(URL.createObjectURL(file));
@@ -325,8 +374,24 @@ function CreateBlogForm({
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Featured Image</Label>
+                      <Separator />
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base">Featured Image</Label>
+                          {featuredPreview && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={removeFeaturedImage}
+                              className="h-8 text-destructive hover:text-destructive"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Remove
+                            </Button>
+                          )}
+                        </div>
                         <ImageUpload
                           label=""
                           preview={featuredPreview}
@@ -335,8 +400,9 @@ function CreateBlogForm({
                           isDragActive={false}
                           helpText="Used for social sharing • Max: 5MB"
                         />
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-sm text-muted-foreground">Or generate with AI:</span>
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-purple-500" />
+                          <span className="text-sm text-muted-foreground">Generate with AI:</span>
                           <AIGenerator onFileSelect={(file) => {
                             setFeaturedImage(file);
                             setFeaturedPreview(URL.createObjectURL(file));
@@ -345,7 +411,7 @@ function CreateBlogForm({
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="imageAlt">Image Alt Text</Label>
+                        <Label htmlFor="imageAlt" className="text-base">Image Alt Text</Label>
                         <Input
                           id="imageAlt"
                           name="imageAlt"
@@ -353,6 +419,9 @@ function CreateBlogForm({
                           onChange={handleInputChange}
                           placeholder="Describe the image for accessibility"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Helps screen readers and improves SEO
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -360,9 +429,13 @@ function CreateBlogForm({
 
                 {/* Sidebar Column */}
                 <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Publishing</CardTitle>
+                  <Card className="border-2 border-primary/20">
+                    <CardHeader className="space-y-1 pb-4">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Send className="w-5 h-5 text-primary" />
+                        Publishing
+                      </CardTitle>
+                      <CardDescription>Choose where to publish</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <ExternalSitesSection
@@ -372,21 +445,26 @@ function CreateBlogForm({
                       />
 
                       {formData.externalSiteIds.length === 0 && (
-                        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                          <AlertCircleIcon className="w-4 h-4 text-amber-600" />
-                          <p className="text-xs text-amber-700">
-                            Select at least one site to publish
+                        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs text-amber-700 dark:text-amber-400">
+                            Select at least one site to enable publishing
                           </p>
                         </div>
                       )}
 
                       <Separator />
 
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="published" className="text-sm font-medium">
-                            Publish immediately
-                          </Label>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="published" className="text-sm font-medium cursor-pointer">
+                              Publish immediately
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Post will go live right away
+                            </p>
+                          </div>
                           <Switch
                             id="published"
                             checked={formData.published}
@@ -395,10 +473,15 @@ function CreateBlogForm({
                           />
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="featured" className="text-sm font-medium">
-                            Featured post
-                          </Label>
+                        <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="featured" className="text-sm font-medium cursor-pointer">
+                              Featured post
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Highlight this post
+                            </p>
+                          </div>
                           <Switch
                             id="featured"
                             checked={formData.featured}
@@ -406,20 +489,16 @@ function CreateBlogForm({
                           />
                         </div>
                       </div>
-
-                      {formData.published && formData.externalSiteIds.length === 0 && (
-                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                          <p className="text-xs text-destructive">
-                            Cannot publish without selecting at least one external site
-                          </p>
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Tags</CardTitle>
+                  <Card className="border-2">
+                    <CardHeader className="space-y-1 pb-4">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Tag className="w-5 h-5 text-primary" />
+                        Tags
+                      </CardTitle>
+                      <CardDescription>Add relevant tags</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <TagsInput
@@ -437,131 +516,154 @@ function CreateBlogForm({
             </TabsContent>
 
             <TabsContent value="seo" className="space-y-6 mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>SEO Optimization</CardTitle>
+              <Card className="border-2">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-primary" />
+                    SEO Optimization
+                  </CardTitle>
                   <CardDescription>Optimize your blog post for search engines</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="seoTitle">SEO Title</Label>
+                    <Label htmlFor="seoTitle" className="text-base">SEO Title</Label>
                     <Input
                       id="seoTitle"
                       name="seoTitle"
                       value={formData.seoTitle}
                       onChange={handleInputChange}
                       placeholder="Custom title for search engines"
+                      className="h-11"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Leave blank to use main title
+                      Leave blank to use main title • Recommended: 50-60 characters
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="seoDescription">Meta Description</Label>
+                    <Label htmlFor="seoDescription" className="text-base">Meta Description</Label>
                     <Textarea
                       id="seoDescription"
                       name="seoDescription"
                       value={formData.seoDescription}
                       onChange={handleInputChange}
-                      placeholder="Brief description for search results (150-160 characters)"
+                      placeholder="Brief description for search results"
                       rows={3}
+                      className="resize-none"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Recommended: 150-160 characters
+                    </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="seoKeywords">Keywords</Label>
+                    <Label htmlFor="seoKeywords" className="text-base">Keywords</Label>
                     <Input
                       id="seoKeywords"
                       name="seoKeywords"
                       value={formData.seoKeywords}
                       onChange={handleInputChange}
-                      placeholder="Comma-separated keywords"
+                      placeholder="keyword1, keyword2, keyword3"
+                      className="h-11"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated keywords for SEO
+                    </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="canonicalUrl">Canonical URL</Label>
+                    <Label htmlFor="canonicalUrl" className="text-base">Canonical URL</Label>
                     <Input
                       id="canonicalUrl"
                       name="canonicalUrl"
                       value={formData.canonicalUrl}
                       onChange={handleInputChange}
                       placeholder="https://example.com/original-post"
+                      className="h-11"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Specify if this content is published elsewhere
+                      Specify if this content is published elsewhere first
                     </p>
                   </div>
 
                   <Separator />
 
-                  <FAQManager
-                    faqs={formData.faqs}
-                    onAdd={handleFAQAdd}
-                    onRemove={handleFAQRemove}
-                    onUpdate={handleFAQUpdate}
-                  />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <HelpCircle className="w-5 h-5 text-primary" />
+                      <Label className="text-base">Frequently Asked Questions</Label>
+                    </div>
+                    <FAQManager
+                      faqs={formData.faqs}
+                      onAdd={handleFAQAdd}
+                      onRemove={handleFAQRemove}
+                      onUpdate={handleFAQUpdate}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-3 sm:justify-between items-center">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {/* Action Bar */}
+          <Card className="border-2 sticky bottom-0 shadow-lg">
+            <CardContent className="py-2">
+              <div className="flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center">
+                <div className="flex items-center gap-2 text-sm">
                   {formData.externalSiteIds.length === 0 ? (
                     <>
-                      <AlertCircleIcon className="w-4 h-4 text-amber-500" />
-                      <span>Select at least one site to publish</span>
+                      <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <span className="text-muted-foreground">Select at least one site to publish</span>
                     </>
                   ) : (
                     <>
-                      <GlobeIcon className="w-4 h-4 text-green-500" />
-                      <span>Ready to publish to {formData.externalSiteIds.length} site(s)</span>
+                      <Globe className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span className="text-muted-foreground">
+                        Ready to publish to <span className="font-medium text-foreground">{formData.externalSiteIds.length}</span> site(s)
+                      </span>
                     </>
                   )}
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-wrap gap-2 sm:gap-3">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => hasUnsavedChanges ? setShowCancelDialog(true) : onCancel()}
                     disabled={loading}
                   >
+                    <X className="w-4 h-4 mr-2" />
                     Cancel
                   </Button>
                   
-                  <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={loading || !formData.title || !formData.content}
-                    >
-                      <EyeIcon className="w-4 h-4 mr-2" />
-                      Preview
-                    </Button>
-                    
-                    <Button
-                      type="submit"
-                      disabled={loading || !formData.title || !formData.content || !canPublish}
-                    >
-                      <SaveIcon className="w-4 h-4 mr-2" />
-                      {loading ? 'Creating...' : 'Create & Publish'}
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={loading || !formData.title || !formData.content}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                  
+                  <Button
+                    type="submit"
+                    disabled={loading || !formData.title || !formData.content || !canPublish}
+                    className="min-w-[140px]"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Create & Publish
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
-              
-              {hasUnsavedChanges && (
-                <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
-                  <p className="text-sm text-muted-foreground">
-                    You have unsaved changes
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </form>
@@ -569,9 +671,12 @@ function CreateBlogForm({
         <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Discard Changes?</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-500" />
+                Discard Changes?
+              </DialogTitle>
               <DialogDescription>
-                You have unsaved changes. Are you sure you want to leave?
+                You have unsaved changes. Are you sure you want to leave? All your work will be lost.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -579,6 +684,7 @@ function CreateBlogForm({
                 Continue Editing
               </Button>
               <Button variant="destructive" onClick={() => { setShowCancelDialog(false); onCancel(); }}>
+                <X className="w-4 h-4 mr-2" />
                 Discard Changes
               </Button>
             </DialogFooter>
@@ -595,7 +701,6 @@ export default function CreateBlogPage() {
   const { data: brandsData, isLoading: brandsLoading } = useSWR('/api/brands', fetcher);
   const { data: sitesData, isLoading: sitesLoading } = useSWR('/api/blogs/sites', fetcher);
 
-  // Updated to match the new data structure
   const brands: Brand[] = brandsData?.data || [];
   const externalSites: ExternalBlogSite[] = sitesData?.externalSites || [];
   
@@ -612,7 +717,6 @@ export default function CreateBlogPage() {
       success: async (response) => {
         if (response.ok) {
           const data = await response.json();
-          // Navigate to blog list or blog detail page after successful creation
           router.push('/blogs');
           return data.message || 'Blog post created successfully!';
         } else {

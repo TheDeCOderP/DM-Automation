@@ -152,6 +152,7 @@ model User {
   AuditLog      AuditLog[]
   blogs         Blog[]
   socialAccounts UserSocialAccount[]
+  connectedSocialAccountsToBrands SocialAccountBrand[] @relation("ConnectedSocialAccounts")
   
   // Add these two relations for BrandInvitation
   sentBrandInvitations BrandInvitation[] @relation("SentBrandInvitations")
@@ -235,8 +236,13 @@ model SocialAccountBrand {
   brand           Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
   socialAccountId String
   socialAccount   SocialAccount  @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  connectedByUserId String?
+  connectedBy     User?          @relation(fields: [connectedByUserId], references: [id], onDelete: Cascade, name: "ConnectedSocialAccounts")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
   
   @@unique([brandId, socialAccountId])
+  @@index([connectedByUserId])
 }
 
 model SocialAccountPage {

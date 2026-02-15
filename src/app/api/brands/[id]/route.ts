@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
             where: {
                 name: {
                     equals: name,
-                    mode: 'insensitive' // Case-insensitive comparison
+                    
                 },
                 NOT: {
                     id: id as string

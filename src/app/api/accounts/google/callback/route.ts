@@ -108,10 +108,13 @@ export async function GET(request: NextRequest) {
             socialAccountId: account.id,
           },
         },
-        update: {},
+        update: {
+          connectedByUserId: token.id
+        },
         create: {
           brandId: brand.id,
           socialAccountId: account.id,
+          connectedByUserId: token.id
         },
       });
 

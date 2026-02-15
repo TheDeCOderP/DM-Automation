@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
           include: {
             socialAccounts: {
               where: {
+                connectedByUserId: token.id, // Only show accounts connected by this user
                 socialAccount: {
                   platform: {
                     not: {
@@ -28,6 +29,13 @@ export async function GET(req: NextRequest) {
                 },
               },
               include: {
+                connectedBy: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true
+                  }
+                },
                 socialAccount: {
                   include: {
                     pages: true,
@@ -51,6 +59,7 @@ export async function GET(req: NextRequest) {
         ...sa.socialAccount,
         brandId: ub.brand.id,
         brandName: ub.brand.name,
+        connectedBy: sa.connectedBy, // Add who connected this account
         // Add user info from the junction table
         userAccess: sa.socialAccount.users.find(u => u.userId === token.id)
       }))
@@ -173,12 +182,23 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
-    // Check if the social account is connected to any brands
+    // Check if the social account is connected to any brands by this user
     const remainingBrands = await prisma.socialAccountBrand.count({
       where: {
         socialAccountId: userSocialAccount.socialAccountId,
+        connectedByUserId: token.id
       },
     });
+
+    // If this user has no more brand connections, remove the brand associations
+    if (remainingBrands > 0) {
+      await prisma.socialAccountBrand.deleteMany({
+        where: {
+          socialAccountId: userSocialAccount.socialAccountId,
+          connectedByUserId: token.id
+        },
+      });
+    }
 
     // If no users AND no brands left, delete the social account entirely
     if (remainingUsers === 0 && remainingBrands === 0) {

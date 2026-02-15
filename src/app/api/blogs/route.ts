@@ -377,21 +377,62 @@ async function publishToExternalSite(blog: BlogPost, externalSiteId: string, use
 
 function prepareBlogPayload(blog: BlogPost, externalSite: ExternalSite) {
   console.log("Blog", blog);
+  
+  // Extract excerpt from content (strip HTML tags for better excerpt)
+  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
+  const excerpt = stripHtml(blog.content).substring(0, 150).trim() + '...';
+
   const basePayload = {
     title: blog.title,
     content: blog.content,
-    excerpt: blog.content.substring(0, 150) + '...',
+    excerpt: excerpt,
     status: 'draft' as const,
     tags: blog.tags || [],
+    slug: blog.slug,
+    banner: blog.banner,
   };
 
   switch (externalSite.platform) {
     case 'WORDPRESS':
-      return {
-        ...basePayload,
-        content: blog.content,
-        status: 'draft' as const,
+      // Use field mapping from config if available
+      const wpConfig = externalSite.config as { fieldMapping?: Record<string, string> };
+      const fieldMapping = wpConfig?.fieldMapping || {
+        title: 'title',
+        content: 'content',
+        excerpt: 'excerpt',
+        slug: 'slug',
+        tags: 'tags',
+        banner: 'featured_media',
+        status: 'status'
       };
+
+      const wpPayload: Record<string, unknown> = {
+        [fieldMapping.title || 'title']: blog.title,
+        [fieldMapping.content || 'content']: blog.content,
+        [fieldMapping.excerpt || 'excerpt']: excerpt,
+        [fieldMapping.status || 'status']: 'draft',
+      };
+
+      // Add slug if available
+      if (blog.slug && fieldMapping.slug) {
+        wpPayload[fieldMapping.slug] = blog.slug;
+      }
+
+      // Add tags if available (WordPress expects tag IDs or names)
+      if (blog.tags && Array.isArray(blog.tags) && blog.tags.length > 0 && fieldMapping.tags) {
+        wpPayload[fieldMapping.tags] = blog.tags;
+      }
+
+      // Add featured image URL if available (note: WordPress typically needs media ID, not URL)
+      // This would need to be uploaded to WordPress media library first
+      if (blog.banner && fieldMapping.banner) {
+        // Store the URL in meta or a custom field for now
+        wpPayload.meta = {
+          featured_image_url: blog.banner
+        };
+      }
+
+      return wpPayload;
 
     case 'HASHNODE':
       return {
@@ -409,7 +450,7 @@ function prepareBlogPayload(blog: BlogPost, externalSite: ExternalSite) {
           published: true,
           tags: blog.tags || [],
           main_image: blog.banner,
-          description: blog.content.substring(0, 150) + '...',
+          description: excerpt,
         },
       };
 
@@ -421,7 +462,9 @@ function prepareBlogPayload(blog: BlogPost, externalSite: ExternalSite) {
         Object.keys(customConfig.fieldMapping).forEach(key => {
           const sourceKey = key as keyof typeof basePayload;
           const targetKey = customConfig.fieldMapping![key];
-          mappedPayload[targetKey] = basePayload[sourceKey];
+          if (basePayload[sourceKey] !== undefined) {
+            mappedPayload[targetKey] = basePayload[sourceKey];
+          }
         });
         return mappedPayload;
       }

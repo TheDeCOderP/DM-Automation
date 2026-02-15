@@ -171,10 +171,13 @@ console.log("Access Token:", access_token, "Refresh Token:", refresh_token);
           socialAccountId: account.id,
         },
       },
-      update: {},
+      update: {
+        connectedByUserId: token.id
+      },
       create: {
         brandId: userBrand.brandId,
         socialAccountId: account.id,
+        connectedByUserId: token.id
       },
     })
 

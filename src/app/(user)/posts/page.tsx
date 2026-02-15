@@ -15,6 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getPlatformIcon } from "@/utils/ui/icons";
 import { 
   FileText, 
@@ -25,7 +33,10 @@ import {
   User,
   Image as ImageIcon,
   Video,
-  Eye
+  Eye,
+  Grid3x3,
+  List,
+  LayoutGrid
 } from "lucide-react";
 import { Platform, Status } from "@prisma/client";
 
@@ -64,11 +75,14 @@ interface Post {
   }[];
 }
 
+type ViewMode = "grid" | "list";
+
 export default function PostsListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const brandIdFromUrl = searchParams.get("brand");
   
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [platformFilter, setPlatformFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [brandFilter, setBrandFilter] = useState<string>(brandIdFromUrl || "ALL");
@@ -230,128 +244,304 @@ export default function PostsListPage() {
             <p className="text-sm text-muted-foreground">
               Showing {filteredPosts?.length || 0} posts
             </p>
+            
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                aria-label="Grid view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                aria-label="List view"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPosts?.map((post) => {
-              const PlatformIcon = getPlatformIcon(post.platform);
-              const hasMedia = post.media && post.media.length > 0;
-              const firstMedia = hasMedia ? post.media[0] : null;
+          {/* Grid View */}
+          {viewMode === "grid" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredPosts?.map((post, index) => {
+                const PlatformIcon = getPlatformIcon(post.platform);
+                const hasMedia = post.media && post.media.length > 0;
+                const firstMedia = hasMedia ? post.media[0] : null;
 
-              return (
-                <Card
-                  key={post.id}
-                  className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => router.push(`/posts/${post.id}`)}
-                >
-                  {/* Media Preview */}
-                  {hasMedia && firstMedia ? (
-                    <div className="relative h-48 bg-muted">
-                      {firstMedia.type === "IMAGE" ? (
-                        <img
-                          src={firstMedia.url}
-                          alt="Post media"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-black">
-                          <Video className="h-12 w-12 text-white" />
-                        </div>
-                      )}
-                      {post.media.length > 1 && (
-                        <Badge className="absolute top-2 right-2">
-                          +{post.media.length - 1}
-                        </Badge>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="h-48 bg-muted flex items-center justify-center">
-                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                  )}
-
-                  <CardContent className="p-4 space-y-3">
-                    {/* Platform & Status */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {PlatformIcon}
-                        <span className="text-sm font-medium">
-                          {post.platform}
-                        </span>
-                      </div>
-                      <Badge className={getStatusColor(post.status)}>
-                        {post.status}
+                return (
+                  <Card
+                    key={post.id}
+                    className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative"
+                    onClick={() => router.push(`/posts/${post.id}`)}
+                  >
+                    {/* Serial Number Badge */}
+                    <div className="absolute top-2 left-2 z-10">
+                      <Badge variant="secondary" className="font-mono">
+                        #{index + 1}
                       </Badge>
                     </div>
 
-                    {/* Content */}
-                    <div>
-                      {post.title && (
-                        <h3 className="font-semibold mb-1 line-clamp-1">
-                          {post.title}
-                        </h3>
-                      )}
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {post.content}
-                      </p>
-                    </div>
-
-                    {/* Social Account Info */}
-                    {post.socialAccountPage && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        <span>
-                          @{post.socialAccountPage.socialAccount.platformUsername}
-                        </span>
-                        <span className="text-xs">•</span>
-                        <span>{post.socialAccountPage.pageName}</span>
+                    {/* Media Preview */}
+                    {hasMedia && firstMedia ? (
+                      <div className="relative h-48 bg-muted">
+                        {firstMedia.type === "IMAGE" ? (
+                          <img
+                            src={firstMedia.url}
+                            alt="Post media"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-black">
+                            <Video className="h-12 w-12 text-white" />
+                          </div>
+                        )}
+                        {post.media.length > 1 && (
+                          <Badge className="absolute top-2 right-2">
+                            +{post.media.length - 1}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-48 bg-muted flex items-center justify-center">
+                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
                       </div>
                     )}
 
-                    {/* Brand */}
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-medium">{post.brand.name}</span>
-                    </div>
-
-                    {/* Date & Actions */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {post.publishedAt
-                          ? new Date(post.publishedAt).toLocaleDateString()
-                          : post.scheduledAt
-                          ? new Date(post.scheduledAt).toLocaleDateString()
-                          : new Date(post.createdAt).toLocaleDateString()}
+                    <CardContent className="p-4 space-y-3">
+                      {/* Platform & Status */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {PlatformIcon}
+                          <span className="text-sm font-medium">
+                            {post.platform}
+                          </span>
+                        </div>
+                        <Badge className={getStatusColor(post.status)}>
+                          {post.status}
+                        </Badge>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {post.url && (
+                      {/* Content */}
+                      <div>
+                        {post.title && (
+                          <h3 className="font-semibold mb-1 line-clamp-1">
+                            {post.title}
+                          </h3>
+                        )}
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {post.content}
+                        </p>
+                      </div>
+
+                      {/* Social Account Info */}
+                      {post.socialAccountPage && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          <span>
+                            @{post.socialAccountPage.socialAccount.platformUsername}
+                          </span>
+                          <span className="text-xs">•</span>
+                          <span>{post.socialAccountPage.pageName}</span>
+                        </div>
+                      )}
+
+                      {/* Brand */}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium">{post.brand.name}</span>
+                      </div>
+
+                      {/* Date & Actions */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {post.publishedAt
+                            ? new Date(post.publishedAt).toLocaleDateString()
+                            : post.scheduledAt
+                            ? new Date(post.scheduledAt).toLocaleDateString()
+                            : new Date(post.createdAt).toLocaleDateString()}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {post.url && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(post.url!, "_blank");
+                              }}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-7 px-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(post.url!, "_blank");
-                            }}
                           >
-                            <ExternalLink className="h-3 w-3" />
+                            <Eye className="h-3 w-3" />
                           </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* List View */}
+          {viewMode === "list" && (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60px]">S.No</TableHead>
+                    <TableHead className="w-[80px]">Media</TableHead>
+                    <TableHead>Content</TableHead>
+                    <TableHead className="w-[120px]">Platform</TableHead>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead className="w-[150px]">Brand</TableHead>
+                    <TableHead className="w-[120px]">Date</TableHead>
+                    <TableHead className="w-[100px] text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPosts?.map((post, index) => {
+                    const PlatformIcon = getPlatformIcon(post.platform);
+                    const hasMedia = post.media && post.media.length > 0;
+                    const firstMedia = hasMedia ? post.media[0] : null;
+
+                    return (
+                      <TableRow
+                        key={post.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => router.push(`/posts/${post.id}`)}
+                      >
+                        {/* Serial Number */}
+                        <TableCell className="font-mono font-medium">
+                          {index + 1}
+                        </TableCell>
+
+                        {/* Media Thumbnail */}
+                        <TableCell>
+                          <div className="relative w-12 h-12 rounded overflow-hidden bg-muted">
+                            {hasMedia && firstMedia ? (
+                              firstMedia.type === "IMAGE" ? (
+                                <img
+                                  src={firstMedia.url}
+                                  alt="Post media"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-black">
+                                  <Video className="h-4 w-4 text-white" />
+                                </div>
+                              )
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            {post.media.length > 1 && (
+                              <div className="absolute bottom-0 right-0 bg-black/70 text-white text-[10px] px-1 rounded-tl">
+                                +{post.media.length - 1}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Content */}
+                        <TableCell>
+                          <div className="max-w-md">
+                            {post.title && (
+                              <p className="font-semibold text-sm mb-1 line-clamp-1">
+                                {post.title}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {post.content}
+                            </p>
+                            {post.socialAccountPage && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                @{post.socialAccountPage.socialAccount.platformUsername}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Platform */}
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {PlatformIcon}
+                            <span className="text-sm">{post.platform}</span>
+                          </div>
+                        </TableCell>
+
+                        {/* Status */}
+                        <TableCell>
+                          <Badge className={getStatusColor(post.status)}>
+                            {post.status}
+                          </Badge>
+                        </TableCell>
+
+                        {/* Brand */}
+                        <TableCell>
+                          <span className="text-sm font-medium">
+                            {post.brand.name}
+                          </span>
+                        </TableCell>
+
+                        {/* Date */}
+                        <TableCell>
+                          <div className="text-sm text-muted-foreground">
+                            {post.publishedAt
+                              ? new Date(post.publishedAt).toLocaleDateString()
+                              : post.scheduledAt
+                              ? new Date(post.scheduledAt).toLocaleDateString()
+                              : new Date(post.createdAt).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+
+                        {/* Actions */}
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {post.url && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(post.url!, "_blank");
+                                }}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
 
           {filteredPosts?.length === 0 && (
             <Card>

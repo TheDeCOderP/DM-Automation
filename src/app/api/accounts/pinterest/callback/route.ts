@@ -91,10 +91,13 @@ console.log('Pinterest token data:', tokenData);
               socialAccountId: account.id
             }
           },
-          update: {},
+          update: {
+            connectedByUserId: userId
+          },
           create: {
             brandId,
-            socialAccountId: account.id
+            socialAccountId: account.id,
+            connectedByUserId: userId
           }
         });
 
