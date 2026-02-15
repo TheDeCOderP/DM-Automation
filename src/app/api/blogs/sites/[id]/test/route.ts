@@ -5,8 +5,9 @@ import { authOptions } from '@/lib/auth';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: siteId } = await params;
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.email) {
@@ -14,8 +15,6 @@ export async function POST(
   }
 
   try {
-    const siteId = params.id;
-
     // Fetch the external blog site
     const externalSite = await prisma.externalBlogSite.findFirst({
       where: {
