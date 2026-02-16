@@ -341,42 +341,42 @@ export default function BrandsPage() {
 
                       {/* Actions */}
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            {brand.isAdmin && (
+                        {brand.isAdmin && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-secondary/50">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
-                            )}
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={() => setTimeout(() => openConnectModal(brand.id, brand.name), 0)}
-                              className="gap-2 cursor-pointer"
-                            >
-                              <Globe className="h-4 w-4" />
-                              Connect Accounts
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setTimeout(() => openShareModal(brand.id, brand.name), 0)}
-                              className="gap-2 cursor-pointer"
-                            >
-                              <Share2 className="h-4 w-4" />
-                              Share Brand
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setTimeout(() => handleEdit(brand), 0)} className="gap-2 cursor-pointer">
-                              <Edit className="h-4 w-4" />
-                              Edit Brand
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setTimeout(() => handleDelete(brand.id), 0)}
-                              className="text-destructive focus:text-destructive gap-2 cursor-pointer"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete Brand
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => setTimeout(() => openConnectModal(brand.id, brand.name), 0)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <Globe className="h-4 w-4" />
+                                Connect Accounts
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setTimeout(() => openShareModal(brand.id, brand.name), 0)}
+                                className="gap-2 cursor-pointer"
+                              >
+                                <Share2 className="h-4 w-4" />
+                                Share Brand
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setTimeout(() => handleEdit(brand), 0)} className="gap-2 cursor-pointer">
+                                <Edit className="h-4 w-4" />
+                                Edit Brand
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setTimeout(() => handleDelete(brand.id), 0)}
+                                className="text-destructive focus:text-destructive gap-2 cursor-pointer"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete Brand
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

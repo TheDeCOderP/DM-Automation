@@ -86,27 +86,36 @@ export async function GET(req: NextRequest) {
         });
 
         // Transform the data to include role and members information
-        const brands = userBrands.map((ub: any) => ({
-            ...ub.brand,
-            // Flatten the socialAccounts structure
-            socialAccounts: ub.brand.socialAccounts.map((sa: any) => ({
-                ...sa.socialAccount,
-                connectedBy: sa.connectedBy // Add who connected this account
-            })),
-            // Include user's role for this specific brand
-            userRole: ub.role.name,
-            isAdmin: ub.role.name === "BrandAdmin",
-            // Include all members (users who have access to this brand)
-            members: ub.brand.members.map((member: any) => ({
-                id: member.user.id,
-                name: member.user.name,
-                email: member.user.email,
-                image: member.user.image,
-                role: member.role.name,
-                // Add isCurrentUser flag to identify the current user
-                isCurrentUser: member.user.id === token.id
-            }))
-        }));
+        const brands = userBrands.map((ub: any) => {
+            console.log('DEBUG - Role info:', {
+                roleId: ub.roleId,
+                roleName: ub.role?.name,
+                roleObject: ub.role,
+                isAdmin: ub.role?.name === "BrandAdmin"
+            });
+            
+            return {
+                ...ub.brand,
+                // Flatten the socialAccounts structure
+                socialAccounts: ub.brand.socialAccounts.map((sa: any) => ({
+                    ...sa.socialAccount,
+                    connectedBy: sa.connectedBy // Add who connected this account
+                })),
+                // Include user's role for this specific brand
+                userRole: ub.role?.name,
+                isAdmin: ub.role?.name === "BrandAdmin",
+                // Include all members (users who have access to this brand)
+                members: ub.brand.members.map((member: any) => ({
+                    id: member.user.id,
+                    name: member.user.name,
+                    email: member.user.email,
+                    image: member.user.image,
+                    role: member.role?.name,
+                    // Add isCurrentUser flag to identify the current user
+                    isCurrentUser: member.user.id === token.id
+                }))
+            };
+        });
 
         return NextResponse.json({ data: brands }, { status: 200 });
     } catch (error) {
@@ -163,11 +172,23 @@ export async function POST(req: NextRequest) {
             },
         });
 
+        // Find the BrandAdmin role dynamically to ensure correct assignment
+        const brandAdminRole = await prisma.role.findFirst({
+            where: { name: "BrandAdmin" }
+        });
+
+        if (!brandAdminRole) {
+            return NextResponse.json(
+                { error: "BrandAdmin role not found. Please run database seed." },
+                { status: 500 }
+            );
+        }
+
         await prisma.userBrand.create({
             data: {
                 userId: token.id,
                 brandId: brand.id,
-                roleId: "PCR-0004", // BrandAdmin role
+                roleId: brandAdminRole.id, // BrandAdmin role (dynamically fetched)
             },
         });
 

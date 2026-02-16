@@ -64,7 +64,7 @@ interface Post {
     name: string;
     pageName: string;
     platform: Platform;
-    socialAccount: {
+    socialAccount?: {
       platformUsername: string;
     };
   } | null;
@@ -340,7 +340,7 @@ export default function PostsListPage() {
                       </div>
 
                       {/* Social Account Info */}
-                      {post.socialAccountPage && (
+                      {post.socialAccountPage && post.socialAccountPage.socialAccount && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <User className="h-3 w-3" />
                           <span>
@@ -469,7 +469,7 @@ export default function PostsListPage() {
                             <p className="text-sm text-muted-foreground line-clamp-2">
                               {post.content}
                             </p>
-                            {post.socialAccountPage && (
+                            {post.socialAccountPage?.socialAccount && (
                               <p className="text-xs text-muted-foreground mt-1">
                                 @{post.socialAccountPage.socialAccount.platformUsername}
                               </p>

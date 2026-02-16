@@ -44,9 +44,21 @@ export async function PUT(req: NextRequest) {
 
 
         if(status === InvitationStatus.ACCEPTED) {
+            // Find the BrandUser role dynamically for invited members
+            const brandUserRole = await prisma.role.findFirst({
+                where: { name: "BrandUser" }
+            });
+
+            if (!brandUserRole) {
+                return NextResponse.json(
+                    { message: "BrandUser role not found. Please run database seed." },
+                    { status: 500 }
+                );
+            }
+
             await prisma.userBrand.create({
                 data: {
-                    roleId: "PCR-0004",
+                    roleId: brandUserRole.id,
                     brandId: invitation.brandId,
                     userId: invitation.invitedToId,
                 }
