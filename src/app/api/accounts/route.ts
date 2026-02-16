@@ -115,12 +115,15 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Social account not found" }, { status: 404 });
     }
 
-    // Update the social account
+    // Prevent updating fields that are part of unique constraints
+    const { platformUserId, platformUsername, platform: _, ...safeData } = data;
+    
+    // Update the social account with safe data only
     await prisma.socialAccount.update({
       where: {
         id: userSocialAccount.socialAccountId,
       },
-      data,
+      data: safeData,
     });
 
     return NextResponse.json({ message: "Social account updated successfully" }, { status: 200 });

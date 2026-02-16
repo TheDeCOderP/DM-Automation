@@ -94,8 +94,8 @@ export async function GET(request: NextRequest) {
     const encryptedAccessToken = await encryptToken(accessToken);
     const encryptedRefreshToken = await encryptToken(tokenData.refresh_token || "");
 
-    // 5️⃣ Update the existing social account with page access tokens (optional)
-    // This step is optional depending on whether you want to store the page-specific token
+    // 5️⃣ Update the existing social account with page access tokens
+    // Only update tokens, not platformUserId/platformUsername to avoid unique constraint violation
     await prisma.socialAccount.update({
       where: {
         id: linkedinAccount.id
@@ -104,8 +104,7 @@ export async function GET(request: NextRequest) {
         accessToken: encryptedAccessToken,
         refreshToken: encryptedRefreshToken || null,
         tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-        platformUserId: platformUserId,
-        platformUsername: platformUsername,
+        lastSyncedAt: new Date(),
       }
     });
 
