@@ -37,7 +37,7 @@ import { getPlatformIcon } from "@/utils/ui/icons";
 import { Platform, Status } from "@prisma/client";
 import { format } from "date-fns";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => res.json()).then((data) => data.post || data);
 
 interface Post {
   id: string;
@@ -48,13 +48,13 @@ interface Post {
   url: string | null;
   publishedAt: string | null;
   scheduledAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | null;
+  updatedAt: string | null;
   user: {
     name: string | null;
     email: string;
   };
-  brand: {
+  brand?: {
     id: string;
     name: string;
   };
@@ -245,7 +245,7 @@ export default function PostDetailPage() {
   }
 
   const PlatformIcon = getPlatformIcon(post.platform);
-  const canEdit = post.status === "DRAFTED" || post.status === "FAILED";
+  const canEdit = post.status === "DRAFTED" || post.status === "FAILED" || post.status === "SCHEDULED";
   const canPublish = post.status === "DRAFTED";
   const canSchedule = post.status === "DRAFTED";
 
@@ -267,8 +267,8 @@ export default function PostDetailPage() {
               {post.title || "Untitled Post"}
             </h1>
             <p className="text-muted-foreground">
-              {post.brand.name} • Created{" "}
-              {format(new Date(post.createdAt), "MMM d, yyyy")}
+              {post.brand?.name || "Unknown Brand"} • Created{" "}
+              {post.createdAt ? format(new Date(post.createdAt), "MMM d, yyyy") : "Unknown"}
             </p>
           </div>
         </div>
@@ -500,7 +500,7 @@ export default function PostDetailPage() {
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Created</span>
-                <span>{format(new Date(post.createdAt), "MMM d, yyyy HH:mm")}</span>
+                <span>{post.createdAt ? format(new Date(post.createdAt), "MMM d, yyyy HH:mm") : "Unknown"}</span>
               </div>
               {post.scheduledAt && (
                 <div className="flex items-center justify-between">
@@ -519,7 +519,7 @@ export default function PostDetailPage() {
               )}
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Updated</span>
-                <span>{format(new Date(post.updatedAt), "MMM d, yyyy HH:mm")}</span>
+                <span>{post.updatedAt ? format(new Date(post.updatedAt), "MMM d, yyyy HH:mm") : "Unknown"}</span>
               </div>
             </CardContent>
           </Card>

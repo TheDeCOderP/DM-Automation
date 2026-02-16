@@ -429,6 +429,7 @@ export async function POST(req: NextRequest) {
           userId: token.id,
           brandId: brandId,
           frequency: frequency,
+          socialAccountId: accountId, // Save which social account to use
         },
       })
 

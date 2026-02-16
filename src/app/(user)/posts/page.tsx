@@ -36,7 +36,8 @@ import {
   Eye,
   Grid3x3,
   List,
-  LayoutGrid
+  LayoutGrid,
+  Edit
 } from "lucide-react";
 import { Platform, Status } from "@prisma/client";
 
@@ -368,6 +369,20 @@ export default function PostsListPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          {(post.status === "DRAFTED" || post.status === "FAILED" || post.status === "SCHEDULED") && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/posts/${post.id}`);
+                              }}
+                              title="Edit post"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          )}
                           {post.url && (
                             <Button
                               size="sm"
@@ -377,6 +392,7 @@ export default function PostsListPage() {
                                 e.stopPropagation();
                                 window.open(post.url!, "_blank");
                               }}
+                              title="View on platform"
                             >
                               <ExternalLink className="h-3 w-3" />
                             </Button>
@@ -385,6 +401,7 @@ export default function PostsListPage() {
                             size="sm"
                             variant="ghost"
                             className="h-7 px-2"
+                            title="View details"
                           >
                             <Eye className="h-3 w-3" />
                           </Button>
@@ -513,6 +530,20 @@ export default function PostsListPage() {
                         {/* Actions */}
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            {(post.status === "DRAFTED" || post.status === "FAILED" || post.status === "SCHEDULED") && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/posts/${post.id}`);
+                                }}
+                                title="Edit post"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
                             {post.url && (
                               <Button
                                 size="sm"
@@ -522,6 +553,7 @@ export default function PostsListPage() {
                                   e.stopPropagation();
                                   window.open(post.url!, "_blank");
                                 }}
+                                title="View on platform"
                               >
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
@@ -530,6 +562,7 @@ export default function PostsListPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0"
+                              title="View details"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>

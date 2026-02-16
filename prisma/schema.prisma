@@ -211,6 +211,7 @@ model SocialAccount {
   pages             SocialAccountPage[]
   brands            SocialAccountBrand[]
   users             UserSocialAccount[]
+  posts             Post[]
 
   @@unique([platform, platformUserId])
 }
@@ -294,6 +295,9 @@ model Post {
 
   socialAccountPageId String?
   socialAccountPage   SocialAccountPage? @relation(fields: [socialAccountPageId], references: [id], onDelete: Cascade)
+
+  socialAccountId String?
+  socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
 
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

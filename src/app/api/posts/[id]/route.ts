@@ -32,20 +32,36 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     let analytics = null;
 
-    switch (post.platform) {
-      case "FACEBOOK":
-        if (post.socialAccountPage?.accessToken && post.socialAccountPage?.pageId) {
-          //analytics = await fetchFacebookAnalytics(post.socialAccountPage.pageId, post.url, post.socialAccountPage.accessToken);
-        }
-        break;
-      case "TWITTER":
-        analytics = await fetchTwitterPostAnalytics(post);
-        break;
-      case "LINKEDIN":
-        analytics = await fetchLinkedInPostAnalytics(post);
-        break;
-      default:
-        analytics = { message: "Analytics not available for this platform" };
+    try {
+      switch (post.platform) {
+        case "FACEBOOK":
+          if (post.socialAccountPage?.accessToken && post.socialAccountPage?.pageId) {
+            //analytics = await fetchFacebookAnalytics(post.socialAccountPage.pageId, post.url, post.socialAccountPage.accessToken);
+          }
+          break;
+        case "TWITTER":
+          if (post.userId && post.url && post.socialAccountPageId) {
+            analytics = await fetchTwitterPostAnalytics(post);
+          } else {
+            analytics = { message: "Post not yet published or missing required data" };
+          }
+          break;
+        case "LINKEDIN":
+          if (post.userId && post.url && post.socialAccountPageId) {
+            analytics = await fetchLinkedInPostAnalytics(post);
+          } else {
+            analytics = { message: "Post not yet published or missing required data" };
+          }
+          break;
+        default:
+          analytics = { message: "Analytics not available for this platform" };
+      }
+    } catch (analyticsError) {
+      console.error("Error fetching analytics:", analyticsError);
+      analytics = { 
+        message: "Unable to fetch analytics", 
+        error: analyticsError instanceof Error ? analyticsError.message : "Unknown error" 
+      };
     }
 
     return NextResponse.json(
@@ -104,10 +120,10 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       );
     }
 
-    // Only allow editing drafted or failed posts
-    if (existingPost.status !== "DRAFTED" && existingPost.status !== "FAILED") {
+    // Only allow editing drafted, failed, or scheduled posts
+    if (existingPost.status !== "DRAFTED" && existingPost.status !== "FAILED" && existingPost.status !== "SCHEDULED") {
       return NextResponse.json(
-        { error: "Only drafted or failed posts can be edited" },
+        { error: "Only drafted, failed, or scheduled posts can be edited" },
         { status: 400 }
       );
     }

@@ -125,76 +125,96 @@ export async function publishToLinkedin(
   try {
     if (!post) throw new Error('Invalid input');
 
-    // 1. Get LinkedIn account through user junction table
-    const userSocialAccount = await prisma.userSocialAccount.findFirst({
-      where: {
-        OR: [
-          // Case 1: User personally connected the brand's LinkedIn account
-          {
-            userId: post.userId,
-            socialAccount: {
-              platform: 'LINKEDIN',
-              brands: {
-                some: {
-                  brandId: post.brandId
-                }
-              }
-            }
-          },
-          // Case 2: Another user connected the LinkedIn account, but it's linked to the same brand
-          {
-            socialAccount: {
-              platform: 'LINKEDIN',
-              brands: {
-                some: {
-                  brandId: post.brandId
+    // 1. Get LinkedIn account - prioritize socialAccountId if specified
+    let socialAccount = null;
+    
+    if (post.socialAccountId) {
+      // Use the specific social account that was selected
+      const accountData = await prisma.socialAccount.findFirst({
+        where: {
+          id: post.socialAccountId,
+          platform: 'LINKEDIN',
+        },
+      });
+      
+      if (accountData) {
+        socialAccount = accountData;
+      }
+    }
+    
+    // Fallback to finding any LinkedIn account for the brand
+    if (!socialAccount) {
+      const userSocialAccount = await prisma.userSocialAccount.findFirst({
+        where: {
+          OR: [
+            // Case 1: User personally connected the brand's LinkedIn account
+            {
+              userId: post.userId,
+              socialAccount: {
+                platform: 'LINKEDIN',
+                brands: {
+                  some: {
+                    brandId: post.brandId
+                  }
                 }
               }
             },
-            user: {
-              brands: {
-                some: {
-                  brandId: post.brandId
+            // Case 2: Another user connected the LinkedIn account, but it's linked to the same brand
+            {
+              socialAccount: {
+                platform: 'LINKEDIN',
+                brands: {
+                  some: {
+                    brandId: post.brandId
+                  }
+                }
+              },
+              user: {
+                brands: {
+                  some: {
+                    brandId: post.brandId
+                  }
                 }
               }
             }
+          ]
+        },
+        include: {
+          socialAccount: true,
+          user: true
+        }
+      });
+
+      if (!userSocialAccount) {
+        // Update post status to failed if no connected account
+        await prisma.post.update({
+          where: { id: post.id },
+          data: { 
+            status: "FAILED",
+            updatedAt: new Date()
           }
-        ]
-      },
-      include: {
-        socialAccount: true,
-        user: true
+        });
+
+        // Create notification for the user
+        await prisma.notification.create({
+          data: {
+            userId: post.userId,
+            type: "POST_FAILED",
+            title: "Post Failed",
+            message: "Failed to publish your post on LinkedIn - no connected account for this brand",
+            metadata: {
+              postId: post.id,
+              platform: "LINKEDIN"
+            }
+          }
+        });
+
+        throw new Error('User has no connected LinkedIn account for this brand');
       }
-    });
 
-    if (!userSocialAccount) {
-      // Update post status to failed if no connected account
-      await prisma.post.update({
-        where: { id: post.id },
-        data: { 
-          status: "FAILED",
-          updatedAt: new Date()
-        }
-      });
-
-      // Create notification for the user
-      await prisma.notification.create({
-        data: {
-          userId: post.userId,
-          type: "POST_FAILED",
-          title: "Post Failed",
-          message: "Failed to publish your post on LinkedIn - no connected account for this brand",
-          metadata: {
-            postId: post.id,
-            platform: "LINKEDIN"
-          }
-        }
-      });
-
-      throw new Error('User has no connected LinkedIn account for this brand');
+      socialAccount = userSocialAccount.socialAccount;
     }
 
-    const socialAccount = userSocialAccount.socialAccount;
     socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
     if(socialAccount.refreshToken) {
       socialAccount.refreshToken = await decryptToken(socialAccount.refreshToken);

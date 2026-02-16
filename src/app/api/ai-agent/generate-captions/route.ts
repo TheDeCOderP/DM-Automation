@@ -1,6 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "@/lib/gemini";
+import { stripMarkdown } from "@/utils/markdown";
 
 interface SocialPlatform {
   id: string
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
           - Be optimized for all listed platforms
           - Not exceed ${minWordLimit} characters
           - Be platform-agnostic in tone
+          - Use plain text only, NO markdown formatting (no **, *, __, etc.)
           
           Content requirements:
           ${prompt}
@@ -78,8 +80,11 @@ export async function POST(req: NextRequest) {
         }
       );
       
+      // Strip any markdown that might have been generated
+      const cleanCaption = stripMarkdown((text || '').trim());
+      
       return NextResponse.json({ 
-        commonCaption: (text || '').trim() 
+        commonCaption: cleanCaption
       }, { status: 200 });
       
     } else {
@@ -92,6 +97,7 @@ export async function POST(req: NextRequest) {
             - Tone: ${getPlatformTone(platform.id)}
             - Include relevant hashtags if appropriate
             - Must follow platform best practices
+            - Use plain text only, NO markdown formatting (no **, *, __, etc.)
             - Content focus: ${prompt}
             
             Respond with ONLY the caption text, no additional commentary or formatting.
@@ -101,7 +107,11 @@ export async function POST(req: NextRequest) {
             maxTokens: platform.wordLimit,
           }
         );
-        return { platform: platform.id, caption: (text || '').trim() };
+        
+        // Strip any markdown that might have been generated
+        const cleanCaption = stripMarkdown((text || '').trim());
+        
+        return { platform: platform.id, caption: cleanCaption };
       });
 
       const platformResults = await Promise.all(platformPromises);
