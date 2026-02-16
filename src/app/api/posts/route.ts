@@ -466,8 +466,13 @@ export async function POST(req: NextRequest) {
             saveResponses: true,
             schedule: scheduleFormat,
             requestMethod: 1, // POST method
-            // You might want to include post IDs or other metadata in the request body
+            requestTimeout: 30,
+            // Add authentication header for callback
             extendedData: {
+              headers: {
+                "Authorization": `Bearer ${process.env.CRON_SECRET_TOKEN}`,
+                "Content-Type": "application/json"
+              },
               body: JSON.stringify({
                 postIds: createdPosts.map(p => p.id),
                 userId: token.id,
@@ -483,7 +488,7 @@ export async function POST(req: NextRequest) {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer RDnkbD0orjf+MLPMfmeix/ZgqW49Bv0nFmGCijETocY=`,
+            Authorization: `Bearer ${process.env.CRON_JOB_API_KEY}`,
           },
           body: JSON.stringify(scheduleData),
         })
