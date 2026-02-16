@@ -279,7 +279,7 @@ model Post {
   publishedAt      DateTime?
   scheduledAt      DateTime?
   frequency        Frequency?
-  url              String?    @db.Text
+  url              String?    @db.LongText
   status           Status     @default(DRAFTED)
 
   // Platform-specific metadata (hashtags, threads, etc.)
