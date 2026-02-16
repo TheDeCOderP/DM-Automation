@@ -29,6 +29,42 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     }
 
     try {
+        // Get authenticated user
+        const { getToken } = await import("next-auth/jwt");
+        const token = await getToken({ req });
+        
+        if (!token?.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Check if user has access to this brand and their role
+        const userBrand = await prisma.userBrand.findFirst({
+            where: {
+                userId: token.id,
+                brandId: id as string,
+            },
+            include: {
+                role: true,
+            }
+        });
+
+        if (!userBrand) {
+            return NextResponse.json(
+                { error: "You don't have access to this brand" },
+                { status: 403 }
+            );
+        }
+
+        // Check if user has permission to edit (BrandAdmin or BrandEditor)
+        const canEdit = userBrand.role?.name === "BrandAdmin" || userBrand.role?.name === "BrandEditor";
+        
+        if (!canEdit) {
+            return NextResponse.json(
+                { error: "You don't have permission to edit this brand. Only Brand Admins and Editors can edit brand details." },
+                { status: 403 }
+            );
+        }
+
         const formData = await req.formData()
         const name = formData.get('name') as string;
         const file = formData.get('logo') as File | null;
@@ -94,6 +130,40 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     }
 
     try {
+        // Get authenticated user
+        const { getToken } = await import("next-auth/jwt");
+        const token = await getToken({ req });
+        
+        if (!token?.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Check if user has access to this brand and their role
+        const userBrand = await prisma.userBrand.findFirst({
+            where: {
+                userId: token.id,
+                brandId: id as string,
+            },
+            include: {
+                role: true,
+            }
+        });
+
+        if (!userBrand) {
+            return NextResponse.json(
+                { error: "You don't have access to this brand" },
+                { status: 403 }
+            );
+        }
+
+        // Only BrandAdmin can delete brand
+        if (userBrand.role?.name !== "BrandAdmin") {
+            return NextResponse.json(
+                { error: "Only Brand Admins can delete brands" },
+                { status: 403 }
+            );
+        }
+
         const brand = await prisma.brand.findUnique({
             where: {
                 id: id as string,

@@ -42,11 +42,8 @@ type SocialAccountWithPages = SocialAccount & {
 export default function CreatePostPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data, isLoading } = useSwr("/api/accounts", fetcher);
-  const accounts: SocialAccountWithPages[] = data?.data || [];
-  const brands: Brand[] = data?.brands || [];
-
-  // Initialize from URL params
+  
+  // Initialize from URL params - MOVED UP before useSwr
   const [activeStep, setActiveStep] = useState<number>(() => {
     const step = searchParams.get('step');
     return step ? parseInt(step, 10) : 0;
@@ -66,6 +63,18 @@ export default function CreatePostPage() {
     return pages ? pages.split(',').filter(Boolean) : [];
   });
 
+  // Fetch accounts filtered by selected brand
+  const { data, isLoading } = useSwr(
+    selectedBrandId ? `/api/accounts?brandId=${selectedBrandId}` : null,
+    fetcher
+  );
+  const accounts: SocialAccountWithPages[] = data?.data || [];
+  const brands: Brand[] = data?.brands || [];
+  
+  // Fetch all brands for brand selection step
+  const { data: allBrandsData } = useSwr('/api/brands', fetcher);
+  const allBrands: Brand[] = allBrandsData?.data || [];
+
   const [schedule, setSchedule] = useState<ScheduleData>({
     startDate: new Date(),
     startTime: "12:00",
@@ -78,6 +87,12 @@ export default function CreatePostPage() {
   const [platformCaptions, setPlatformCaptions] = useState<{ [key: string]: string }>({});
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
+
+  // Clear selected accounts/pages when brand changes (security measure)
+  useEffect(() => {
+    setSelectedAccounts([]);
+    setSelectedPageIds([]);
+  }, [selectedBrandId]);
 
   // Update URL when state changes
   useEffect(() => {
@@ -321,7 +336,7 @@ export default function CreatePostPage() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <BrandsCard
               isLoading={isLoading}
-              brands={brands}
+              brands={allBrands}
               selectedBrandId={selectedBrandId}
               setSelectedBrandId={setSelectedBrandId}
             />
@@ -371,7 +386,7 @@ export default function CreatePostPage() {
             <div className="hidden md:flex items-center gap-4 text-sm text-white">
               <Badge variant="secondary" className="gap-1.5">
                 <Building2 className="w-3 h-3" />
-                {selectedBrandId ? brands.find(b => b.id === selectedBrandId)?.name : 'No brand'}
+                {selectedBrandId ? allBrands.find(b => b.id === selectedBrandId)?.name : 'No brand'}
               </Badge>
               <Badge variant="secondary" className="gap-1.5">
                 <Users className="w-3 h-3" />

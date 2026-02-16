@@ -51,27 +51,27 @@ async function main() {
     prisma.role.upsert({
       where: { name: "SuperAdmin" },
       update: {},
-      create: { id: "PCR-0001", name: "SuperAdmin" },
+      create: { id: "PCR-0000", name: "SuperAdmin" },
     }),
     prisma.role.upsert({
       where: { name: "ADMIN" },
       update: {},
-      create: { id: "PCR-0002", name: "Admin" },
+      create: { id: "PCR-0001", name: "Admin" },
     }),
     prisma.role.upsert({
       where: { name: "USER" },
       update: {},
-      create: { id: "PCR-0003", name: "User" },
+      create: { id: "PCR-0002", name: "User" },
     }),
     prisma.role.upsert({
       where: { name: "BrandAdmin" },
       update: {},
-      create: { id: "PCR-0004", name: "BrandAdmin", description: "The one who creates a brand" },
+      create: { id: "PCR-0003", name: "BrandAdmin", description: "The one who creates a brand" },
     }),
     prisma.role.upsert({
       where: { name: "BrandUser" },
       update: {},
-      create: { id: "PCR-0005", name: "BrandUser", description: "The one who works for a brand" },
+      create: { id: "PCR-0004", name: "BrandUser", description: "The one who works for a brand" },
     }),
   ]);
 

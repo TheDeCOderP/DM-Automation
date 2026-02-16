@@ -10,16 +10,23 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Get brandId from query params for filtering (optional - backward compatible)
+    const { searchParams } = new URL(req.url);
+    const filterBrandId = searchParams.get("brandId");
+
     const userBrands = await prisma.userBrand.findMany({
       where: {
         userId: token.id,
+        ...(filterBrandId && { brandId: filterBrandId }), // Filter by specific brand if provided
       },
       include: {
         brand: {
           include: {
             socialAccounts: {
               where: {
-                connectedByUserId: token.id, // Only show accounts connected by this user
+                // If filtering by specific brand, show ALL accounts for that brand
+                // If not filtering, only show accounts connected by this user
+                ...(filterBrandId ? {} : { connectedByUserId: token.id }),
                 socialAccount: {
                   platform: {
                     not: {
