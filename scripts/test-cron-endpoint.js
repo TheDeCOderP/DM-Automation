@@ -3,7 +3,7 @@ async function testCronEndpoint() {
   console.log('🧪 Testing Cron Endpoint...\n');
   
   const url = 'http://localhost:3000/api/cron-jobs/publish-post';
-  const token = 'sk_cron_secure_token_2024_prabisha_dma';
+  const token = 'gdfgvdfgfdbfdhgfbbfghfbfhfgbhffhffbdfgdfdffg';
   
   console.log('📡 Endpoint:', url);
   console.log('🔑 Token:', token);

@@ -165,6 +165,17 @@ export async function POST(req: NextRequest) {
             imageUrl: item.imageUrl,
             calendarItemId: item.id,
           },
+          // Create media record if image exists
+          ...(item.imageUrl ? {
+            media: {
+              create: {
+                url: item.imageUrl,
+                type: "IMAGE",
+                userId: token.id,
+                brandId: item.calendar.brandId,
+              }
+            }
+          } : {})
         },
       });
 

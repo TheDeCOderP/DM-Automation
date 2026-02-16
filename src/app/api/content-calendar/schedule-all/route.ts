@@ -209,9 +209,20 @@ export async function POST(req: NextRequest) {
               postGroupId: postGroup.id,
               platformMetadata: {
                 hashtags: item.hashtags,
-                imagePrompt: item.imagePrompt,
+                imageUrl: item.imageUrl,
                 calendarItemId: item.id,
               },
+              // Create media record if image exists
+              ...(item.imageUrl ? {
+                media: {
+                  create: {
+                    url: item.imageUrl,
+                    type: "IMAGE",
+                    userId: token.id,
+                    brandId: calendar.brandId,
+                  }
+                }
+              } : {})
             },
           });
 
