@@ -30,7 +30,7 @@ export default function HomePage() {
     } else if (user?.role === "SUPERADMIN" || user?.role === "ADMIN") {
       router.push("/admin");
     } else {
-      router.push("/user/dashboard");
+      router.push("/dashboard");
     }
   };
 
