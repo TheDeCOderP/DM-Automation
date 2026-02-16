@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, XCircle, Mail } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { formatDate } from '@/utils/format';
 
 interface InvitationData {
   brand: {
@@ -233,7 +234,7 @@ export default function AcceptInvitePage() {
                 </p>
                 <p className="mt-1">
                   <strong>Expires:</strong>{' '}
-                  {new Date(invitationData.expiresAt).toLocaleDateString()}
+                  {formatDate(invitationData.expiresAt)}
                 </p>
               </div>
 

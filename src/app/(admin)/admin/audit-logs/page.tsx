@@ -35,6 +35,7 @@ import {
   AlertDescription,
 } from "@/components/ui/alert";
 import { AuditLog } from "@prisma/client";
+import { formatDateTime } from "@/utils/format";
 
 interface AuditLogsWithUser extends AuditLog {
   user: {
@@ -176,7 +177,7 @@ async function AuditLogsContent() {
                   data.map((log: AuditLogsWithUser) => (
                     <TableRow key={log.id} className="hover:bg-muted/50">
                       <TableCell className="font-mono text-xs">
-                        {new Date(log.createdAt).toLocaleString()}
+                        {formatDateTime(log.createdAt)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getActionVariant(log.action)}>

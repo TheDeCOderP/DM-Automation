@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
+import React from "react";
 import useSwr from "swr";
 import { useRouter } from "next/navigation";
 import {
@@ -12,15 +13,25 @@ import {
   Plus,
   Image as ImageIcon,
   Loader2,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import EditCalendarItemModal from "../_components/EditCalendarItemModal";
 import AddCalendarItemModal from "../_components/AddCalendarItemModal";
 import ScheduleAllModal from "../_components/ScheduleAllModal";
+import ScheduleItemModal from "../_components/ScheduleItemModal";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -46,15 +57,17 @@ interface CalendarItem {
   };
 }
 
-export default function CalendarDetailPage({ params }: { params: { id: string } }) {
+export default function CalendarDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const [editingItem, setEditingItem] = useState<CalendarItem | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedulingItem, setSchedulingItem] = useState<CalendarItem | null>(null);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
 
   const { data, mutate, isLoading } = useSwr(
-    `/api/content-calendar/${params.id}`,
+    `/api/content-calendar/${resolvedParams.id}`,
     fetcher
   );
 
@@ -80,6 +93,16 @@ export default function CalendarDetailPage({ params }: { params: { id: string } 
     }
   };
 
+  const handleScheduleItem = async (item: CalendarItem) => {
+    if (!item.suggestedTime) {
+      toast.error("Please set a suggested time first by editing the post");
+      return;
+    }
+
+    // Open the schedule modal
+    setSchedulingItem(item);
+  };
+
   const handleGenerateImages = async () => {
     // Count items without images
     const itemsWithoutImages = items.filter(item => !item.imageUrl && item.imagePrompt);
@@ -101,7 +124,7 @@ export default function CalendarDetailPage({ params }: { params: { id: string } 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          calendarId: params.id,
+          calendarId: resolvedParams.id,
         }),
       });
 
@@ -294,56 +317,48 @@ export default function CalendarDetailPage({ params }: { params: { id: string } 
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all" className="space-y-4 mt-4">
-              {items.map((item) => (
-                <CalendarItemCard
-                  key={item.id}
-                  item={item}
-                  platforms={platforms}
-                  onEdit={() => setEditingItem(item)}
-                  onDelete={() => handleDeleteItem(item.id)}
-                  getStatusColor={getStatusColor}
-                />
-              ))}
+            <TabsContent value="all" className="mt-4">
+              <CalendarItemsTable
+                items={items}
+                platforms={platforms}
+                onEdit={setEditingItem}
+                onDelete={handleDeleteItem}
+                onSchedule={handleScheduleItem}
+                getStatusColor={getStatusColor}
+              />
             </TabsContent>
 
-            <TabsContent value="draft" className="space-y-4 mt-4">
-              {draftItems.map((item) => (
-                <CalendarItemCard
-                  key={item.id}
-                  item={item}
-                  platforms={platforms}
-                  onEdit={() => setEditingItem(item)}
-                  onDelete={() => handleDeleteItem(item.id)}
-                  getStatusColor={getStatusColor}
-                />
-              ))}
+            <TabsContent value="draft" className="mt-4">
+              <CalendarItemsTable
+                items={draftItems}
+                platforms={platforms}
+                onEdit={setEditingItem}
+                onDelete={handleDeleteItem}
+                onSchedule={handleScheduleItem}
+                getStatusColor={getStatusColor}
+              />
             </TabsContent>
 
-            <TabsContent value="scheduled" className="space-y-4 mt-4">
-              {scheduledItems.map((item) => (
-                <CalendarItemCard
-                  key={item.id}
-                  item={item}
-                  platforms={platforms}
-                  onEdit={() => setEditingItem(item)}
-                  onDelete={() => handleDeleteItem(item.id)}
-                  getStatusColor={getStatusColor}
-                />
-              ))}
+            <TabsContent value="scheduled" className="mt-4">
+              <CalendarItemsTable
+                items={scheduledItems}
+                platforms={platforms}
+                onEdit={setEditingItem}
+                onDelete={handleDeleteItem}
+                onSchedule={handleScheduleItem}
+                getStatusColor={getStatusColor}
+              />
             </TabsContent>
 
-            <TabsContent value="published" className="space-y-4 mt-4">
-              {publishedItems.map((item) => (
-                <CalendarItemCard
-                  key={item.id}
-                  item={item}
-                  platforms={platforms}
-                  onEdit={() => setEditingItem(item)}
-                  onDelete={() => handleDeleteItem(item.id)}
-                  getStatusColor={getStatusColor}
-                />
-              ))}
+            <TabsContent value="published" className="mt-4">
+              <CalendarItemsTable
+                items={publishedItems}
+                platforms={platforms}
+                onEdit={setEditingItem}
+                onDelete={handleDeleteItem}
+                onSchedule={handleScheduleItem}
+                getStatusColor={getStatusColor}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -364,7 +379,7 @@ export default function CalendarDetailPage({ params }: { params: { id: string } 
 
       {showAddModal && (
         <AddCalendarItemModal
-          calendarId={params.id}
+          calendarId={resolvedParams.id}
           platforms={platforms}
           nextDay={items.length + 1}
           onClose={() => setShowAddModal(false)}
@@ -377,8 +392,10 @@ export default function CalendarDetailPage({ params }: { params: { id: string } 
 
       {showScheduleModal && (
         <ScheduleAllModal
-          calendarId={params.id}
+          calendarId={resolvedParams.id}
           itemsCount={draftItems.length}
+          platforms={platforms}
+          brandId={calendar.brandId}
           onClose={() => setShowScheduleModal(false)}
           onSuccess={() => {
             mutate();
@@ -387,140 +404,245 @@ export default function CalendarDetailPage({ params }: { params: { id: string } 
           }}
         />
       )}
+
+      {schedulingItem && (
+        <ScheduleItemModal
+          item={schedulingItem}
+          platforms={platforms}
+          brandId={calendar.brandId}
+          onClose={() => setSchedulingItem(null)}
+          onSuccess={() => {
+            mutate();
+            setSchedulingItem(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// Calendar Item Card Component
-function CalendarItemCard({
-  item,
+// Calendar Items Table Component
+function CalendarItemsTable({
+  items,
   platforms,
   onEdit,
   onDelete,
+  onSchedule,
   getStatusColor,
 }: {
-  item: CalendarItem;
+  items: CalendarItem[];
   platforms: string[];
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit: (item: CalendarItem) => void;
+  onDelete: (itemId: string) => void;
+  onSchedule: (item: CalendarItem) => void;
   getStatusColor: (status: string) => string;
 }) {
-  const [showFullCaption, setShowFullCaption] = useState(false);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        No items found
+      </div>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <Badge variant="outline">Day {item.day}</Badge>
-              <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
-            </div>
-            <CardTitle className="mt-2">{item.topic}</CardTitle>
-            {item.suggestedTime && (
-              <CardDescription className="mt-1">
-                <Calendar className="w-3 h-3 inline mr-1" />
-                {new Date(item.suggestedTime).toLocaleString()}
-              </CardDescription>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" onClick={onEdit}>
-              <Edit className="w-4 h-4" />
+    <div className="border rounded-lg overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-16">S. No.</TableHead>
+            <TableHead className="w-20">Day</TableHead>
+            <TableHead className="w-32">Status</TableHead>
+            <TableHead>Topic</TableHead>
+            <TableHead className="w-48">Scheduled Time</TableHead>
+            <TableHead className="w-24">Image</TableHead>
+            <TableHead className="w-32 text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item, index) => (
+            <React.Fragment key={item.id}>
+              <TableRow className="cursor-pointer hover:bg-muted/50">
+                <TableCell className="font-medium">{index + 1}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">Day {item.day}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{item.topic}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {item.suggestedTime ? (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(item.suggestedTime).toLocaleString()}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">Not set</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {item.imageUrl ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-1 text-sm text-green-600 hover:text-green-700"
+                      onClick={() => setImagePreview(item.imageUrl!)}
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Yes
+                    </Button>
+                  ) : item.imagePrompt ? (
+                    <span className="text-muted-foreground text-sm">Pending</span>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">No</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-1 justify-end">
+                    {(item.status === "DRAFT" || item.status === "EDITED") && (
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={() => onSchedule(item)}
+                        title="Schedule Now"
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(item.id)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+              
+              {/* Expanded Row Details */}
+              {expandedRow === item.id && (
+                <TableRow>
+                  <TableCell colSpan={7} className="bg-muted/30">
+                    <div className="p-4 space-y-4">
+                      {/* Captions */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-sm">Captions:</h4>
+                        {platforms.map((platform: string) => {
+                          const captionKey = `caption${platform.charAt(0) + platform.slice(1).toLowerCase()}` as keyof CalendarItem;
+                          const caption = item[captionKey] as string;
+                          
+                          if (!caption) return null;
+
+                          return (
+                            <div key={platform} className="p-3 bg-background rounded-lg border">
+                              <p className="text-sm font-semibold mb-1">{platform}</p>
+                              <p className="text-sm whitespace-pre-wrap">{caption}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Hashtags */}
+                      {item.hashtags && item.hashtags.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Hashtags:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {item.hashtags.map((tag: string, idx: number) => (
+                              <Badge key={idx} variant="secondary">
+                                #{tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Image */}
+                      {item.imageUrl ? (
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Generated Image:</h4>
+                          <div className="border rounded-lg overflow-hidden max-w-md">
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.topic}
+                              className="w-full h-64 object-cover"
+                            />
+                          </div>
+                        </div>
+                      ) : item.imagePrompt ? (
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Image Prompt:</h4>
+                          <div className="p-3 bg-background rounded-lg border">
+                            <p className="text-sm text-muted-foreground">{item.imagePrompt}</p>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Published Posts */}
+                      {item.postGroup && item.postGroup.posts.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Published Posts:</h4>
+                          <div className="space-y-2">
+                            {item.postGroup.posts.map((post: any) => (
+                              <div key={post.id} className="flex items-center justify-between text-sm p-2 bg-background rounded border">
+                                <span>{post.platform}</span>
+                                <Badge variant="outline">{post.status}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Image Preview Modal */}
+      {imagePreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setImagePreview(null)}
+        >
+          <div className="relative max-w-2xl w-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-10 right-0 bg-black/50 hover:bg-black/70 text-white"
+              onClick={() => setImagePreview(null)}
+            >
+              <span className="text-2xl">×</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={onDelete}>
-              <Trash2 className="w-4 h-4 text-destructive" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Captions Preview */}
-        <div className="space-y-3">
-          {platforms.map((platform: string) => {
-            const captionKey = `caption${platform.charAt(0) + platform.slice(1).toLowerCase()}` as keyof CalendarItem;
-            const caption = item[captionKey] as string;
-            
-            if (!caption) return null;
-
-            const truncated = caption.length > 150;
-            const displayCaption = showFullCaption || !truncated 
-              ? caption 
-              : caption.substring(0, 150) + "...";
-
-            return (
-              <div key={platform} className="p-3 bg-muted rounded-lg">
-                <p className="text-sm font-semibold mb-1">{platform}</p>
-                <p className="text-sm whitespace-pre-wrap">{displayCaption}</p>
-                {truncated && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 h-auto mt-1"
-                    onClick={() => setShowFullCaption(!showFullCaption)}
-                  >
-                    {showFullCaption ? "Show less" : "Show more"}
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Hashtags */}
-        {item.hashtags && item.hashtags.length > 0 && (
-          <div>
-            <p className="text-sm font-semibold mb-2">Hashtags:</p>
-            <div className="flex flex-wrap gap-2">
-              {item.hashtags.map((tag: string, index: number) => (
-                <Badge key={index} variant="secondary">
-                  #{tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Image Prompt or Generated Image */}
-        {item.imageUrl ? (
-          <div className="border rounded-lg overflow-hidden">
-            <img 
-              src={item.imageUrl} 
-              alt={item.topic}
-              className="w-full h-48 object-cover"
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
             />
-            <div className="p-2 bg-muted">
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <ImageIcon className="w-3 h-3" />
-                Generated Image
-              </p>
-            </div>
           </div>
-        ) : item.imagePrompt ? (
-          <div className="p-3 bg-muted rounded-lg">
-            <p className="text-sm font-semibold mb-1 flex items-center gap-2">
-              <ImageIcon className="w-4 h-4" />
-              Image Prompt:
-            </p>
-            <p className="text-sm text-muted-foreground">{item.imagePrompt}</p>
-          </div>
-        ) : null}
-
-        {/* Published Posts */}
-        {item.postGroup && item.postGroup.posts.length > 0 && (
-          <div className="pt-3 border-t">
-            <p className="text-sm font-semibold mb-2">Published Posts:</p>
-            <div className="space-y-2">
-              {item.postGroup.posts.map((post: any) => (
-                <div key={post.id} className="flex items-center justify-between text-sm">
-                  <span>{post.platform}</span>
-                  <Badge variant="outline">{post.status}</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }

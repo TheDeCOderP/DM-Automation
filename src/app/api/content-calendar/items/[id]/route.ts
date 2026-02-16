@@ -120,6 +120,7 @@ export async function PATCH(
         captionTikTok: body.captionTikTok,
         hashtags: body.hashtags,
         imagePrompt: body.imagePrompt,
+        imageUrl: body.imageUrl, // Save the image URL
         suggestedTime: body.suggestedTime ? new Date(body.suggestedTime) : undefined,
         status: body.status || "EDITED", // Mark as edited when user changes it
       },

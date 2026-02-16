@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getPlatformIcon } from "@/utils/ui/icons";
+import { formatDate } from "@/utils/format";
 import { 
   FileText, 
   Search, 
@@ -362,10 +363,10 @@ export default function PostsListPage() {
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
                           {post.publishedAt
-                            ? new Date(post.publishedAt).toLocaleDateString()
+                            ? formatDate(post.publishedAt)
                             : post.scheduledAt
-                            ? new Date(post.scheduledAt).toLocaleDateString()
-                            : new Date(post.createdAt).toLocaleDateString()}
+                            ? formatDate(post.scheduledAt)
+                            : formatDate(post.createdAt)}
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -520,10 +521,10 @@ export default function PostsListPage() {
                         <TableCell>
                           <div className="text-sm text-muted-foreground">
                             {post.publishedAt
-                              ? new Date(post.publishedAt).toLocaleDateString()
+                              ? formatDate(post.publishedAt)
                               : post.scheduledAt
-                              ? new Date(post.scheduledAt).toLocaleDateString()
-                              : new Date(post.createdAt).toLocaleDateString()}
+                              ? formatDate(post.scheduledAt)
+                              : formatDate(post.createdAt)}
                           </div>
                         </TableCell>
 

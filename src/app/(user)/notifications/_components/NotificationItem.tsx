@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import type { Notification } from "@prisma/client";
+import { formatDateTime } from "@/utils/format";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -122,12 +123,7 @@ export function NotificationItem({
               <span>•</span>
               <time dateTime={notification.createdAt.toISOString()} className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {new Date(notification.createdAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatDateTime(notification.createdAt)}
               </time>
             </div>
           </div>

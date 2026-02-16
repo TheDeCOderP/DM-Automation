@@ -46,10 +46,42 @@ export default function HomePage() {
 
   if (status === "loading") {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-black/50">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-white" />
-          <p className="text-white">Loading...</p>
+      <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="flex flex-col items-center gap-6">
+          {/* Animated spinner */}
+          <div className="relative w-20 h-20">
+            {/* Outer ring */}
+            <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-white/20 animate-pulse" />
+            
+            {/* Spinning ring */}
+            <div className="absolute inset-0 w-20 h-20 rounded-full border-4 border-transparent border-t-white border-r-white animate-spin" 
+                 style={{ animationDuration: "0.8s" }} />
+            
+            {/* Middle ring - opposite direction */}
+            <div className="absolute inset-2 w-16 h-16 rounded-full border-4 border-transparent border-b-white/70 border-l-white/70 animate-spin" 
+                 style={{ animationDuration: "1.2s", animationDirection: "reverse" }} />
+            
+            {/* Inner pulsing dot */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-4 h-4 rounded-full bg-white animate-pulse" 
+                   style={{ animationDuration: "1.5s" }} />
+            </div>
+          </div>
+
+          {/* Loading text with animated dots */}
+          <div className="flex items-center gap-1">
+       
+            <div className="flex gap-1 pb-1">
+              <span className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </div>
+
+          {/* Shimmer progress bar */}
+          <div className="w-64 h-1.5 bg-white/20 rounded-full overflow-hidden shadow-inner">
+            <div className="h-full bg-gradient-to-r from-white via-white/60 to-white animate-shimmer bg-[length:200%_100%]" />
+          </div>
         </div>
       </div>
     );

@@ -404,7 +404,7 @@ model ContentCalendarItem {
   // Common data
   hashtags      Json? // Array of hashtags
   imagePrompt   String?   @db.Text
-  imageUrl      String?   @db.Text // Generated or uploaded image URL
+  imageUrl      String?   @db.LongText // Generated or uploaded image URL (can store base64 or URL)
   suggestedTime DateTime?
 
   // Status tracking

@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateWithThinking } from "@/lib/gemini";
+import { generateWithThinking, GEMINI_MODELS } from "@/lib/gemini";
 import { Platform } from "@prisma/client";
 
 interface GenerateCalendarRequest {
@@ -131,7 +131,8 @@ Generate exactly ${totalPosts} content ideas now:`;
 
   try {
     const response = await generateWithThinking(prompt, {
-      thinkingLevel: 'medium'
+      // Remove thinking level as it's not supported
+      model: GEMINI_MODELS.PRO_PREVIEW
     });
     
     // Extract JSON from response

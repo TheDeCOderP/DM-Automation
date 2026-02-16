@@ -91,7 +91,7 @@ export default function EditCalendarItemModal({
   const [hashtagInput, setHashtagInput] = useState("");
   const [imagePrompt, setImagePrompt] = useState(item.imagePrompt || "");
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(item.imageUrl || null);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("");
   const [suggestedTime, setSuggestedTime] = useState(
     item.suggestedTime
@@ -100,6 +100,13 @@ export default function EditCalendarItemModal({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  // Update imagePreview when item changes (when modal reopens with updated data)
+  useEffect(() => {
+    if (item.imageUrl) {
+      setImagePreview(item.imageUrl);
+    }
+  }, [item.imageUrl]);
 
   // Auto-select aspect ratio based on platforms
   useEffect(() => {
@@ -132,13 +139,17 @@ export default function EditCalendarItemModal({
     setHashtags(hashtags.filter((t) => t !== tag));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedImage(file);
+      
+      // Convert to base64 for preview and saving
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        toast.success("Image uploaded successfully");
       };
       reader.readAsDataURL(file);
     }
@@ -227,6 +238,7 @@ export default function EditCalendarItemModal({
           captionTikTok: captions.TIKTOK,
           hashtags,
           imagePrompt,
+          imageUrl: imagePreview || item.imageUrl, // Save the generated image URL
           suggestedTime: suggestedTime ? new Date(suggestedTime).toISOString() : null,
         }),
       });
@@ -264,7 +276,7 @@ export default function EditCalendarItemModal({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!max-w-[1300px] !w-[98vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Calendar Item - Day {item.day}</DialogTitle>
           <DialogDescription>

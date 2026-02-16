@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CalendarIcon, BarChart3Icon, UsersIcon, BuildingIcon, GlobeIcon } from "lucide-react"
+import { formatDate } from "@/utils/format"
 
 interface PostReportData {
   summary: {
@@ -589,7 +590,7 @@ export default function PostReportsPage() {
                     <Badge variant={post.status === "PUBLISHED" ? "default" : "secondary"}>{post.status}</Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(post.createdAt).toLocaleDateString()}
+                    {formatDate(post.createdAt)}
                   </TableCell>
                 </TableRow>
               ))}

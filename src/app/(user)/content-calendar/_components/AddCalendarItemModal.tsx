@@ -245,7 +245,7 @@ export default function AddCalendarItemModal({
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!max-w-[1300px] !w-[98vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Calendar Item</DialogTitle>
           <DialogDescription>

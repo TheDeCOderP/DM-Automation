@@ -2,9 +2,23 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { X, Loader2, Sparkles } from "lucide-react";
+import { 
+  X, 
+  Loader2, 
+  Sparkles, 
+  AlertTriangle,
+  Linkedin,
+  Twitter,
+  Instagram,
+  Facebook,
+  Youtube,
+  Pin,
+  MessageCircle,
+  Music
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatDate } from "@/utils/format";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -14,6 +28,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Platform } from "@prisma/client";
 
 interface CreateCalendarModalProps {
@@ -23,14 +47,14 @@ interface CreateCalendarModalProps {
 }
 
 const PLATFORMS = [
-  { value: "LINKEDIN", label: "LinkedIn", icon: "💼" },
-  { value: "TWITTER", label: "Twitter", icon: "🐦" },
-  { value: "INSTAGRAM", label: "Instagram", icon: "📸" },
-  { value: "FACEBOOK", label: "Facebook", icon: "👥" },
-  { value: "YOUTUBE", label: "YouTube", icon: "📺" },
-  { value: "PINTEREST", label: "Pinterest", icon: "📌" },
-  { value: "REDDIT", label: "Reddit", icon: "🤖" },
-  { value: "TIKTOK", label: "TikTok", icon: "🎵" },
+  { value: "LINKEDIN", label: "LinkedIn", icon: Linkedin, color: "text-blue-600" },
+  { value: "TWITTER", label: "Twitter", icon: Twitter, color: "text-sky-500" },
+  { value: "INSTAGRAM", label: "Instagram", icon: Instagram, color: "text-pink-600" },
+  { value: "FACEBOOK", label: "Facebook", icon: Facebook, color: "text-blue-700" },
+  { value: "YOUTUBE", label: "YouTube", icon: Youtube, color: "text-red-600" },
+  { value: "PINTEREST", label: "Pinterest", icon: Pin, color: "text-red-500" },
+  { value: "REDDIT", label: "Reddit", icon: MessageCircle, color: "text-orange-600" },
+  { value: "TIKTOK", label: "TikTok", icon: Music, color: "text-black dark:text-white" },
 ];
 
 export default function CreateCalendarModal({
@@ -47,6 +71,37 @@ export default function CreateCalendarModal({
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState("");
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  // Check if form has any data
+  const hasFormData = () => {
+    return (
+      topic.trim() !== "" ||
+      selectedPlatforms.length > 0 ||
+      duration !== 30 ||
+      postsPerWeek !== 5 ||
+      startDate !== new Date().toISOString().split("T")[0]
+    );
+  };
+
+  const handleCloseAttempt = () => {
+    // Prevent closing while generating
+    if (isGenerating) {
+      toast.error("Please wait while content is being generated...");
+      return;
+    }
+    
+    if (hasFormData()) {
+      setShowCloseConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirm(false);
+    onClose();
+  };
 
   // Calculate end date based on start date and duration
   const endDate = new Date(startDate);
@@ -125,17 +180,34 @@ export default function CreateCalendarModal({
   const totalPosts = Math.ceil((duration / 7) * postsPerWeek) * selectedPlatforms.length;
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Generate Content Calendar
-          </DialogTitle>
-          <DialogDescription>
-            AI will generate platform-specific content for your selected duration
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open onOpenChange={handleCloseAttempt}>
+        <DialogContent 
+          className="!max-w-[1200px] !w-[95vw] max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            // Prevent closing by clicking outside while generating
+            if (isGenerating) {
+              e.preventDefault();
+              toast.error("Please wait while content is being generated...");
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            // Prevent closing with Escape key while generating
+            if (isGenerating) {
+              e.preventDefault();
+              toast.error("Please wait while content is being generated...");
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Generate Content Calendar
+            </DialogTitle>
+            <DialogDescription>
+              AI will generate platform-specific content for your selected duration
+            </DialogDescription>
+          </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Topic */}
@@ -155,82 +227,85 @@ export default function CreateCalendarModal({
             </p>
           </div>
 
-          {/* Start Date */}
-          <div className="space-y-2">
-            <Label htmlFor="startDate">
-              Start Date <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              disabled={isGenerating}
-              min={new Date().toISOString().split("T")[0]}
-            />
-            <p className="text-sm text-muted-foreground">
-              When should the calendar start?
-            </p>
-          </div>
-
-          {/* Duration */}
-          <div className="space-y-2">
-            <Label htmlFor="duration">
-              Duration (Days) <span className="text-red-500">*</span>
-            </Label>
-            
-            {/* Quick Presets */}
-            <div className="flex gap-2 mb-2">
-              <Button
-                type="button"
-                variant={duration === 7 ? "default" : "outline"}
-                size="sm"
-                onClick={() => setDuration(7)}
+          {/* Start Date and Duration in one row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Start Date */}
+            <div className="space-y-2">
+              <Label htmlFor="startDate">
+                Start Date <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 disabled={isGenerating}
-              >
-                1 Week
-              </Button>
-              <Button
-                type="button"
-                variant={duration === 14 ? "default" : "outline"}
-                size="sm"
-                onClick={() => setDuration(14)}
-                disabled={isGenerating}
-              >
-                2 Weeks
-              </Button>
-              <Button
-                type="button"
-                variant={duration === 30 ? "default" : "outline"}
-                size="sm"
-                onClick={() => setDuration(30)}
-                disabled={isGenerating}
-              >
-                1 Month
-              </Button>
-              <Button
-                type="button"
-                variant={duration === 90 ? "default" : "outline"}
-                size="sm"
-                onClick={() => setDuration(90)}
-                disabled={isGenerating}
-              >
-                3 Months
-              </Button>
+                min={new Date().toISOString().split("T")[0]}
+              />
+              <p className="text-sm text-muted-foreground">
+                When should the calendar start?
+              </p>
             </div>
-            
-            <Input
-              id="duration"
-              type="number"
-              min={7}
-              max={90}
-              value={duration}
-              onChange={(e) => setDuration(parseInt(e.target.value))}
-              disabled={isGenerating}
-            />
-            <p className="text-sm text-muted-foreground">
-              Number of days (7-90) - Use presets or enter custom value
-            </p>
+
+            {/* Duration */}
+            <div className="space-y-2">
+              <Label htmlFor="duration">
+                Duration (Days) <span className="text-red-500">*</span>
+              </Label>
+              
+              {/* Quick Presets */}
+              <div className="flex gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant={duration === 7 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDuration(7)}
+                  disabled={isGenerating}
+                >
+                  1 Week
+                </Button>
+                <Button
+                  type="button"
+                  variant={duration === 14 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDuration(14)}
+                  disabled={isGenerating}
+                >
+                  2 Weeks
+                </Button>
+                <Button
+                  type="button"
+                  variant={duration === 30 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDuration(30)}
+                  disabled={isGenerating}
+                >
+                  1 Month
+                </Button>
+                <Button
+                  type="button"
+                  variant={duration === 90 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDuration(90)}
+                  disabled={isGenerating}
+                >
+                  3 Months
+                </Button>
+              </div>
+              
+              <Input
+                id="duration"
+                type="number"
+                min={7}
+                max={90}
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
+                disabled={isGenerating}
+              />
+              <p className="text-sm text-muted-foreground">
+                Number of days (7-90) - Use presets or enter custom value
+              </p>
+            </div>
           </div>
 
           {/* Posts Per Week */}
@@ -258,28 +333,31 @@ export default function CreateCalendarModal({
               Select Platforms <span className="text-red-500">*</span>
             </Label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {PLATFORMS.map((platform) => (
-                <div
-                  key={platform.value}
-                  className={`flex items-center space-x-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                    selectedPlatforms.includes(platform.value as Platform)
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                  onClick={() => handlePlatformToggle(platform.value as Platform)}
-                >
-                  <Checkbox
-                    checked={selectedPlatforms.includes(platform.value as Platform)}
-                    onCheckedChange={() =>
-                      handlePlatformToggle(platform.value as Platform)
-                    }
-                  />
-                  <span className="text-xl">{platform.icon}</span>
-                  <Label className="cursor-pointer flex-1">
-                    {platform.label}
-                  </Label>
-                </div>
-              ))}
+              {PLATFORMS.map((platform) => {
+                const IconComponent = platform.icon;
+                return (
+                  <div
+                    key={platform.value}
+                    className={`flex items-center space-x-2 p-3 rounded-lg border cursor-pointer transition-all ${
+                      selectedPlatforms.includes(platform.value as Platform)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => handlePlatformToggle(platform.value as Platform)}
+                  >
+                    <Checkbox
+                      checked={selectedPlatforms.includes(platform.value as Platform)}
+                      onCheckedChange={() =>
+                        handlePlatformToggle(platform.value as Platform)
+                      }
+                    />
+                    <IconComponent className={`w-5 h-5 ${platform.color}`} />
+                    <Label className="cursor-pointer flex-1">
+                      {platform.label}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -289,7 +367,7 @@ export default function CreateCalendarModal({
               <h4 className="font-semibold">Summary:</h4>
               <ul className="text-sm space-y-1">
                 <li>
-                  • <strong>Date Range:</strong> {new Date(startDate).toLocaleDateString()} - {endDate.toLocaleDateString()}
+                  • <strong>Date Range:</strong> {formatDate(startDate)} - {formatDate(endDate)}
                 </li>
                 <li>
                   • {Math.ceil((duration / 7) * postsPerWeek)} content ideas will be
@@ -322,7 +400,7 @@ export default function CreateCalendarModal({
 
         {/* Actions */}
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose} disabled={isGenerating}>
+          <Button variant="outline" onClick={handleCloseAttempt} disabled={isGenerating}>
             Cancel
           </Button>
           <Button onClick={handleGenerate} disabled={isGenerating}>
@@ -341,5 +419,27 @@ export default function CreateCalendarModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Close Confirmation Dialog */}
+    <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            Discard Changes?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved changes in the form. Are you sure you want to close? All your entered data will be lost.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continue Editing</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Discard & Close
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

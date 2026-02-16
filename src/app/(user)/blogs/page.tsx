@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import Image from 'next/image';
+import { formatDate } from '@/utils/format';
 
 interface Blog {
   id: number;
@@ -105,7 +106,7 @@ export default function BlogsPage() {
                         {blog.title}
                       </h3>
                       <p className="text-sm text-gray-500 mt-1">
-                        By {blog.author.name} • {new Date(blog.createdAt).toLocaleDateString()}
+                        By {blog.author.name} • {formatDate(blog.createdAt)}
                       </p>
                       <div className="flex items-center space-x-4 mt-2">
                         <span className="text-sm text-gray-500">

@@ -4,6 +4,7 @@ import type React from "react"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, Building2, AlertCircle, CheckCircle, XCircle } from "lucide-react"
+import { formatDate, formatDateTime } from "@/utils/format"
 
 interface ApiPost {
   id: string
@@ -99,8 +100,7 @@ export function PostHoverCard({ children, post }: PostHoverCardProps) {
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Calendar className="w-4 h-4" />
                 <span>
-                  Scheduled: {new Date(post.scheduledAt).toLocaleDateString()} at{" "}
-                  {new Date(post.scheduledAt).toLocaleTimeString()}
+                  Scheduled: {formatDateTime(post.scheduledAt)}
                 </span>
               </div>
             )}
@@ -108,14 +108,13 @@ export function PostHoverCard({ children, post }: PostHoverCardProps) {
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <CheckCircle className="w-4 h-4" />
                 <span>
-                  Published: {new Date(post.publishedAt).toLocaleDateString()} at{" "}
-                  {new Date(post.publishedAt).toLocaleTimeString()}
+                  Published: {formatDateTime(post.publishedAt)}
                 </span>
               </div>
             )}
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Clock className="w-4 h-4" />
-              <span>Created: {new Date(post.createdAt).toLocaleDateString()}</span>
+              <span>Created: {formatDate(post.createdAt)}</span>
             </div>
           </div>
         </div>

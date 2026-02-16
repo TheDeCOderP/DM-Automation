@@ -228,14 +228,16 @@ export async function generateWithThinking(
   try {
     const config: any = {};
     
-    if (options?.thinkingLevel) {
+    // Only add thinking config if model supports it and level is provided
+    // Note: Not all models support thinking levels
+    if (options?.thinkingLevel && options?.model?.includes('thinking')) {
       config.thinkingConfig = {
         thinkingLevel: options.thinkingLevel
       };
     }
 
     const response = await ai.models.generateContent({
-      model: options?.model || GEMINI_MODELS.PRO_THINKING,
+      model: options?.model || GEMINI_MODELS.PRO_PREVIEW,
       contents: prompt,
       config
     });

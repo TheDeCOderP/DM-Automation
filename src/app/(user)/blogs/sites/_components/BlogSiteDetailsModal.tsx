@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ExternalBlogSite } from "@prisma/client";
 
 import { getPlatformColor, getPlatformIcon } from "@/utils/ui/icons";
+import { formatDate } from "@/utils/format";
 
 interface ExternalBlogSiteWithBrand extends ExternalBlogSite {
   brand: {
@@ -95,7 +96,7 @@ export default function BlogSiteDetailsModal({
           <Separator />
           <div className="space-y-1">
             <Label className="text-sm font-medium">Connected</Label>
-            <p className="text-sm">{new Date(site.createdAt).toLocaleDateString()}</p>
+            <p className="text-sm">{formatDate(site.createdAt)}</p>
           </div>
         </div>
       </DialogContent>
