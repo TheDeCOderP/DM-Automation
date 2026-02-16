@@ -262,7 +262,19 @@ export async function POST(req: NextRequest) {
       scheduledAt = utcDate.toISOString()
 
       status = Status.SCHEDULED
-      frequency = schedule.frequency.toUpperCase() as Frequency
+      
+      // Map frontend frequency values to Prisma enum
+      const frequencyMap: Record<string, Frequency> = {
+        'once': Frequency.ONCE,
+        'minutes': Frequency.HOURLY,
+        'daily': Frequency.DAILY,
+        'monthly': Frequency.MONTHLY,
+        'yearly': Frequency.MONTHLY,
+        'custom': Frequency.ONCE, // Custom cron expressions stored as ONCE
+      };
+      
+      frequency = frequencyMap[schedule.frequency.toLowerCase()] || Frequency.ONCE;
+      
       ;({ cron: cronExpression, expiresAt } = generateCronExpression(schedule))
       console.log("Generated cron:", cronExpression, "timezone:", "UTC", "scheduledAt:", scheduledAt)
     } else {

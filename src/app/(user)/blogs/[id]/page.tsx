@@ -64,7 +64,7 @@ export default function BlogPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <button
-            onClick={() => router.push('/dashboard/external-blog-sites')}
+            onClick={() => router.push('/blogs/sites')}
             className="text-blue-600 hover:text-blue-800 mb-4"
           >
             ← Back to Sites
