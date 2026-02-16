@@ -47,38 +47,73 @@ export async function POST(req: NextRequest) {
 }
 
 async function getImageDimensions(base64Image: string): Promise<{ width: number; height: number }> {
-    // Remove data URL prefix if present
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    
-    // Simple PNG dimension extraction (first 24 bytes contain dimensions)
-    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
-        const width = buffer.readUInt32BE(16);
-        const height = buffer.readUInt32BE(20);
-        return { width, height };
-    }
-    
-    // Simple JPEG dimension extraction
-    if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
-        let offset = 2;
-        while (offset < buffer.length) {
-            if (buffer[offset] !== 0xFF) break;
-            
-            const marker = buffer[offset + 1];
-            offset += 2;
-            
-            if (marker === 0xC0 || marker === 0xC2) {
-                const height = buffer.readUInt16BE(offset + 1);
-                const width = buffer.readUInt16BE(offset + 3);
+    try {
+        // Remove data URL prefix if present
+        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Validate buffer has minimum size
+        if (buffer.length < 24) {
+            throw new Error("Image buffer too small");
+        }
+        
+        // Simple PNG dimension extraction (first 24 bytes contain dimensions)
+        if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+            const width = buffer.readUInt32BE(16);
+            const height = buffer.readUInt32BE(20);
+            if (width > 0 && height > 0) {
                 return { width, height };
             }
-            
-            const segmentLength = buffer.readUInt16BE(offset);
-            offset += segmentLength;
         }
+        
+        // Simple JPEG dimension extraction
+        if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
+            let offset = 2;
+            while (offset < buffer.length - 8) {
+                if (buffer[offset] !== 0xFF) break;
+                
+                const marker = buffer[offset + 1];
+                offset += 2;
+                
+                if (marker === 0xC0 || marker === 0xC2) {
+                    const height = buffer.readUInt16BE(offset + 1);
+                    const width = buffer.readUInt16BE(offset + 3);
+                    if (width > 0 && height > 0) {
+                        return { width, height };
+                    }
+                }
+                
+                const segmentLength = buffer.readUInt16BE(offset);
+                offset += segmentLength;
+            }
+        }
+        
+        // WebP dimension extraction
+        if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+            buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+            // VP8 format
+            if (buffer[12] === 0x56 && buffer[13] === 0x50 && buffer[14] === 0x38 && buffer[15] === 0x20) {
+                const width = buffer.readUInt16LE(26) & 0x3fff;
+                const height = buffer.readUInt16LE(28) & 0x3fff;
+                if (width > 0 && height > 0) {
+                    return { width, height };
+                }
+            }
+            // VP8L format
+            if (buffer[12] === 0x56 && buffer[13] === 0x50 && buffer[14] === 0x38 && buffer[15] === 0x4C) {
+                const bits = buffer.readUInt32LE(21);
+                const width = (bits & 0x3FFF) + 1;
+                const height = ((bits >> 14) & 0x3FFF) + 1;
+                if (width > 0 && height > 0) {
+                    return { width, height };
+                }
+            }
+        }
+        
+        throw new Error("Unable to extract image dimensions - unsupported format or corrupted data");
+    } catch (error) {
+        throw new Error(`Unable to extract image dimensions: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    throw new Error("Unable to extract image dimensions");
 }
 
 function calculateAspectRatio(width: number, height: number): '1:1' | '16:9' | '9:16' | '4:3' | '3:4' {
