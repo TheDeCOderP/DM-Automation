@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { toast } from "sonner"
 import { useState } from "react"
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText, Calendar } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -245,10 +245,10 @@ export default function BrandsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/50">
-                  <TableHead className="font-semibold text-foreground w-[35%]">Brand</TableHead>
-                  <TableHead className="font-semibold text-foreground w-[30%]">Social Accounts</TableHead>
-                  <TableHead className="font-semibold text-foreground w-[20%]">Posts</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground w-[15%]">Actions</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[30%]">Brand</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[25%]">Social Accounts</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[25%]">Quick Actions</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground w-[20%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -326,17 +326,28 @@ export default function BrandsPage() {
                         )}
                       </TableCell>
 
-                      {/* Posts */}
+                      {/* Quick Actions */}
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => router.push(`/posts?brand=${brand.id}`)}
-                          className="gap-2 w-full"
-                        >
-                          <FileText className="h-4 w-4" />
-                          View Posts
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/posts?brand=${brand.id}`)}
+                            className="gap-2 flex-1"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Posts
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/content-calendar?brand=${brand.id}`)}
+                            className="gap-2 flex-1"
+                          >
+                            <Calendar className="h-4 w-4" />
+                            Calendar
+                          </Button>
+                        </div>
                       </TableCell>
 
                       {/* Actions */}

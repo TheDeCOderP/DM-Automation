@@ -1,0 +1,60 @@
+{
+  "references": [
+    {
+      "file": "/reference-images/square-1-1.png",
+      "width": 1080,
+      "height": 1080,
+      "aspectRatio": "1080:1080",
+      "label": "Square (1:1)",
+      "platforms": [
+        "LinkedIn",
+        "Instagram",
+        "Facebook"
+      ]
+    },
+    {
+      "file": "/reference-images/landscape-16-9.png",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatio": "1920:1080",
+      "label": "Landscape (16:9)",
+      "platforms": [
+        "YouTube",
+        "Twitter",
+        "Reddit"
+      ]
+    },
+    {
+      "file": "/reference-images/portrait-9-16.png",
+      "width": 1080,
+      "height": 1920,
+      "aspectRatio": "1080:1920",
+      "label": "Portrait (9:16)",
+      "platforms": [
+        "TikTok",
+        "Instagram Story"
+      ]
+    },
+    {
+      "file": "/reference-images/standard-4-3.png",
+      "width": 1600,
+      "height": 1200,
+      "aspectRatio": "1600:1200",
+      "label": "Standard (4:3)",
+      "platforms": [
+        "Facebook",
+        "Presentations"
+      ]
+    },
+    {
+      "file": "/reference-images/portrait-3-4.png",
+      "width": 1200,
+      "height": 1600,
+      "aspectRatio": "1200:1600",
+      "label": "Portrait (3:4)",
+      "platforms": [
+        "Pinterest"
+      ]
+    }
+  ]
+}

@@ -1,8 +1,16 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron-jobs/publish-post",
-      "schedule": "0 0 * * *"
+  "functions": {
+    "api/content-calendar/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "api/content-calendar/generate-images/route.ts": {
+      "maxDuration": 60
+    },
+    "api/content-calendar/schedule-all/route.ts": {
+      "maxDuration": 60
+    },
+    "api/cron-jobs/publish-post/route.ts": {
+      "maxDuration": 60
     }
-  ]
+  }
 }

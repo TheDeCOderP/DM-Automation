@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, Share2, Info } from "lucide-react";
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, Share2, Info, FileText, Calendar } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export function MobileBrandCard({
   onShare: (brandId: string, brandName: string) => void
   onDetails: (brand: BrandWithSocialAccounts) => void
 }) {
+  const router = useRouter();
+  
   return (
     <Card className="lg:hidden shadow-md hover:shadow-xl transition-all duration-300 border-2">
       <CardHeader className="pb-3">
@@ -126,6 +129,31 @@ export function MobileBrandCard({
               Connect Social Accounts
             </Button>
           )}
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Quick Actions</p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/posts?brand=${brand.id}`)}
+              className="gap-2 flex-1"
+            >
+              <FileText className="h-4 w-4" />
+              Posts
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/content-calendar?brand=${brand.id}`)}
+              className="gap-2 flex-1"
+            >
+              <Calendar className="h-4 w-4" />
+              Calendar
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

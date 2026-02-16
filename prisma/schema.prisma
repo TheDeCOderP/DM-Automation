@@ -128,51 +128,52 @@ model Session {
 }
 
 model User {
-  id            String             @id @default(cuid())
-  email         String             @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   name          String?
   image         String?
   password      String?
-  roleId        String             @default("PCR-0002")
-  isActive      Boolean            @default(false) // User must be approved by admin
+  roleId        String    @default("PCR-0002")
+  isActive      Boolean   @default(false) // User must be approved by admin
   emailVerified DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  resetToken        String?  // Optional, stores token
-  resetTokenExpiry  DateTime? // Expiry timestamp
+  resetToken       String? // Optional, stores token
+  resetTokenExpiry DateTime? // Expiry timestamp
 
-  notifications Notification[]
-  media         Media[]
-  posts         Post[]
-  brands        UserBrand[]
-  accounts      Account[]
-  sessions      Session[]
-  role          Role               @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  AuditLog      AuditLog[]
-  blogs         Blog[]
-  socialAccounts UserSocialAccount[]
+  notifications                   Notification[]
+  media                           Media[]
+  posts                           Post[]
+  brands                          UserBrand[]
+  accounts                        Account[]
+  sessions                        Session[]
+  role                            Role                 @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  AuditLog                        AuditLog[]
+  blogs                           Blog[]
+  socialAccounts                  UserSocialAccount[]
   connectedSocialAccountsToBrands SocialAccountBrand[] @relation("ConnectedSocialAccounts")
-  
+
   // Add these two relations for BrandInvitation
-  sentBrandInvitations BrandInvitation[] @relation("SentBrandInvitations")
+  sentBrandInvitations     BrandInvitation[] @relation("SentBrandInvitations")
   acceptedBrandInvitations BrandInvitation[] @relation("AcceptedBrandInvitations")
 }
 
 model Brand {
-  id             String                 @id @default(cuid())
-  name           String
-  description    String?                @db.Text
-  logo           String?
-  website        String?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  
-  members        UserBrand[]
-  posts          Post[]
-  media          Media[]
-  socialAccounts SocialAccountBrand[]
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  logo        String?
+  website     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members          UserBrand[]
+  posts            Post[]
+  media            Media[]
+  socialAccounts   SocialAccountBrand[]
   brandInvitations BrandInvitation[]
+  contentCalendars ContentCalendar[]
 
   externalBlogSites ExternalBlogSite[]
 }
@@ -185,9 +186,9 @@ model UserBrand {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  role  Role  @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@unique([userId, brandId])
   @@index([userId])
@@ -195,36 +196,36 @@ model UserBrand {
 }
 
 model SocialAccount {
-  id                String                @id @default(cuid())
+  id                String    @id @default(cuid())
   platform          Platform
-  accessToken       String                @db.LongText
-  refreshToken      String?               @db.LongText
+  accessToken       String    @db.LongText
+  refreshToken      String?   @db.LongText
   tokenExpiresAt    DateTime?
   platformUserId    String
   platformUsername  String
   platformUserImage String?
 
-  lastSyncedAt      DateTime              @default(now())
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  lastSyncedAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  pages             SocialAccountPage[]
-  brands            SocialAccountBrand[]
-  users             UserSocialAccount[]
-  posts             Post[]
+  pages  SocialAccountPage[]
+  brands SocialAccountBrand[]
+  users  UserSocialAccount[]
+  posts  Post[]
 
   @@unique([platform, platformUserId])
 }
 
 model UserSocialAccount {
-  id              String         @id @default(cuid())
+  id              String   @id @default(cuid())
   userId          String
   socialAccountId String
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  socialAccount   SocialAccount  @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
 
   @@unique([userId, socialAccountId])
   @@index([userId])
@@ -232,66 +233,70 @@ model UserSocialAccount {
 }
 
 model SocialAccountBrand {
-  id              String         @id @default(cuid())
-  brandId         String
-  brand           Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  socialAccountId String
-  socialAccount   SocialAccount  @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  id                String        @id @default(cuid())
+  brandId           String
+  brand             Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  socialAccountId   String
+  socialAccount     SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
   connectedByUserId String?
-  connectedBy     User?          @relation(fields: [connectedByUserId], references: [id], onDelete: Cascade, name: "ConnectedSocialAccounts")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @default(now()) @updatedAt
-  
+  connectedBy       User?         @relation(fields: [connectedByUserId], references: [id], onDelete: Cascade, name: "ConnectedSocialAccounts")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
+
   @@unique([brandId, socialAccountId])
   @@index([connectedByUserId])
 }
 
 model SocialAccountPage {
-  id              String         @id @default(cuid())
-  name            String
-  pageId          String
-  pageName        String
-  pageImage       String?        @db.LongText
-  accessToken     String         @db.LongText
-  tokenExpiresAt  DateTime?
-  isActive        Boolean        @default(true)
-  platform        Platform       @default(FACEBOOK)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  
-  socialAccountId String
-  socialAccount   SocialAccount  @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  name           String
+  pageId         String
+  pageName       String
+  pageImage      String?   @db.LongText
+  accessToken    String    @db.LongText
+  tokenExpiresAt DateTime?
+  isActive       Boolean   @default(true)
+  platform       Platform  @default(FACEBOOK)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  posts           Post[]
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  posts Post[]
 
   @@unique([pageId, socialAccountId])
   @@index([socialAccountId])
 }
 
 model Post {
-  id          String     @id @default(cuid())
-  userId      String
-  title       String?
-  content     String     @db.Text
-  platform    Platform
-  autoReplyEnabled    Boolean            @default(false)
-  publishedAt DateTime?
-  scheduledAt DateTime?
-  frequency   Frequency?
-  url         String?    @db.Text
-  status      Status     @default(DRAFTED)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id               String     @id @default(cuid())
+  userId           String
+  title            String?
+  content          String     @db.Text
+  platform         Platform
+  autoReplyEnabled Boolean    @default(false)
+  publishedAt      DateTime?
+  scheduledAt      DateTime?
+  frequency        Frequency?
+  url              String?    @db.Text
+  status           Status     @default(DRAFTED)
 
-  media       Media[]
-  analytics   PostAnalytics[]
+  // Platform-specific metadata (hashtags, threads, etc.)
+  platformMetadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  media          Media[]
+  analytics      PostAnalytics[]
   commentReplies CommentReply[]
 
   postGroupId String?
   postGroup   PostGroup? @relation(fields: [postGroupId], references: [id], onDelete: Cascade)
 
-  brandId     String
-  brand       Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   socialAccountPageId String?
   socialAccountPage   SocialAccountPage? @relation(fields: [socialAccountPageId], references: [id], onDelete: Cascade)
@@ -299,97 +304,164 @@ model Post {
   socialAccountId String?
   socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
 
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CommentReply {
-  id                 String   @id @default(cuid())
-  postId             String
-  post               Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
   // Original comment details
-  platformCommentId  String   // NOT unique - user can comment multiple times
-  commentAuthorId    String   // Author ID from the platform
-  commentAuthorName  String?
-  commentText        String   @db.Text
-  commentCreatedAt   DateTime
-  
+  platformCommentId String // NOT unique - user can comment multiple times
+  commentAuthorId   String // Author ID from the platform
+  commentAuthorName String?
+  commentText       String   @db.Text
+  commentCreatedAt  DateTime
+
   // Our reply details
-  replyText          String   @db.Text
-  platformReplyId    String?  // The ID of our reply on the platform
-  
+  replyText       String  @db.Text
+  platformReplyId String? // The ID of our reply on the platform
+
   // Status tracking
-  status             String   @default("PENDING") // PENDING, SENT, FAILED
-  errorMessage       String?  @db.Text
-  
+  status       String  @default("PENDING") // PENDING, SENT, FAILED
+  errorMessage String? @db.Text
+
   // Thread/context tracking
-  parentCommentId    String?  // If this comment is a reply to another comment
-  threadId           String?  // To track entire conversation threads
-  
+  parentCommentId String? // If this comment is a reply to another comment
+  threadId        String? // To track entire conversation threads
+
   // Additional metadata
-  platform           Platform
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  
+  platform Platform
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Composite unique constraint to prevent duplicate replies to the same comment
+  @@unique([postId, platformCommentId])
   @@index([postId])
   @@index([platformCommentId])
   @@index([commentAuthorId])
   @@index([platformReplyId])
   @@index([status])
   @@index([createdAt])
-  
-  // Composite unique constraint to prevent duplicate replies to the same comment
-  @@unique([postId, platformCommentId])
 }
 
 model PostGroup {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  posts      Post[]
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts         Post[]
+  calendarItems ContentCalendarItem[]
+}
+
+// Content Calendar for bulk content generation
+model ContentCalendar {
+  id      String @id @default(cuid())
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  topic        String
+  duration     Int // Number of days
+  startDate    DateTime? // When calendar starts
+  endDate      DateTime? // When calendar ends
+  platforms    Json // Array of platforms: ["LINKEDIN", "TWITTER", "INSTAGRAM"]
+  postsPerWeek Int
+
+  status String @default("DRAFT") // DRAFT, SCHEDULED, COMPLETED
+
+  items ContentCalendarItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+// Individual items in a content calendar
+model ContentCalendarItem {
+  id         String          @id @default(cuid())
+  calendarId String
+  calendar   ContentCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  day   Int // Day number in the calendar (1-30)
+  topic String
+
+  // Platform-specific captions
+  captionLinkedIn  String? @db.Text
+  captionTwitter   String? @db.Text
+  captionInstagram String? @db.Text
+  captionFacebook  String? @db.Text
+  captionYouTube   String? @db.Text
+  captionPinterest String? @db.Text
+  captionReddit    String? @db.Text
+  captionTikTok    String? @db.Text
+
+  // Common data
+  hashtags      Json? // Array of hashtags
+  imagePrompt   String?   @db.Text
+  imageUrl      String?   @db.Text // Generated or uploaded image URL
+  suggestedTime DateTime?
+
+  // Status tracking
+  status String @default("DRAFT") // DRAFT, EDITED, SCHEDULED, PUBLISHED
+
+  // Link to actual posts when scheduled
+  postGroupId String?
+  postGroup   PostGroup? @relation(fields: [postGroupId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([calendarId])
+  @@index([postGroupId])
+  @@index([status])
+  @@index([day])
 }
 
 model PostAnalytics {
-  id          String   @id @default(cuid())
-  postId      String   @unique
-  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  postId String @unique
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
   // Platform-specific post identifier (the actual post ID on the platform)
   platformPostId String?
-  
+
   // Basic engagement metrics (common across platforms)
-  likes        Int      @default(0)
-  comments     Int      @default(0)
-  shares       Int      @default(0)
-  saves        Int      @default(0)  // For Pinterest, Instagram, etc.
-  clicks       Int      @default(0)
-  impressions  Int      @default(0)
-  reach        Int      @default(0)
-  
+  likes       Int @default(0)
+  comments    Int @default(0)
+  shares      Int @default(0)
+  saves       Int @default(0) // For Pinterest, Instagram, etc.
+  clicks      Int @default(0)
+  impressions Int @default(0)
+  reach       Int @default(0)
+
   // Video-specific metrics
-  views        Int      @default(0)
-  videoPlays   Int      @default(0)
-  watchTime    Int?     @default(0) // in seconds
-  completionRate Float?  @default(0) // percentage
-  
+  views          Int    @default(0)
+  videoPlays     Int    @default(0)
+  watchTime      Int?   @default(0) // in seconds
+  completionRate Float? @default(0) // percentage
+
   // Audience metrics
-  engagementRate Float?  @default(0) // calculated field
-  
+  engagementRate Float? @default(0) // calculated field
+
   // Platform-specific metrics stored as JSON for flexibility
   platformSpecificData Json?
-  
+
   // Demographics data (can be expanded based on platform availability)
   demographics Json?
-  
+
   // Time-series data for tracking analytics over time
   analyticsHistory Json? // Array of { timestamp: DateTime, metrics: {...} }
-  
+
   // Timestamps
   lastSyncedAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([postId])
   @@index([platformPostId])
@@ -402,15 +474,15 @@ model Media {
   type      MediaType
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  
-  postId    String
-  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  brandId   String 
-  brand     Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
@@ -424,7 +496,7 @@ model Notification {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum InvitationStatus {
@@ -436,18 +508,18 @@ enum InvitationStatus {
 }
 
 model BrandInvitation {
-  id           String           @id @default(cuid())
-  brandId      String
-  brand        Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  status       InvitationStatus @default(PENDING)
-  token        String           @unique
-  expiresAt    DateTime
-  invitedById  String
-  invitedBy    User             @relation(fields: [invitedById], references: [id], onDelete: Cascade, name: "SentBrandInvitations")
-  invitedToId  String
-  invitedTo    User             @relation(fields: [invitedToId], references: [id], onDelete: Cascade, name: "AcceptedBrandInvitations")
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id          String           @id @default(cuid())
+  brandId     String
+  brand       Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  status      InvitationStatus @default(PENDING)
+  token       String           @unique
+  expiresAt   DateTime
+  invitedById String
+  invitedBy   User             @relation(fields: [invitedById], references: [id], onDelete: Cascade, name: "SentBrandInvitations")
+  invitedToId String
+  invitedTo   User             @relation(fields: [invitedToId], references: [id], onDelete: Cascade, name: "AcceptedBrandInvitations")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@unique([brandId, invitedToId, status])
   @@index([token])
@@ -620,7 +692,6 @@ model SidebarSettings {
   updatedAt           DateTime             @updatedAt
 }
 
-
 model CarouselItem {
   id          String   @id @default(cuid())
   title       String
@@ -687,43 +758,42 @@ model IdSequence {
 }
 
 model Blog {
-  id               String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Core content
-  banner           String?
-  title            String
-  slug             String     @unique
-  excerpt          String?
-  content          String     @db.LongText
-  tags             Json?
+  banner  String?
+  title   String
+  slug    String  @unique
+  excerpt String?
+  content String  @db.LongText
+  tags    Json?
 
   // Images
-  image            String?
-  imageAlt         String?
+  image    String?
+  imageAlt String?
 
   // SEO fields
-  seoTitle         String?
-  seoDescription   String?
-  seoKeywords      String?
-  canonicalUrl     String?
-  structuredData   Json?
-  faqs             Json?
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String?
+  canonicalUrl   String?
+  structuredData Json?
+  faqs           Json?
 
   // Status
-  published        Boolean    @default(false)
-  featured         Boolean    @default(false)
-  publishedAt      DateTime?
+  published   Boolean   @default(false)
+  featured    Boolean   @default(false)
+  publishedAt DateTime?
 
   // Relations
-  authorId         String
-  author           User       @relation(fields: [authorId], references: [id])
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
 
-  blogPosts        BlogPost[]
+  blogPosts BlogPost[]
 
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
-
 
 enum BlogPostStatus {
   DRAFT
@@ -736,71 +806,70 @@ enum BlogPostStatus {
 // Add new model for external blog site configurations
 // Add new models
 model ExternalBlogSite {
-  id          String   @id @default(cuid())
-  name        String
-  platform    Platform
-  baseUrl     String
-  apiEndpoint String
-  apiKey      String   @db.LongText
-  secretKey   String?  @db.LongText
-  username    String?
+  id           String   @id @default(cuid())
+  name         String
+  platform     Platform
+  baseUrl      String
+  apiEndpoint  String
+  apiKey       String   @db.LongText
+  secretKey    String?  @db.LongText
+  username     String?
   fieldMapping Json?
-  authType    String   @default("API_KEY")
-  contentType String   @default("application/json")
-  config      Json?
-  
+  authType     String   @default("API_KEY")
+  contentType  String   @default("application/json")
+  config       Json?
+
   // Relationships
-  brandId     String
-  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  
-  blogPosts   BlogPost[]
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  blogPosts BlogPost[]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([brandId, baseUrl, platform])
   @@index([brandId])
 }
 
-
 // Add new model for tracking blog posts to external sites
 model BlogPost {
-  id                  String        @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Reference to your existing Blog model
-  blogId              String
-  blog                Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
-  
+  blogId String
+  blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
   // Reference to external site
-  externalBlogSiteId  String
-  externalBlogSite    ExternalBlogSite @relation(fields: [externalBlogSiteId], references: [id], onDelete: Cascade)
-  
+  externalBlogSiteId String
+  externalBlogSite   ExternalBlogSite @relation(fields: [externalBlogSiteId], references: [id], onDelete: Cascade)
+
   // External platform post ID (if published successfully)
-  externalPostId      String?
-  externalPostUrl     String?       @db.Text
-  
+  externalPostId  String?
+  externalPostUrl String? @db.Text
+
   // Status tracking
-  status              BlogPostStatus @default(DRAFT)
-  scheduledAt         DateTime?
-  publishedAt         DateTime?
-  
+  status      BlogPostStatus @default(DRAFT)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+
   // Error tracking
-  errorMessage        String?       @db.Text
-  retryCount          Int           @default(0)
-  
+  errorMessage String? @db.Text
+  retryCount   Int     @default(0)
+
   // Request/response data for debugging
-  requestPayload      Json?         // The payload that was sent
-  responseData        Json?         // The response received
-  
+  requestPayload Json? // The payload that was sent
+  responseData   Json? // The response received
+
   // Additional metadata
-  tags                String?       // Tags for the external platform
-  categories          String?       // Categories for the external platform
-  featuredImage      String?       // Override featured image if needed
-  
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  
+  tags          String? // Tags for the external platform
+  categories    String? // Categories for the external platform
+  featuredImage String? // Override featured image if needed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([blogId, externalBlogSiteId])
   @@index([blogId])
   @@index([externalBlogSiteId])
@@ -822,16 +891,13 @@ model AuditLog {
   @@index([userId, action, createdAt])
 }
 
-
-
 // banner management 
-
 
 model Banner {
   id            String   @id @default(cuid())
   title         String
-  type          String   // Slugified: "festive-ads", "sidebar-ads", etc.
-  typeLabel     String?  // Human-readable: "Festive Ads", "Sidebar Ads", etc.
+  type          String // Slugified: "festive-ads", "sidebar-ads", etc.
+  typeLabel     String? // Human-readable: "Festive Ads", "Sidebar Ads", etc.
   imageUrl      String
   imagePublicId String?
   redirectUrl   String?
