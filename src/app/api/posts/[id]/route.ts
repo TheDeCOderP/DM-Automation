@@ -21,8 +21,19 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       where: { id },
       include: {
         brand: true,
-        socialAccountPage: true,
+        socialAccountPage: {
+          include: {
+            socialAccount: true,
+          },
+        },
         media: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
       },
     });
 

@@ -44,21 +44,29 @@ export async function PUT(req: NextRequest) {
 
 
         if(status === InvitationStatus.ACCEPTED) {
-            // Find the BrandUser role dynamically for invited members
-            const brandUserRole = await prisma.role.findFirst({
-                where: { name: "BrandUser" }
-            });
+            // Get roleId from invitation metadata, or default to BrandUser
+            let roleId = invitation.metadata && typeof invitation.metadata === 'object' && 'roleId' in invitation.metadata 
+                ? (invitation.metadata as any).roleId 
+                : null;
 
-            if (!brandUserRole) {
-                return NextResponse.json(
-                    { message: "BrandUser role not found. Please run database seed." },
-                    { status: 500 }
-                );
+            // If no roleId in metadata, find the BrandUser role as default
+            if (!roleId) {
+                const brandUserRole = await prisma.role.findFirst({
+                    where: { name: "BrandUser" }
+                });
+
+                if (!brandUserRole) {
+                    return NextResponse.json(
+                        { message: "BrandUser role not found. Please run database seed." },
+                        { status: 500 }
+                    );
+                }
+                roleId = brandUserRole.id;
             }
 
             await prisma.userBrand.create({
                 data: {
-                    roleId: brandUserRole.id,
+                    roleId: roleId,
                     brandId: invitation.brandId,
                     userId: invitation.invitedToId,
                 }

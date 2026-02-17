@@ -481,9 +481,11 @@ export default function PostDetailPage() {
               {post.socialAccountPage && (
                 <div className="text-sm">
                   <p className="text-muted-foreground">Posted via</p>
-                  <p className="font-medium">
-                    @{post.socialAccountPage.socialAccount.platformUsername}
-                  </p>
+                  {post.socialAccountPage.socialAccount && (
+                    <p className="font-medium">
+                      @{post.socialAccountPage.socialAccount.platformUsername}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {post.socialAccountPage.pageName}
                   </p>

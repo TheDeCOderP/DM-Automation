@@ -135,20 +135,31 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "12")
     const skip = (page - 1) * limit
 
+    // Get all brands the user has access to
+    const userBrands = await prisma.userBrand.findMany({
+      where: { userId: token.id },
+      select: { brandId: true }
+    })
+
+    const brandIds = userBrands.map(ub => ub.brandId)
+
+    // Build where clause to include all posts from user's brands
+    const whereClause = {
+      brandId: {
+        in: brandIds
+      },
+      status: {
+        in: ["SCHEDULED", "PUBLISHED"],
+      },
+    }
+
     // Get total count for pagination
     const totalPosts = await prisma.post.count({
-      where: {
-        userId: token.id,
-      },
+      where: whereClause,
     })
 
     const posts = await prisma.post.findMany({
-      where: {
-        userId: token.id,
-        status: {
-          in: ["SCHEDULED", "PUBLISHED"],
-        },
-      },
+      where: whereClause,
       include: {
         media: true,
         brand: true,

@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 import { User } from "@prisma/client";
 
@@ -30,9 +32,11 @@ export default function ShareBrandModal({
 }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
+  const [selectedRole, setSelectedRole] = useState<string>("PCR-0004") // Default to BrandUser
   const [isSharing, setIsSharing] = useState(false)
 
   const { data, isLoading } = useSWR(open ? `/api/brands/${brandId}/invite/users` : null, fetcher);
+  const { data: rolesData, isLoading: rolesLoading } = useSWR(open ? '/api/roles' : null, fetcher);
   
   // Fix: Access the data directly, not through usersData.data
   const usersData = data?.users || [];
@@ -58,12 +62,20 @@ export default function ShareBrandModal({
       return
     }
 
+    if (!selectedRole) {
+      toast.error("Please select a role")
+      return
+    }
+
     setIsSharing(true)
     try {
       const response = await fetch(`/api/brands/${brandId}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIds: Array.from(selectedUsers) })
+        body: JSON.stringify({ 
+          userIds: Array.from(selectedUsers),
+          roleId: selectedRole 
+        })
       })
 
       if (!response.ok) throw new Error("Failed to share brand")
@@ -71,6 +83,7 @@ export default function ShareBrandModal({
       toast.success(`Brand shared with ${selectedUsers.size} user(s)`)
       setSelectedUsers(new Set())
       setSearchQuery("")
+      setSelectedRole("PCR-0004") // Reset to default
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -95,6 +108,28 @@ export default function ShareBrandModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="role-select">Select Role</Label>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger id="role-select">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {rolesLoading ? (
+                  <SelectItem value="loading" disabled>Loading roles...</SelectItem>
+                ) : (
+                  rolesData?.roles
+                    ?.filter((role: any) => role.name === "BrandAdmin" || role.name === "BrandUser")
+                    .map((role: any) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name} {role.description && `- ${role.description}`}
+                      </SelectItem>
+                    ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -193,7 +228,7 @@ export default function ShareBrandModal({
           </Button>
           <Button
             onClick={handleShare}
-            disabled={selectedUsers.size === 0 || isSharing}
+            disabled={selectedUsers.size === 0 || !selectedRole || isSharing}
             className="flex-1"
           >
             {isSharing ? "Sharing..." : `Share with ${selectedUsers.size || ""} user${selectedUsers.size !== 1 ? "s" : ""}`}

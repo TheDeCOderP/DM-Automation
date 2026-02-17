@@ -35,10 +35,20 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
     try {
         const { id: brandId } = await context.params;
-        const { userIds } = await req.json();
+        const { userIds, roleId } = await req.json();
 
         if (!userIds || !brandId) {
             return NextResponse.json({ message: 'Email and Brand ID are required' }, { status: 400 });
+        }
+
+        // Validate roleId if provided
+        if (roleId) {
+            const role = await prisma.role.findUnique({
+                where: { id: roleId }
+            });
+            if (!role) {
+                return NextResponse.json({ message: 'Invalid role ID' }, { status: 400 });
+            }
         }
 
         // Verify that the brand exists
@@ -101,6 +111,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
                     invitedToId: user.id,
                     invitedById: token.id,
                     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
+                    metadata: roleId ? { roleId } : null, // Store roleId in metadata
                 },
             });
 

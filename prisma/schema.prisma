@@ -518,6 +518,7 @@ model BrandInvitation {
   invitedBy   User             @relation(fields: [invitedById], references: [id], onDelete: Cascade, name: "SentBrandInvitations")
   invitedToId String
   invitedTo   User             @relation(fields: [invitedToId], references: [id], onDelete: Cascade, name: "AcceptedBrandInvitations")
+  metadata    Json?            // Store additional data like roleId
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
