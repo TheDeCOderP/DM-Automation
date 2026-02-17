@@ -3,6 +3,7 @@ import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 import { decryptToken } from "@/lib/encryption";
 import { Post, Media, SocialAccount } from "@prisma/client";
 import type { TwitterTweetResponse, TweetBody } from "@/types/twitter";
+import { updateCalendarItemStatus } from "@/utils/calendar-status-updater";
 
 export async function publishToTwitter(
     post: Post & { media?: Media[] }
@@ -193,6 +194,9 @@ async function recordSuccessfulPost(
             }
         })
     ]);
+
+    // Update calendar item status if applicable
+    await updateCalendarItemStatus(post.id);
 }
 
 async function handleTwitterPostFailure(

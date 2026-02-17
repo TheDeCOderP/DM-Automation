@@ -6,8 +6,11 @@ import cronParser from "cron-parser";
 
 interface ScheduleAllRequest {
   calendarId: string;
-  socialAccountIds?: string[]; // Optional: specific accounts per platform
-  socialAccountPageIds?: string[]; // Optional: specific pages per platform
+  accountSelections: {
+    platform: string;
+    socialAccountId: string;
+    socialAccountPageId: string | null;
+  }[];
 }
 
 // Helper function to generate cron expression for one-time post
@@ -76,11 +79,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: ScheduleAllRequest = await req.json();
-    const { calendarId, socialAccountIds, socialAccountPageIds } = body;
+    const { calendarId, accountSelections } = body;
 
-    if (!calendarId) {
+    if (!calendarId || !accountSelections || accountSelections.length === 0) {
       return NextResponse.json(
-        { error: "calendarId is required" },
+        { error: "calendarId and accountSelections are required" },
         { status: 400 }
       );
     }
@@ -125,24 +128,9 @@ export async function POST(req: NextRequest) {
 
     console.log(`[SCHEDULE-ALL] Scheduling ${calendar.items.length} calendar items in batches`);
 
-    const platforms = calendar.platforms as Platform[];
     const createdPosts = [];
     const errors = [];
     const BATCH_SIZE = 5; // Process 5 items at a time to avoid timeout
-
-    // Get social accounts for the brand
-    const brandSocialAccounts = await prisma.socialAccountBrand.findMany({
-      where: {
-        brandId: calendar.brandId,
-      },
-      include: {
-        socialAccount: {
-          include: {
-            pages: true,
-          },
-        },
-      },
-    });
 
     // Process calendar items in batches
     for (let i = 0; i < calendar.items.length; i += BATCH_SIZE) {
@@ -152,22 +140,27 @@ export async function POST(req: NextRequest) {
       // Process each item in the batch
       for (const item of batch) {
       try {
+        // Validate that item has suggested time
+        if (!item.suggestedTime) {
+          console.warn(`[SCHEDULE-ALL] Skipping day ${item.day} - no suggested time`);
+          errors.push({
+            day: item.day,
+            error: "No suggested time set",
+          });
+          continue;
+        }
+
         // Create a post group for this calendar item
         const postGroup = await prisma.postGroup.create({
           data: {},
         });
 
-        // Link calendar item to post group
-        await prisma.contentCalendarItem.update({
-          where: { id: item.id },
-          data: {
-            postGroupId: postGroup.id,
-            status: "SCHEDULED",
-          },
-        });
+        let postsCreatedForItem = 0;
 
-        // Create posts for each platform
-        for (const platform of platforms) {
+        // Create posts for each account selection
+        for (const selection of accountSelections) {
+          const platform = selection.platform as Platform;
+          
           // Get caption for this platform
           let caption = "";
           if (platform === "LINKEDIN") caption = item.captionLinkedIn || "";
@@ -180,61 +173,81 @@ export async function POST(req: NextRequest) {
           else if (platform === "TIKTOK") caption = item.captionTikTok || "";
 
           if (!caption) {
-            console.warn(`[SCHEDULE-ALL] No caption for ${platform} on day ${item.day}`);
+            console.warn(`[SCHEDULE-ALL] No caption for ${platform} on day ${item.day}, skipping`);
             continue;
           }
 
-          // Find social account for this platform
-          const socialAccountBrand = brandSocialAccounts.find(
-            (sab) => sab.socialAccount.platform === platform
-          );
-
-          if (!socialAccountBrand) {
-            console.warn(`[SCHEDULE-ALL] No social account found for ${platform}`);
-            continue;
-          }
-
-          // Create post
-          const post = await prisma.post.create({
-            data: {
-              title: item.topic,
-              content: caption,
-              platform: platform,
-              scheduledAt: item.suggestedTime || new Date(),
-              status: Status.SCHEDULED,
-              frequency: Frequency.ONCE,
-              userId: token.id,
-              brandId: calendar.brandId,
-              socialAccountId: socialAccountBrand.socialAccountId,
-              postGroupId: postGroup.id,
-              platformMetadata: {
-                hashtags: item.hashtags,
-                imageUrl: item.imageUrl,
-                calendarItemId: item.id,
-              },
-              // Create media record if image exists
-              ...(item.imageUrl ? {
-                media: {
-                  create: {
-                    url: item.imageUrl,
-                    type: "IMAGE",
-                    userId: token.id,
-                    brandId: calendar.brandId,
-                  }
-                }
-              } : {})
+          // Prepare post data
+          const postData: any = {
+            title: item.topic,
+            content: caption,
+            platform: platform,
+            scheduledAt: item.suggestedTime,
+            status: Status.SCHEDULED,
+            frequency: Frequency.ONCE,
+            url: null,
+            userId: token.id,
+            brandId: calendar.brandId,
+            socialAccountId: selection.socialAccountId,
+            socialAccountPageId: selection.socialAccountPageId,
+            postGroupId: postGroup.id,
+            platformMetadata: {
+              hashtags: item.hashtags,
+              imageUrl: item.imageUrl,
+              calendarItemId: item.id,
             },
+          };
+
+          // Add media if image exists
+          if (item.imageUrl) {
+            postData.media = {
+              create: {
+                url: item.imageUrl,
+                type: "IMAGE",
+                userId: token.id,
+                brandId: calendar.brandId,
+              }
+            };
+          }
+
+          // Create post for this specific account/page combination
+          const post = await prisma.post.create({
+            data: postData,
           });
 
           createdPosts.push(post);
-          console.log(`[SCHEDULE-ALL] Created ${platform} post for day ${item.day}`);
+          postsCreatedForItem++;
+          const accountInfo = selection.socialAccountPageId 
+            ? `page ${selection.socialAccountPageId}` 
+            : `account ${selection.socialAccountId}`;
+          console.log(`[SCHEDULE-ALL] Created ${platform} post for ${accountInfo} on day ${item.day}`);
+        }
+
+        // Only link calendar item if at least one post was created
+        if (postsCreatedForItem > 0) {
+          await prisma.contentCalendarItem.update({
+            where: { id: item.id },
+            data: {
+              postGroupId: postGroup.id,
+              status: "SCHEDULED",
+            },
+          });
+        } else {
+          // Delete empty post group
+          await prisma.postGroup.delete({
+            where: { id: postGroup.id },
+          });
+          errors.push({
+            day: item.day,
+            error: "No posts created - missing captions for selected platforms",
+          });
+          continue;
         }
 
         // Create cron job for this post group
-        if (item.suggestedTime) {
-          const { cron, expiresAt } = generateCronExpression(item.suggestedTime);
-          const scheduleFormat = convertCronToScheduleFormat(cron, expiresAt);
-          const callbackUrl = `${process.env.NEXTAUTH_URL}/api/cron-jobs/publish-post`;
+        const { cron, expiresAt } = generateCronExpression(item.suggestedTime);
+        const scheduleFormat = convertCronToScheduleFormat(cron, expiresAt);
+        const callbackUrl = `${process.env.NEXTAUTH_URL}/api/cron-jobs/publish-post`;
 
           const scheduleData = {
             job: {
@@ -283,8 +296,7 @@ export async function POST(req: NextRequest) {
               error: "Failed to create cron job",
             });
           }
-        }
-      } catch (itemError) {
+        } catch (itemError) {
         console.error(`[SCHEDULE-ALL] Error processing day ${item.day}:`, itemError);
         errors.push({
           day: item.day,

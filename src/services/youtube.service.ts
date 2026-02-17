@@ -3,6 +3,7 @@ import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { decryptToken } from "@/lib/encryption";
 import { isTokenExpired, refreshAccessToken } from "@/utils/token";
+import { updateCalendarItemStatus } from "@/utils/calendar-status-updater";
 
 import { VideoUploadBody } from "@/types/youtube";
 import { Post, Media, SocialAccount, MediaType } from "@prisma/client";
@@ -331,6 +332,9 @@ async function recordSuccessfulPost(
             }
         })
     ]);
+
+    // Update calendar item status if applicable
+    await updateCalendarItemStatus(post.id);
 
     console.log(`Post ${post.id} 'published' successfully on YouTube`);
 }

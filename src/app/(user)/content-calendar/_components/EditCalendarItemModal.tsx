@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 interface EditCalendarItemModalProps {
   item: any;
@@ -220,6 +221,16 @@ export default function EditCalendarItemModal({
       return;
     }
 
+    // Validate suggested time is in the future
+    if (suggestedTime) {
+      const scheduledDate = new Date(suggestedTime);
+      const now = new Date();
+      if (scheduledDate <= now) {
+        toast.error("Suggested time must be in the future");
+        return;
+      }
+    }
+
     setIsSaving(true);
 
     try {
@@ -297,16 +308,13 @@ export default function EditCalendarItemModal({
           </div>
 
           {/* Suggested Time */}
-          <div className="space-y-2">
-            <Label htmlFor="suggestedTime">Suggested Posting Time</Label>
-            <Input
-              id="suggestedTime"
-              type="datetime-local"
-              value={suggestedTime}
-              onChange={(e) => setSuggestedTime(e.target.value)}
-              disabled={isSaving}
-            />
-          </div>
+          <DateTimePicker
+            value={suggestedTime}
+            onChange={setSuggestedTime}
+            disabled={isSaving}
+            label="Suggested Posting Time"
+            required
+          />
 
           {/* Platform Captions */}
           <div className="space-y-2">

@@ -9,36 +9,40 @@ import { publishToReddit } from "@/services/reddit.service";
 import { publishToInstagram } from "@/services/instagram.service";
 import { publishToTikTok } from "@/services/tiktok.service";
 import { updateCalendarItemStatus } from "@/utils/calendar-status-updater";
+import { getToken } from "next-auth/jwt";
 
 /**
- * Cron Job Endpoint - Called by external cron service to publish scheduled posts
- * This endpoint processes all posts that are scheduled to be published
+ * Manual endpoint to publish overdue scheduled posts
+ * This can be called manually or set up as a backup cron job
  */
 export async function POST(req: NextRequest) {
   try {
-    // Verify the request is from authorized source
+    // Verify authentication - either cron token or user session
     const authHeader = req.headers.get("authorization");
     const expectedToken = process.env.CRON_SECRET_TOKEN;
+    const token = await getToken({ req });
 
-    // If CRON_SECRET_TOKEN is not set, allow for backward compatibility
-    if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
-      console.warn("Unauthorized cron job attempt");
+    const isAuthorizedCron = expectedToken && authHeader === `Bearer ${expectedToken}`;
+    const isAuthorizedUser = token?.id;
+
+    if (!isAuthorizedCron && !isAuthorizedUser) {
+      console.warn("Unauthorized publish-overdue attempt");
       return NextResponse.json(
-        { error: "Unauthorized - Invalid cron token" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
     const now = new Date();
     
-    console.log(`[CRON] Starting scheduled post publishing at ${now.toISOString()}`);
+    console.log(`[PUBLISH-OVERDUE] Starting at ${now.toISOString()}`);
     
-    // Find all scheduled posts that should be published now (including overdue posts)
-    const scheduledPosts = await prisma.post.findMany({
+    // Find all scheduled posts that are overdue
+    const overduePosts = await prisma.post.findMany({
       where: {
         status: "SCHEDULED",
         scheduledAt: {
-          lte: now, // Posts scheduled for now or earlier (catches overdue posts too)
+          lte: now,
         },
       },
       include: {
@@ -53,21 +57,17 @@ export async function POST(req: NextRequest) {
           },
         },
       },
-      orderBy: {
-        scheduledAt: 'asc', // Process oldest first
-      },
-      take: 50, // Process max 50 posts per run to avoid timeout
+      take: 50,
     });
 
-    console.log(`[CRON] Found ${scheduledPosts.length} posts to publish`);
+    console.log(`[PUBLISH-OVERDUE] Found ${overduePosts.length} overdue posts`);
 
-    if (scheduledPosts.length === 0) {
+    if (overduePosts.length === 0) {
       return NextResponse.json(
         {
           success: true,
-          message: "No posts to publish",
-          timestamp: now.toISOString(),
-          processed: 0,
+          message: "No overdue posts found",
+          published: 0,
         },
         { status: 200 }
       );
@@ -78,18 +78,11 @@ export async function POST(req: NextRequest) {
       failed: [] as { postId: string; error: string }[],
     };
 
-    // Process each post
-    for (const post of scheduledPosts) {
+    // Process each overdue post
+    for (const post of overduePosts) {
       try {
-        // Log if post is overdue
-        if (post.scheduledAt) {
-          const minutesOverdue = Math.floor((now.getTime() - post.scheduledAt.getTime()) / 1000 / 60);
-          if (minutesOverdue > 5) {
-            console.log(`[CRON] ⚠️  Post ${post.id} is ${minutesOverdue} minutes overdue`);
-          }
-        }
-        
-        console.log(`[CRON] Publishing post ${post.id} on ${post.platform}`);
+        const minutesOverdue = Math.floor((now.getTime() - (post.scheduledAt?.getTime() || 0)) / 1000 / 60);
+        console.log(`[PUBLISH-OVERDUE] Publishing post ${post.id} (${minutesOverdue} min overdue) on ${post.platform}`);
 
         // Publish based on platform
         if (post.platform === "LINKEDIN") {
@@ -132,21 +125,22 @@ export async function POST(req: NextRequest) {
           data: {
             userId: post.userId,
             type: "POST_PUBLISHED",
-            title: "Post Published Successfully",
-            message: `Your post has been published on ${post.platform}`,
+            title: "Overdue Post Published",
+            message: `Your overdue post has been published on ${post.platform}`,
             metadata: {
               postId: post.id,
               platform: post.platform,
               publishedAt: now.toISOString(),
+              wasOverdue: true,
             },
           },
         });
 
         results.success.push(post.id);
-        console.log(`[CRON] ✓ Successfully published post ${post.id}`);
+        console.log(`[PUBLISH-OVERDUE] ✓ Successfully published post ${post.id}`);
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error(`[CRON] ✗ Failed to publish post ${post.id}:`, errorMessage);
+        console.error(`[PUBLISH-OVERDUE] ✗ Failed to publish post ${post.id}:`, errorMessage);
 
         // Update post status to FAILED
         await prisma.post.update({
@@ -163,7 +157,7 @@ export async function POST(req: NextRequest) {
             userId: post.userId,
             type: "POST_FAILED",
             title: "Post Publishing Failed",
-            message: `Failed to publish your post on ${post.platform}`,
+            message: `Failed to publish your overdue post on ${post.platform}`,
             metadata: {
               postId: post.id,
               platform: post.platform,
@@ -176,14 +170,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(`[CRON] Completed: ${results.success.length} success, ${results.failed.length} failed`);
+    console.log(`[PUBLISH-OVERDUE] Completed: ${results.success.length} success, ${results.failed.length} failed`);
 
     return NextResponse.json(
       {
         success: true,
-        message: "Cron job completed",
+        message: "Overdue posts processed",
         timestamp: now.toISOString(),
-        processed: scheduledPosts.length,
+        processed: overduePosts.length,
         successCount: results.success.length,
         failedCount: results.failed.length,
         results,
@@ -191,7 +185,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("[CRON] Fatal error:", error);
+    console.error("[PUBLISH-OVERDUE] Fatal error:", error);
     return NextResponse.json(
       { 
         success: false,
@@ -205,6 +199,6 @@ export async function POST(req: NextRequest) {
 
 // Also support GET for manual testing
 export async function GET(req: NextRequest) {
-  console.log("[CRON] Manual GET request received");
+  console.log("[PUBLISH-OVERDUE] Manual GET request received");
   return POST(req);
 }

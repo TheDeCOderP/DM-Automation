@@ -25,6 +25,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 interface ScheduleItemModalProps {
   item: any;
@@ -65,6 +66,11 @@ export default function ScheduleItemModal({
   const [isLoading, setIsLoading] = useState(true);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [hasScheduled, setHasScheduled] = useState(false);
+  const [suggestedTime, setSuggestedTime] = useState(
+    item.suggestedTime
+      ? new Date(item.suggestedTime).toISOString().slice(0, 16)
+      : ""
+  );
 
   // Fetch social accounts for the brand
   useEffect(() => {
@@ -142,8 +148,16 @@ export default function ScheduleItemModal({
   };
 
   const handleSchedule = async () => {
-    if (!item.suggestedTime) {
-      toast.error("Please set a suggested time first");
+    if (!suggestedTime) {
+      toast.error("Please set a schedule time");
+      return;
+    }
+
+    // Validate that time is in the future
+    const scheduledDate = new Date(suggestedTime);
+    const now = new Date();
+    if (scheduledDate <= now) {
+      toast.error("Schedule time must be in the future");
       return;
     }
 
@@ -160,6 +174,22 @@ export default function ScheduleItemModal({
     setIsScheduling(true);
 
     try {
+      // First update the suggested time if it changed
+      if (suggestedTime !== item.suggestedTime) {
+        const updateResponse = await fetch(`/api/content-calendar/items/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            suggestedTime: new Date(suggestedTime).toISOString(),
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error("Failed to update schedule time");
+        }
+      }
+
+      // Then schedule the post
       const response = await fetch("/api/content-calendar/schedule-item", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -209,7 +239,7 @@ export default function ScheduleItemModal({
     <>
       <Dialog open onOpenChange={handleCloseAttempt}>
         <DialogContent 
-          className="!max-w-[2500px] !w-[98vw] max-h-[90vh] overflow-y-auto"
+          className="!max-w-[1100px] !w-[98vw] max-h-[90vh] overflow-y-auto"
           onPointerDownOutside={(e) => {
             if (!hasScheduled && selectedAccounts.length > 0 && !isScheduling) {
               e.preventDefault();
@@ -237,15 +267,14 @@ export default function ScheduleItemModal({
             </div>
           ) : (
             <>
-              {/* Scheduled Time */}
-              {item.suggestedTime && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Scheduled for:</strong> {new Date(item.suggestedTime).toLocaleString()}
-                  </AlertDescription>
-                </Alert>
-              )}
+              {/* Schedule Time Selector */}
+              <DateTimePicker
+                value={suggestedTime}
+                onChange={setSuggestedTime}
+                disabled={isScheduling}
+                label="Schedule Time"
+                required
+              />
 
               {/* Platform Account Selection */}
               <div className="space-y-4">
@@ -352,7 +381,10 @@ export default function ScheduleItemModal({
           <Button variant="outline" onClick={handleCloseAttempt} disabled={isScheduling}>
             Cancel
           </Button>
-          <Button onClick={handleSchedule} disabled={isScheduling || isLoading || selectedAccounts.length === 0}>
+          <Button 
+            onClick={handleSchedule} 
+            disabled={isScheduling || isLoading || selectedAccounts.length === 0 || !suggestedTime}
+          >
             {isScheduling ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

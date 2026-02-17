@@ -1,5 +1,6 @@
 // lib/social/instagram.ts
 import { prisma } from "@/lib/prisma";
+import { updateCalendarItemStatus } from "@/utils/calendar-status-updater";
 import { decryptToken } from "@/lib/encryption";
 import { isTokenExpired } from "@/utils/token";
 import { Post, Media } from "@prisma/client";
@@ -406,6 +407,9 @@ async function recordSuccessfulInstagramPost(
       }
     })
   ]);
+
+  // Update calendar item status if applicable
+  await updateCalendarItemStatus(post.id);
 }
 
 // Utility function to refresh Instagram token if needed

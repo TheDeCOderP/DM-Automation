@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { updateCalendarItemStatus } from "@/utils/calendar-status-updater";
 import { Post, Media } from "@prisma/client";
 import { isTokenExpired } from "@/utils/token";
 import { decryptToken } from "@/lib/encryption";
@@ -358,6 +359,9 @@ async function recordSuccessfulPinterestPost(
       }
     })
   ]);
+
+  // Update calendar item status if applicable
+  await updateCalendarItemStatus(post.id);
 }
 
 async function handlePinterestPostFailure(

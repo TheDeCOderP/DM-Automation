@@ -1,5 +1,6 @@
 // lib/social/reddit.ts
 import { prisma } from "@/lib/prisma";
+import { updateCalendarItemStatus } from "@/utils/calendar-status-updater";
 import { decryptToken, encryptToken } from "@/lib/encryption";
 import { isTokenExpired } from "@/utils/token";
 import { Post, Media } from "@prisma/client";
@@ -500,6 +501,9 @@ async function recordSuccessfulRedditPost(
       }
     })
   ]);
+
+  // Update calendar item status if applicable
+  await updateCalendarItemStatus(post.id);
 }
 
 // Utility functions for Reddit API

@@ -110,18 +110,36 @@ export async function POST(req: NextRequest) {
 
     console.log(`[SCHEDULE-ITEM] Scheduling calendar item day ${item.day}`);
 
+    // Validate that at least one platform has content
+    let hasValidContent = false;
+    for (const selection of accountSelections) {
+      const platform = selection.platform as Platform;
+      let caption = "";
+      if (platform === "LINKEDIN") caption = item.captionLinkedIn || "";
+      else if (platform === "TWITTER") caption = item.captionTwitter || "";
+      else if (platform === "INSTAGRAM") caption = item.captionInstagram || "";
+      else if (platform === "FACEBOOK") caption = item.captionFacebook || "";
+      else if (platform === "YOUTUBE") caption = item.captionYouTube || "";
+      else if (platform === "PINTEREST") caption = item.captionPinterest || "";
+      else if (platform === "REDDIT") caption = item.captionReddit || "";
+      else if (platform === "TIKTOK") caption = item.captionTikTok || "";
+      
+      if (caption) {
+        hasValidContent = true;
+        break;
+      }
+    }
+
+    if (!hasValidContent) {
+      return NextResponse.json(
+        { error: "No content available for selected platforms. Please add captions first." },
+        { status: 400 }
+      );
+    }
+
     // Create a post group for this calendar item
     const postGroup = await prisma.postGroup.create({
       data: {},
-    });
-
-    // Link calendar item to post group
-    await prisma.contentCalendarItem.update({
-      where: { id: item.id },
-      data: {
-        postGroupId: postGroup.id,
-        status: "SCHEDULED",
-      },
     });
 
     const createdPosts = [];
@@ -142,41 +160,50 @@ export async function POST(req: NextRequest) {
       else if (platform === "TIKTOK") caption = item.captionTikTok || "";
 
       if (!caption) {
-        console.warn(`[SCHEDULE-ITEM] No caption for ${platform} on day ${item.day}`);
+        console.warn(`[SCHEDULE-ITEM] No caption for ${platform} on day ${item.day}, skipping`);
         continue;
       }
 
+      // Prepare post data
+      const postData: any = {
+        title: item.topic,
+        content: caption,
+        platform: platform,
+        scheduledAt: item.suggestedTime,
+        status: Status.SCHEDULED,
+        frequency: Frequency.ONCE,
+        url: null,
+        userId: token.id,
+        brandId: item.calendar.brandId,
+        socialAccountId: selection.socialAccountId,
+        socialAccountPageId: selection.socialAccountPageId,
+        postGroupId: postGroup.id,
+        platformMetadata: {
+          hashtags: item.hashtags,
+          imageUrl: item.imageUrl,
+          calendarItemId: item.id,
+        },
+      };
+
+      // Add media if image exists
+      if (item.imageUrl) {
+        postData.media = {
+          create: {
+            url: item.imageUrl,
+            type: "IMAGE",
+            userId: token.id,
+            brandId: item.calendar.brandId,
+          }
+        };
+      }
+
+      // Debug: Check if url is being set incorrectly
+      console.log('[SCHEDULE-ITEM] postData.url:', postData.url);
+      console.log('[SCHEDULE-ITEM] imageUrl length:', item.imageUrl?.length || 0);
+
       // Create post for this specific account/page combination
       const post = await prisma.post.create({
-        data: {
-          title: item.topic,
-          content: caption,
-          platform: platform,
-          scheduledAt: item.suggestedTime,
-          status: Status.SCHEDULED,
-          frequency: Frequency.ONCE,
-          userId: token.id,
-          brandId: item.calendar.brandId,
-          socialAccountId: selection.socialAccountId,
-          socialAccountPageId: selection.socialAccountPageId,
-          postGroupId: postGroup.id,
-          platformMetadata: {
-            hashtags: item.hashtags,
-            imageUrl: item.imageUrl,
-            calendarItemId: item.id,
-          },
-          // Create media record if image exists
-          ...(item.imageUrl ? {
-            media: {
-              create: {
-                url: item.imageUrl,
-                type: "IMAGE",
-                userId: token.id,
-                brandId: item.calendar.brandId,
-              }
-            }
-          } : {})
-        },
+        data: postData,
       });
 
       createdPosts.push(post);
@@ -185,6 +212,28 @@ export async function POST(req: NextRequest) {
         : `account ${selection.socialAccountId}`;
       console.log(`[SCHEDULE-ITEM] Created ${platform} post for ${accountInfo} on day ${item.day}`);
     }
+
+    // Validate that at least one post was created
+    if (createdPosts.length === 0) {
+      // Rollback: delete the post group
+      await prisma.postGroup.delete({
+        where: { id: postGroup.id },
+      });
+      
+      return NextResponse.json(
+        { error: "No posts were created. Please check that captions exist for the selected platforms." },
+        { status: 400 }
+      );
+    }
+
+    // Link calendar item to post group only after posts are successfully created
+    await prisma.contentCalendarItem.update({
+      where: { id: item.id },
+      data: {
+        postGroupId: postGroup.id,
+        status: "SCHEDULED",
+      },
+    });
 
     // Create cron job for this post group
     const { cron, expiresAt } = generateCronExpression(item.suggestedTime);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, AlertCircle } from "lucide-react";
+import { Loader2, Send, AlertCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,16 +11,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ScheduleAllModalProps {
   calendarId: string;
@@ -43,6 +47,12 @@ interface SocialAccount {
   }[];
 }
 
+interface AccountSelection {
+  platform: string;
+  socialAccountId: string;
+  socialAccountPageId: string | null;
+}
+
 export default function ScheduleAllModal({
   calendarId,
   itemsCount,
@@ -54,9 +64,10 @@ export default function ScheduleAllModal({
   const [isScheduling, setIsScheduling] = useState(false);
   const [progress, setProgress] = useState("");
   const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([]);
-  const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({});
-  const [selectedPages, setSelectedPages] = useState<Record<string, string>>({});
+  const [selectedAccounts, setSelectedAccounts] = useState<AccountSelection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [hasScheduled, setHasScheduled] = useState(false);
 
   // Fetch social accounts for the brand
   useEffect(() => {
@@ -69,22 +80,29 @@ export default function ScheduleAllModal({
         setSocialAccounts(data.accounts || []);
         
         // Auto-select first account for each platform
-        const autoSelected: Record<string, string> = {};
-        const autoSelectedPages: Record<string, string> = {};
+        const autoSelected: AccountSelection[] = [];
         
         platforms.forEach((platform) => {
           const account = data.accounts?.find((acc: SocialAccount) => acc.platform === platform);
           if (account) {
-            autoSelected[platform] = account.id;
-            // Auto-select first page if available
+            // If account has pages, select first page, otherwise just the account
             if (account.pages && account.pages.length > 0) {
-              autoSelectedPages[platform] = account.pages[0].id;
+              autoSelected.push({
+                platform,
+                socialAccountId: account.id,
+                socialAccountPageId: account.pages[0].id,
+              });
+            } else {
+              autoSelected.push({
+                platform,
+                socialAccountId: account.id,
+                socialAccountPageId: null,
+              });
             }
           }
         });
         
         setSelectedAccounts(autoSelected);
-        setSelectedPages(autoSelectedPages);
       } catch (error) {
         console.error("Error fetching accounts:", error);
         toast.error("Failed to load social accounts");
@@ -96,11 +114,44 @@ export default function ScheduleAllModal({
     fetchAccounts();
   }, [brandId, platforms]);
 
+  const handleAccountToggle = (platform: string, accountId: string, pageId: string | null = null) => {
+    setSelectedAccounts(prev => {
+      const exists = prev.find(
+        s => s.platform === platform && 
+             s.socialAccountId === accountId && 
+             s.socialAccountPageId === pageId
+      );
+
+      if (exists) {
+        // Remove if already selected
+        return prev.filter(
+          s => !(s.platform === platform && 
+                 s.socialAccountId === accountId && 
+                 s.socialAccountPageId === pageId)
+        );
+      } else {
+        // Add new selection
+        return [...prev, { platform, socialAccountId: accountId, socialAccountPageId: pageId }];
+      }
+    });
+  };
+
+  const isAccountSelected = (platform: string, accountId: string, pageId: string | null = null) => {
+    return selectedAccounts.some(
+      s => s.platform === platform && 
+           s.socialAccountId === accountId && 
+           s.socialAccountPageId === pageId
+    );
+  };
+
   const handleSchedule = async () => {
-    // Validate that all platforms have selected accounts
-    const missingPlatforms = platforms.filter(p => !selectedAccounts[p]);
+    // Validate that all platforms have at least one selected account
+    const missingPlatforms = platforms.filter(
+      p => !selectedAccounts.some(s => s.platform === p)
+    );
+    
     if (missingPlatforms.length > 0) {
-      toast.error(`Please select accounts for: ${missingPlatforms.join(", ")}`);
+      toast.error(`Please select at least one account for: ${missingPlatforms.join(", ")}`);
       return;
     }
 
@@ -113,11 +164,7 @@ export default function ScheduleAllModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           calendarId,
-          accountSelections: platforms.map(platform => ({
-            platform,
-            socialAccountId: selectedAccounts[platform],
-            socialAccountPageId: selectedPages[platform] || null,
-          })),
+          accountSelections: selectedAccounts,
         }),
       });
 
@@ -136,6 +183,7 @@ export default function ScheduleAllModal({
         toast.success(`Successfully scheduled ${data.scheduled} posts!`);
       }
 
+      setHasScheduled(true);
       onSuccess();
     } catch (error) {
       console.error("Error scheduling posts:", error);
@@ -148,22 +196,45 @@ export default function ScheduleAllModal({
     }
   };
 
+  const handleCloseAttempt = () => {
+    if (!hasScheduled && selectedAccounts.length > 0 && !isScheduling) {
+      setShowCloseConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirm(false);
+    onClose();
+  };
+
   const getAccountsForPlatform = (platform: string) => {
     return socialAccounts.filter(acc => acc.platform === platform);
   };
 
-  const getSelectedAccount = (platform: string) => {
-    const accountId = selectedAccounts[platform];
-    return socialAccounts.find(acc => acc.id === accountId);
-  };
-
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <>
+      <Dialog open onOpenChange={handleCloseAttempt}>
+        <DialogContent 
+          className="!max-w-[2500px] !w-[98vw] max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            if (!hasScheduled && selectedAccounts.length > 0 && !isScheduling) {
+              e.preventDefault();
+              setShowCloseConfirm(true);
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            if (!hasScheduled && selectedAccounts.length > 0 && !isScheduling) {
+              e.preventDefault();
+              setShowCloseConfirm(true);
+            }
+          }}
+        >
         <DialogHeader>
           <DialogTitle>Schedule All Posts</DialogTitle>
           <DialogDescription>
-            Select social accounts and pages for {itemsCount} calendar items
+            Select accounts and pages for {itemsCount} calendar items (Multiple Selection Allowed)
           </DialogDescription>
         </DialogHeader>
 
@@ -176,17 +247,17 @@ export default function ScheduleAllModal({
             <>
               {/* Platform Account Selection */}
               <div className="space-y-4">
-                <h3 className="font-semibold">Select Accounts for Each Platform</h3>
+                <h3 className="font-semibold">Select Accounts & Pages (Multiple Selection Allowed)</h3>
                 {platforms.map((platform) => {
                   const accounts = getAccountsForPlatform(platform);
-                  const selectedAccount = getSelectedAccount(platform);
                   
                   return (
-                    <div key={platform} className="space-y-2 p-4 border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <Label className="flex items-center gap-2">
-                          <Badge>{platform}</Badge>
-                        </Label>
+                    <div key={platform} className="space-y-3 p-4 border rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="default" className="text-base px-3 py-1">{platform}</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          ({selectedAccounts.filter(s => s.platform === platform).length} selected)
+                        </span>
                       </div>
                       
                       {accounts.length === 0 ? (
@@ -197,87 +268,92 @@ export default function ScheduleAllModal({
                           </AlertDescription>
                         </Alert>
                       ) : (
-                        <>
-                          <Select
-                            value={selectedAccounts[platform] || ""}
-                            onValueChange={(value) => {
-                              setSelectedAccounts(prev => ({ ...prev, [platform]: value }));
-                              // Reset page selection when account changes
-                              setSelectedPages(prev => {
-                                const newPages = { ...prev };
-                                delete newPages[platform];
-                                return newPages;
-                              });
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select account" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {accounts.map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  <div className="flex items-center gap-2">
-                                    {account.platformUserImage && (
-                                      <img
-                                        src={account.platformUserImage}
-                                        alt={account.platformUsername}
-                                        className="w-5 h-5 rounded-full"
-                                      />
-                                    )}
-                                    <span>{account.platformUsername}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        <div className="space-y-4">
+                          {accounts.map((account) => (
+                            <div key={account.id} className="space-y-3 p-3 bg-muted/30 rounded-md">
+                              {/* Account Selection */}
+                              <div className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 border-b pb-3">
+                                <Checkbox
+                                  checked={isAccountSelected(platform, account.id, null)}
+                                  onCheckedChange={() => handleAccountToggle(platform, account.id, null)}
+                                />
+                                {account.platformUserImage && (
+                                  <img
+                                    src={account.platformUserImage}
+                                    alt={account.platformUsername}
+                                    className="w-8 h-8 rounded-full"
+                                  />
+                                )}
+                                <Label className="flex-1 cursor-pointer font-medium">
+                                  {account.platformUsername}
+                                </Label>
+                              </div>
 
-                          {/* Page Selection (for Facebook, etc.) */}
-                          {selectedAccount && selectedAccount.pages && selectedAccount.pages.length > 0 && (
-                            <div className="mt-2">
-                              <Label className="text-sm text-muted-foreground">Select Page</Label>
-                              <Select
-                                value={selectedPages[platform] || ""}
-                                onValueChange={(value) => {
-                                  setSelectedPages(prev => ({ ...prev, [platform]: value }));
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select page" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {selectedAccount.pages.map((page) => (
-                                    <SelectItem key={page.id} value={page.id}>
-                                      <div className="flex items-center gap-2">
+                              {/* Pages Selection (if available) */}
+                              {account.pages && account.pages.length > 0 && (
+                                <div className="ml-6">
+                                  <p className="text-sm text-muted-foreground mb-2">Pages:</p>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                    {account.pages.map((page) => (
+                                      <div 
+                                        key={page.id} 
+                                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 border"
+                                      >
+                                        <Checkbox
+                                          checked={isAccountSelected(platform, account.id, page.id)}
+                                          onCheckedChange={() => handleAccountToggle(platform, account.id, page.id)}
+                                        />
                                         {page.pageImage && (
                                           <img
                                             src={page.pageImage}
                                             alt={page.pageName}
-                                            className="w-5 h-5 rounded-full"
+                                            className="w-5 h-5 rounded-full flex-shrink-0"
                                           />
                                         )}
-                                        <span>{page.pageName}</span>
+                                        <Label className="flex-1 cursor-pointer text-sm truncate">
+                                          {page.pageName}
+                                        </Label>
                                       </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </>
+                          ))}
+                        </div>
                       )}
                     </div>
                   );
                 })}
               </div>
 
+              {/* Summary */}
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Total posts to create per calendar item:</strong> {selectedAccounts.length}
+                  <div className="mt-2 text-xs">
+                    {platforms.map(platform => {
+                      const count = selectedAccounts.filter(s => s.platform === platform).length;
+                      return count > 0 ? (
+                        <div key={platform}>• {platform}: {count} post{count !== 1 ? 's' : ''}</div>
+                      ) : null;
+                    })}
+                  </div>
+                  <div className="mt-2 font-semibold">
+                    Grand Total: {selectedAccounts.length * itemsCount} posts will be created
+                  </div>
+                </AlertDescription>
+              </Alert>
+
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li>Posts will be created for all selected platforms</li>
+                    <li>Posts will be created for all {itemsCount} calendar items</li>
+                    <li>Each item will be posted to all selected accounts/pages</li>
                     <li>Cron jobs will be set up for automatic publishing</li>
                     <li>Posts will publish at their suggested times</li>
-                    <li>You can view scheduled posts in the Posts page</li>
                   </ul>
                 </AlertDescription>
               </Alert>
@@ -300,10 +376,10 @@ export default function ScheduleAllModal({
         </div>
 
         <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose} disabled={isScheduling}>
+          <Button variant="outline" onClick={handleCloseAttempt} disabled={isScheduling}>
             Cancel
           </Button>
-          <Button onClick={handleSchedule} disabled={isScheduling || isLoading}>
+          <Button onClick={handleSchedule} disabled={isScheduling || isLoading || selectedAccounts.length === 0}>
             {isScheduling ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -312,12 +388,36 @@ export default function ScheduleAllModal({
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Schedule {itemsCount} Posts
+                Schedule {selectedAccounts.length * itemsCount} Posts
               </>
             )}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Close Confirmation Dialog */}
+    <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            Close Without Scheduling?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            You have selected {selectedAccounts.length} account{selectedAccounts.length !== 1 ? 's' : ''} but haven't scheduled the posts yet. 
+            This will create {selectedAccounts.length * itemsCount} total posts.
+            Are you sure you want to close? Your selections will be lost.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continue Editing</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Close Without Scheduling
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
