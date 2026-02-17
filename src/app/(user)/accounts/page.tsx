@@ -345,7 +345,7 @@ export default function BrandsPage() {
                             className="gap-2 flex-1"
                           >
                             <Calendar className="h-4 w-4" />
-                            Calendar
+                            Content Calendar
                           </Button>
                         </div>
                       </TableCell>
