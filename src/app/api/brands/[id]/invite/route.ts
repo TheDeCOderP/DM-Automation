@@ -111,7 +111,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
                     invitedToId: user.id,
                     invitedById: token.id,
                     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
-                    metadata: roleId ? { roleId } : null, // Store roleId in metadata
+                    ...(roleId && { metadata: { roleId } }), // Store roleId in metadata only if provided
                 },
             });
 
