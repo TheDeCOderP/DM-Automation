@@ -56,9 +56,10 @@ export default function ContentCalendarPage() {
   
   const [selectedBrandId, setSelectedBrandId] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [navigatingToCalendar, setNavigatingToCalendar] = useState<string | null>(null);
 
   // Fetch brands
-  const { data: brandsData } = useSwr("/api/brands", fetcher);
+  const { data: brandsData, isLoading: isLoadingBrands } = useSwr("/api/brands", fetcher);
   const brands: Brand[] = brandsData?.data || [];
 
   // Set selected brand from URL parameter
@@ -132,7 +133,7 @@ export default function ContentCalendarPage() {
   };
 
   // Fetch selected brand's calendars
-  const { data: selectedBrandCalendars, mutate: mutateSelectedBrand } = useSwr(
+  const { data: selectedBrandCalendars, mutate: mutateSelectedBrand, isLoading: isLoadingCalendars } = useSwr(
     selectedBrandId ? `/api/content-calendar?brandId=${selectedBrandId}` : null,
     fetcher
   );
@@ -193,7 +194,14 @@ export default function ContentCalendarPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {calendars.length === 0 ? (
+            {isLoadingCalendars ? (
+              <div className="text-center py-12">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  <p className="text-muted-foreground">Loading calendars...</p>
+                </div>
+              </div>
+            ) : calendars.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground mb-4">No calendars generated yet</p>
@@ -208,7 +216,10 @@ export default function ContentCalendarPage() {
                   <Card 
                     key={calendar.id} 
                     className="hover:shadow-lg transition-all cursor-pointer hover:border-primary"
-                    onClick={() => router.push(`/content-calendar/${calendar.id}`)}
+                    onClick={() => {
+                      setNavigatingToCalendar(calendar.id);
+                      router.push(`/content-calendar/${calendar.id}`);
+                    }}
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between">
@@ -264,10 +275,17 @@ export default function ContentCalendarPage() {
 
                       {/* Action Button */}
                       <div className="pt-2">
-                        <div className="flex items-center justify-center gap-2 p-3 bg-primary/5 rounded-lg text-primary font-medium text-sm">
-                          <Eye className="w-4 h-4" />
-                          Click to View & Edit Content
-                        </div>
+                        {navigatingToCalendar === calendar.id ? (
+                          <div className="flex items-center justify-center gap-2 p-3 bg-primary/5 rounded-lg text-primary font-medium text-sm">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                            Loading...
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2 p-3 bg-primary/5 rounded-lg text-primary font-medium text-sm">
+                            <Eye className="w-4 h-4" />
+                            Click to View & Edit Content
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -299,7 +317,16 @@ export default function ContentCalendarPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {brands.length === 0 ? (
+              {isLoadingBrands ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                      <p className="text-muted-foreground">Loading brands...</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : brands.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No brands found. Create a brand first to generate content calendars.
