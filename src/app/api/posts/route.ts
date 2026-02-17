@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
         in: brandIds
       },
       status: {
-        in: ["SCHEDULED", "PUBLISHED"],
+        in: [Status.SCHEDULED, Status.PUBLISHED],
       },
     }
 
