@@ -197,10 +197,6 @@ export async function POST(req: NextRequest) {
         };
       }
 
-      // Debug: Check if url is being set incorrectly
-      console.log('[SCHEDULE-ITEM] postData.url:', postData.url);
-      console.log('[SCHEDULE-ITEM] imageUrl length:', item.imageUrl?.length || 0);
-
       // Create post for this specific account/page combination
       const post = await prisma.post.create({
         data: postData,
