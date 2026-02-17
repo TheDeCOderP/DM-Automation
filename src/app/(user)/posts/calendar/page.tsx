@@ -28,6 +28,7 @@ import { PostPreviewModal } from "@/components/modals/PostPreviewModal"
 import { getPlatformIcon } from "@/utils/ui/icons"
 import { Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { formatDateTime } from "@/utils/format"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -183,10 +184,7 @@ export default function CalendarUI() {
                           {post.status.substring(0, 3)}
                         </Badge>
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {feature.startAt.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatDateTime(feature.startAt)}
                         </span>
                       </button>
                     )

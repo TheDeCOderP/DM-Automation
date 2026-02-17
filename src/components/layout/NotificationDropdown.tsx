@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 import { getPlatformIcon } from "@/utils/ui/icons";
+import { formatDateTime } from "@/utils/format";
 
 // Define NotificationType enum locally for client-side use
 enum NotificationType {
@@ -136,10 +137,7 @@ function NotificationsList({ notifications = [] }: NotificationsListProps) {
                 {notification.title}
               </p>
               <p className="text-xs text-muted-foreground">
-                {new Date(notification.createdAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                {formatDateTime(notification.createdAt)}
               </p>
             </div>
             <p className="text-sm text-muted-foreground">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { formatDate } from '@/utils/format';
 
 interface ExternalBlogSite {
   id: string;
@@ -133,7 +134,7 @@ export default function BlogPage() {
                         </span>
                         {post.publishedAt && (
                           <span className="text-xs text-gray-500 ml-2">
-                            {new Date(post.publishedAt).toLocaleDateString()}
+                            {formatDate(post.publishedAt)}
                           </span>
                         )}
                       </div>

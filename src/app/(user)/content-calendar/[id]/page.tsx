@@ -32,6 +32,7 @@ import EditCalendarItemModal from "../_components/EditCalendarItemModal";
 import AddCalendarItemModal from "../_components/AddCalendarItemModal";
 import ScheduleAllModal from "../_components/ScheduleAllModal";
 import ScheduleItemModal from "../_components/ScheduleItemModal";
+import { formatDateTime } from "@/utils/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -489,7 +490,7 @@ function CalendarItemsTable({
                   {item.suggestedTime ? (
                     <div className="flex items-center gap-1 text-sm">
                       <Calendar className="w-3 h-3" />
-                      {new Date(item.suggestedTime).toLocaleString()}
+                      {formatDateTime(item.suggestedTime)}
                     </div>
                   ) : (
                     <span className="text-muted-foreground text-sm">Not set</span>

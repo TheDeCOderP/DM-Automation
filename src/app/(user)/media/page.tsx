@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { FileIcon } from 'lucide-react';
 import ZohoWorkDrivePicker from '@/components/features/ZohoWorkDrive';
+import { formatDate } from '@/utils/format';
 
 interface MediaAsset {
   id: string;
@@ -102,7 +103,7 @@ export default function MediaPage() {
                   </p>
                   <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
                     <span>{formatFileSize(asset.size)}</span>
-                    <span>{asset.uploadDate.toLocaleDateString()}</span>
+                    <span>{formatDate(asset.uploadDate)}</span>
                   </div>
                 </div>
               </div>
