@@ -197,17 +197,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[IMAGE-GEN] Generating images for ${calendar.items.length} items`);
-
     // Determine best image specs for this calendar
     const platforms = calendar.platforms as Platform[];
     const imageSpecs = getBestImageSpecs(platforms);
-    console.log(`[IMAGE-GEN] Using image specs:`, {
-      aspectRatio: imageSpecs.aspectRatio,
-      dimensions: `${imageSpecs.width}x${imageSpecs.height}`,
-      platforms: platforms.filter(p => p !== 'ALL'),
-      description: imageSpecs.description
-    });
+    
+    // Generate images in batches
+    const itemsToProcess = calendar.items.filter(item => !item.imageUrl && item.imagePrompt);
+
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[IMAGE-GEN] 🎨 Starting Image Generation`);
+    console.log(`${'='.repeat(60)}`);
+    console.log(`📊 Total items: ${calendar.items.length}`);
+    console.log(`🎯 Items to process: ${itemsToProcess.length}`);
+    console.log(`📐 Aspect ratio: ${imageSpecs.aspectRatio}`);
+    console.log(`📏 Dimensions: ${imageSpecs.width}x${imageSpecs.height}px`);
+    console.log(`🎯 Platforms: ${platforms.filter(p => p !== 'ALL').join(', ')}`);
+    console.log(`${'='.repeat(60)}\n`);
 
     // Get base URL for reference images
     const baseUrl = process.env.NEXTAUTH_URL || `https://${req.headers.get('host')}`;
@@ -215,32 +220,34 @@ export async function POST(req: NextRequest) {
     // Load reference image (optional - for dimension guidance)
     const referenceImageBase64 = await loadReferenceImageBase64(imageSpecs.aspectRatio, baseUrl);
     if (!referenceImageBase64) {
-      console.warn('[IMAGE-GEN] No reference image found, proceeding without it');
+      console.warn('[IMAGE-GEN] ⚠️  No reference image found, proceeding without it\n');
     }
 
     const results = [];
     const errors = [];
     const BATCH_SIZE = 2; // Reduced to 2 images at a time to stay under 60s
-
-    // Generate images in batches
-    const itemsToProcess = calendar.items.filter(item => !item.imageUrl && item.imagePrompt);
     
     // Limit to maximum 5 images per request to avoid timeout
     const MAX_IMAGES_PER_REQUEST = 5;
     if (itemsToProcess.length > MAX_IMAGES_PER_REQUEST) {
-      console.log(`[IMAGE-GEN] Limiting to ${MAX_IMAGES_PER_REQUEST} images per request (${itemsToProcess.length} total)`);
+      console.log(`[IMAGE-GEN] ℹ️  Limiting to ${MAX_IMAGES_PER_REQUEST} images per request (${itemsToProcess.length} total)\n`);
     }
     
     const limitedItems = itemsToProcess.slice(0, MAX_IMAGES_PER_REQUEST);
+    const totalBatches = Math.ceil(limitedItems.length / BATCH_SIZE);
+    const startTime = Date.now();
     
     for (let i = 0; i < limitedItems.length; i += BATCH_SIZE) {
       const batch = limitedItems.slice(i, i + BATCH_SIZE);
-      console.log(`[IMAGE-GEN] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(limitedItems.length / BATCH_SIZE)}`);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      console.log(`\n[IMAGE-GEN] 📦 Batch ${batchNum}/${totalBatches} (${batch.length} images)`);
+      console.log(`${'─'.repeat(60)}`);
 
       // Process batch sequentially to avoid rate limits
       for (const item of batch) {
         try {
-          console.log(`[IMAGE-GEN] Generating image for day ${item.day}: ${item.topic}`);
+          console.log(`[IMAGE-GEN] 🎨 Generating: Day ${item.day} - "${item.topic}"`);
+          console.log(`[IMAGE-GEN] ⏳ Processing...`);
 
           // Enhanced prompt with specific dimensions
           const enhancedPrompt = `Create a high-quality, professional, visually appealing image for social media posting.
@@ -266,6 +273,7 @@ Requirements:
           const imageResult = await generateImage(enhancedPrompt, {
             aspectRatio: imageSpecs.aspectRatio,
             numberOfImages: 1,
+            maxRetries: 3
           });
 
           if (!imageResult.images || imageResult.images.length === 0) {
@@ -283,7 +291,9 @@ Requirements:
             data: { imageUrl },
           });
 
-          console.log(`[IMAGE-GEN] ✓ Generated image for day ${item.day}: ${imageUrl}`);
+          console.log(`[IMAGE-GEN] ✅ Success! Day ${item.day} image uploaded`);
+          console.log(`[IMAGE-GEN] 🔗 URL: ${imageUrl}\n`);
+          
           results.push({
             itemId: item.id,
             day: item.day,
@@ -291,7 +301,7 @@ Requirements:
             success: true,
           });
         } catch (error: any) {
-          console.error(`[IMAGE-GEN] Error generating image for day ${item.day}:`, error);
+          console.error(`[IMAGE-GEN] ❌ Failed for Day ${item.day}: ${error?.message || 'Unknown error'}\n`);
           
           // Extract user-friendly error message
           let errorMessage = "Unknown error";
@@ -311,10 +321,20 @@ Requirements:
     }
 
     const remainingItems = itemsToProcess.length - limitedItems.length;
-    console.log(`[IMAGE-GEN] ✓ Generated ${results.length} images with ${errors.length} errors`);
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    const avgTime = results.length > 0 ? (parseFloat(totalTime) / results.length).toFixed(1) : '0';
+    
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[IMAGE-GEN] 🎉 Image Generation Complete!`);
+    console.log(`${'='.repeat(60)}`);
+    console.log(`✅ Successfully generated: ${results.length} images`);
+    console.log(`❌ Failed: ${errors.length} images`);
+    console.log(`⏱️  Total time: ${totalTime}s`);
+    console.log(`📊 Average per image: ${avgTime}s`);
     if (remainingItems > 0) {
-      console.log(`[IMAGE-GEN] ${remainingItems} images remaining - call this endpoint again with the same calendarId`);
+      console.log(`⏭️  Remaining: ${remainingItems} images (call endpoint again)`);
     }
+    console.log(`${'='.repeat(60)}\n`);
 
     return NextResponse.json(
       {

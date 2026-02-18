@@ -141,7 +141,12 @@ export default function CreateCalendarModal({
     setProgress("Creating calendar structure...");
 
     try {
-      // Step 1: Generate calendar structure
+      // Step 1: Generate calendar structure with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+      
+      setProgress("Generating content ideas (this may take 30-60 seconds)...");
+      
       const response = await fetch("/api/content-calendar/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -154,10 +159,21 @@ export default function CreateCalendarModal({
           platforms: selectedPlatforms,
           postsPerWeek,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const error = await response.json();
+        
+        // Handle specific error cases
+        if (response.status === 503) {
+          throw new Error("AI service is experiencing high demand. Please try again in a few moments.");
+        } else if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please wait a moment and try again.");
+        }
+        
         throw new Error(error.error || "Failed to generate calendar");
       }
 
@@ -175,18 +191,29 @@ export default function CreateCalendarModal({
           const batchIds = itemIds.slice(i, i + BATCH_SIZE);
           setProgress(`Generating captions ${i + 1}-${Math.min(i + BATCH_SIZE, itemIds.length)} of ${itemIds.length}...`);
           
-          const captionResponse = await fetch("/api/content-calendar/generate-captions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              calendarId: data.calendar.id,
-              itemIds: batchIds,
-            }),
-          });
+          try {
+            const captionController = new AbortController();
+            const captionTimeoutId = setTimeout(() => captionController.abort(), 120000); // 120 second timeout per batch
+            
+            const captionResponse = await fetch("/api/content-calendar/generate-captions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                calendarId: data.calendar.id,
+                itemIds: batchIds,
+              }),
+              signal: captionController.signal,
+            });
 
-          if (!captionResponse.ok) {
-            console.error("Failed to generate captions for batch", i);
-            // Continue with next batch even if one fails
+            clearTimeout(captionTimeoutId);
+
+            if (!captionResponse.ok) {
+              console.error("Failed to generate captions for batch", i);
+              // Continue with next batch even if one fails
+            }
+          } catch (batchError) {
+            console.error(`Error in caption batch ${i}:`, batchError);
+            // Continue with next batch
           }
         }
       }
@@ -195,11 +222,17 @@ export default function CreateCalendarModal({
         `Calendar generated! ${data.calendar.items.length} posts created.`
       );
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating calendar:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to generate calendar"
-      );
+      
+      // Handle abort/timeout errors
+      if (error.name === 'AbortError') {
+        toast.error("Request timed out. The AI service might be experiencing high demand. Please try again.");
+      } else {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to generate calendar"
+        );
+      }
     } finally {
       setIsGenerating(false);
       setProgress("");
@@ -419,7 +452,11 @@ export default function CreateCalendarModal({
                 <div className="flex-1">
                   <p className="font-medium">{progress}</p>
                   <p className="text-sm text-muted-foreground">
-                    This may take 2-5 minutes. Please don't close this window.
+                    {progress.includes("content ideas") 
+                      ? "AI is generating creative content ideas. This may take 30-60 seconds..."
+                      : progress.includes("captions")
+                      ? "Creating platform-specific captions and hashtags..."
+                      : "Please don't close this window. This may take 2-5 minutes."}
                   </p>
                 </div>
               </div>

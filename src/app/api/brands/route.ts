@@ -87,13 +87,6 @@ export async function GET(req: NextRequest) {
 
         // Transform the data to include role and members information
         const brands = userBrands.map((ub: any) => {
-            console.log('DEBUG - Role info:', {
-                roleId: ub.roleId,
-                roleName: ub.role?.name,
-                roleObject: ub.role,
-                isAdmin: ub.role?.name === "BrandAdmin"
-            });
-            
             return {
                 ...ub.brand,
                 // Flatten the socialAccounts structure

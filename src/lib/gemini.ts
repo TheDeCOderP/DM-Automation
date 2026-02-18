@@ -7,19 +7,103 @@ const ai = new GoogleGenAI({
 });
 
 /**
+ * Retry utility with exponential backoff for handling temporary API failures
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    initialDelay?: number;
+    maxDelay?: number;
+    operationName?: string;
+  } = {}
+): Promise<T> {
+  const {
+    maxRetries = 2,
+    initialDelay = 1000,
+    maxDelay = 5000,
+    operationName = 'API call'
+  } = options;
+
+  let lastError: any;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), maxDelay);
+        console.log(`[RETRY] ⏳ Attempt ${attempt + 1}/${maxRetries + 1} for ${operationName} after ${delay}ms delay...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Log the actual error for debugging
+      console.error(`[RETRY] Error details:`, {
+        message: error?.message,
+        status: error?.status,
+        code: error?.code,
+        type: error?.constructor?.name
+      });
+      
+      // Check if error is retryable
+      const isNetworkError = error?.message?.includes('fetch failed') || 
+                            error?.message?.includes('ECONNREFUSED') ||
+                            error?.message?.includes('ETIMEDOUT') ||
+                            error?.message?.includes('network');
+      
+      const isRetryable = error?.status === 503 || error?.code === 503 || 
+                          error?.status === 429 || error?.code === 429 ||
+                          error?.message?.includes('high demand') ||
+                          error?.message?.includes('rate limit') ||
+                          isNetworkError;
+      
+      if (!isRetryable || attempt === maxRetries) {
+        if (attempt > 0) {
+          console.error(`[RETRY] ❌ Failed after ${attempt + 1} attempts for ${operationName}`);
+        }
+        
+        // Provide more helpful error message for network errors
+        if (isNetworkError) {
+          throw new Error(`Network error: Unable to connect to AI service. Please check your internet connection and try again.`);
+        }
+        
+        throw error;
+      }
+      
+      console.warn(`[RETRY] ⚠️  ${operationName} failed (attempt ${attempt + 1}/${maxRetries + 1}): ${error?.message || 'Unknown error'}`);
+    }
+  }
+  
+  throw lastError;
+}
+
+/**
  * Available Gemini models for different use cases
+ * See: https://ai.google.dev/gemini-api/docs/models/gemini
  */
 export const GEMINI_MODELS = {
-  // Text generation models
-  FLASH: 'gemini-2.0-flash-exp',
-  PRO: 'gemini-1.5-pro',
-  PRO_PREVIEW: 'gemini-3-pro-preview',
+  // Gemini 3 models (latest, most intelligent)
+  GEMINI_3_PRO: 'gemini-3-pro-preview',
+  GEMINI_3_FLASH: 'gemini-3-flash-preview',
+  GEMINI_3_PRO_IMAGE: 'gemini-3-pro-image-preview',
   
-  // Image generation models (multimodal)
-  PRO_IMAGE: 'gemini-3-pro-image-preview',
+  // Gemini 2.5 models (stable, production-ready)
+  GEMINI_2_5_PRO: 'gemini-2.5-pro',
+  GEMINI_2_5_FLASH: 'gemini-2.5-flash',
+  GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
+  GEMINI_2_5_FLASH_IMAGE: 'gemini-2.5-flash-image',
   
-  // Thinking models
-  PRO_THINKING: 'gemini-3-pro-preview',
+  // Gemini 2.0 models (deprecated, will be shut down March 31, 2026)
+  GEMINI_2_0_FLASH: 'gemini-2.0-flash-exp',
+  
+  // Aliases for backward compatibility
+  FLASH: 'gemini-2.5-flash',
+  PRO: 'gemini-2.5-pro',
+  PRO_PREVIEW: 'gemini-3-flash-preview',  // Use Gemini 3 Flash for best balance
+  PRO_IMAGE: 'gemini-2.5-flash-image',
+  PRO_THINKING: 'gemini-2.5-pro',
 } as const;
 
 /**
@@ -31,26 +115,16 @@ export async function generateText(
     model?: string;
     temperature?: number;
     maxTokens?: number;
-    thinkingLevel?: 'low' | 'medium' | 'high';
   }
 ) {
   try {
-    const config: any = {
-      temperature: options?.temperature || 0.7,
-      maxOutputTokens: options?.maxTokens || 8192,
-    };
-
-    // Add thinking config if specified
-    if (options?.thinkingLevel) {
-      config.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel
-      };
-    }
-
     const response = await ai.models.generateContent({
-      model: options?.model || GEMINI_MODELS.PRO_PREVIEW,
+      model: options?.model || GEMINI_MODELS.GEMINI_2_5_FLASH,
       contents: prompt,
-      config
+      config: {
+        temperature: options?.temperature || 0.7,
+        maxOutputTokens: options?.maxTokens || 8192,
+      }
     });
 
     return response.text;
@@ -88,62 +162,69 @@ export async function generateImage(
     model?: string;
     aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
     numberOfImages?: number;
+    maxRetries?: number;
   }
 ) {
-  try {
-    const config: any = {
-      responseModalities: ['TEXT', 'IMAGE'],
-      tools: [{ googleSearch: {} }],
-    };
+  return retryWithBackoff(
+    async () => {
+      try {
+        const response = await ai.models.generateContent({
+          model: options?.model || GEMINI_MODELS.GEMINI_2_5_FLASH_IMAGE,
+          contents: prompt,
+          config: {
+            responseModalities: ['IMAGE', 'TEXT']
+          }
+        });
+        
+        const images: string[] = [];
+        let textContent = '';
 
-    const chat = ai.chats.create({
-      model: options?.model || GEMINI_MODELS.PRO_IMAGE,
-      config
-    });
-
-    const response = await chat.sendMessage({ message: prompt });
-    
-    const images: string[] = [];
-    let textContent = '';
-
-    // Extract images and text from response with proper type guards
-    if (response?.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.text) {
-          textContent += part.text;
-        } else if (part.inlineData?.data) {
-          images.push(part.inlineData.data);
+        // Extract images and text from response
+        if (response?.candidates?.[0]?.content?.parts) {
+          for (const part of response.candidates[0].content.parts) {
+            if (part.text) {
+              textContent += part.text;
+            } else if (part.inlineData?.data) {
+              images.push(part.inlineData.data);
+            }
+          }
         }
+
+        return {
+          images,
+          text: textContent
+        };
+      } catch (error: any) {
+        console.error('Gemini image generation error:', error);
+        
+        // Create a user-friendly error object
+        const errorResponse = {
+          code: error?.status || error?.code || 500,
+          message: error?.message || 'Failed to generate image',
+          status: error?.status || 'UNKNOWN'
+        };
+
+        // Handle specific error cases
+        if (error?.status === 503 || error?.code === 503) {
+          errorResponse.message = 'The AI image generation service is currently experiencing high demand. Please try again in a few moments.';
+        } else if (error?.status === 429 || error?.code === 429) {
+          errorResponse.message = 'Rate limit exceeded. Please wait a moment before trying again.';
+        } else if (error?.status === 400 || error?.code === 400) {
+          errorResponse.message = 'Invalid request. Please check your prompt and try again.';
+        } else if (error?.status === 401 || error?.code === 401) {
+          errorResponse.message = 'Authentication failed. Please check your API configuration.';
+        }
+
+        throw errorResponse;
       }
+    },
+    {
+      maxRetries: options?.maxRetries ?? 2,
+      initialDelay: 1000,
+      maxDelay: 5000,
+      operationName: 'Image generation'
     }
-
-    return {
-      images,
-      text: textContent
-    };
-  } catch (error: any) {
-    console.error('Gemini image generation error:', error);
-    
-    // Create a user-friendly error object
-    const errorResponse = {
-      code: error?.status || error?.code || 500,
-      message: error?.message || 'Failed to generate image',
-      status: error?.status || 'UNKNOWN'
-    };
-
-    // Handle specific error cases
-    if (error?.status === 503 || error?.code === 503) {
-      errorResponse.message = 'The AI image generation service is currently experiencing high demand. Please try again in a few moments.';
-    } else if (error?.status === 429 || error?.code === 429) {
-      errorResponse.message = 'Rate limit exceeded. Please wait a moment before trying again.';
-    } else if (error?.status === 400 || error?.code === 400) {
-      errorResponse.message = 'Invalid request. Please check your prompt and try again.';
-    } else if (error?.status === 401 || error?.code === 401) {
-      errorResponse.message = 'Authentication failed. Please check your API configuration.';
-    }
-
-    throw errorResponse;
-  }
+  );
 }
 
 /**
@@ -166,17 +247,16 @@ export async function generateMultimodalContent(
       config.tools = [{ googleSearch: {} }];
     }
 
-    const chat = ai.chats.create({
-      model: options?.model || GEMINI_MODELS.PRO_IMAGE,
+    const response = await ai.models.generateContent({
+      model: options?.model || GEMINI_MODELS.GEMINI_2_5_FLASH,
+      contents: prompt,
       config
     });
-
-    const response = await chat.sendMessage({ message: prompt });
     
     const textParts: string[] = [];
     const imageParts: string[] = [];
 
-    // Extract text and images with proper type guards
+    // Extract text and images
     if (response?.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.text) {
@@ -224,25 +304,18 @@ export async function createChat(
   options?: {
     model?: string;
     temperature?: number;
-    includeImages?: boolean;
-    useGoogleSearch?: boolean;
   }
 ) {
   const config: any = {
-    responseModalities: options?.includeImages ? ['TEXT', 'IMAGE'] : ['TEXT'],
     temperature: options?.temperature || 0.7,
   };
-
-  if (options?.useGoogleSearch) {
-    config.tools = [{ googleSearch: {} }];
-  }
 
   if (systemInstruction) {
     config.systemInstruction = systemInstruction;
   }
 
   const chat = ai.chats.create({
-    model: options?.model || GEMINI_MODELS.PRO_IMAGE,
+    model: options?.model || GEMINI_MODELS.GEMINI_2_5_FLASH,
     config
   });
 
@@ -280,30 +353,40 @@ export async function generateWithThinking(
   options?: {
     thinkingLevel?: 'low' | 'medium' | 'high';
     model?: string;
+    maxRetries?: number;
   }
 ) {
-  try {
-    const config: any = {};
-    
-    // Only add thinking config if model supports it and level is provided
-    // Note: Not all models support thinking levels
-    if (options?.thinkingLevel && options?.model?.includes('thinking')) {
-      config.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel
-      };
+  return retryWithBackoff(
+    async () => {
+      try {
+        const config: any = {};
+        
+        // Add thinking config if specified
+        if (options?.thinkingLevel) {
+          config.thinkingConfig = {
+            thinkingLevel: options.thinkingLevel
+          };
+        }
+
+        const response = await ai.models.generateContent({
+          model: options?.model || GEMINI_MODELS.GEMINI_3_FLASH,
+          contents: prompt,
+          config
+        });
+
+        return response.text || '';
+      } catch (error) {
+        console.error('Gemini thinking generation error:', error);
+        throw error;
+      }
+    },
+    {
+      maxRetries: options?.maxRetries ?? 2,
+      initialDelay: 1000,
+      maxDelay: 5000,
+      operationName: 'Content generation'
     }
-
-    const response = await ai.models.generateContent({
-      model: options?.model || GEMINI_MODELS.PRO_PREVIEW,
-      contents: prompt,
-      config
-    });
-
-    return response.text || '';
-  } catch (error) {
-    console.error('Gemini thinking generation error:', error);
-    throw error;
-  }
+  );
 }
 
 export default ai;
