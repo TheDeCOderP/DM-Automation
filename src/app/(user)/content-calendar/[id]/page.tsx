@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Loader2,
   Eye,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -515,6 +516,19 @@ function CalendarItemsTable({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-1 justify-end">
+                    {item.status === "PUBLISHED" && item.postGroup?.posts?.some((post: any) => post.status === "PUBLISHED" && post.url) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          const publishedPost = item.postGroup?.posts?.find((post: any) => post.status === "PUBLISHED" && post.url);
+                          if (publishedPost?.url) window.open(publishedPost.url, '_blank');
+                        }}
+                        title="View published post"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    )}
                     {(item.status === "DRAFT" || item.status === "EDITED") && (
                       <Button
                         variant="default"
@@ -605,7 +619,20 @@ function CalendarItemsTable({
                             {item.postGroup.posts.map((post: any) => (
                               <div key={post.id} className="flex items-center justify-between text-sm p-2 bg-background rounded border">
                                 <span>{post.platform}</span>
-                                <Badge variant="outline">{post.status}</Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">{post.status}</Badge>
+                                  {post.status === "PUBLISHED" && post.url && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => window.open(post.url, '_blank')}
+                                      title="View published post"
+                                    >
+                                      <ExternalLink className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>

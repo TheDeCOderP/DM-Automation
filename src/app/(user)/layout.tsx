@@ -31,7 +31,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       <AppSidebar/>
       <SidebarInset>
         <AppHeader/>
-        <main className='p-5 lg:p-10'>
+        <main className='p-2'>
           {children}
         </main>
       </SidebarInset>

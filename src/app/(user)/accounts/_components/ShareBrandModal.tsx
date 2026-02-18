@@ -122,7 +122,7 @@ export default function ShareBrandModal({
                     ?.filter((role: any) => role.name === "BrandAdmin" || role.name === "BrandUser")
                     .map((role: any) => (
                       <SelectItem key={role.id} value={role.id}>
-                        {role.name} {role.description && `- ${role.description}`}
+                        {role.name} {role.description && ``}
                       </SelectItem>
                     ))
                 )}

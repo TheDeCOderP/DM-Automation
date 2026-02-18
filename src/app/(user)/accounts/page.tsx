@@ -191,14 +191,15 @@ export default function BrandsPage() {
           <Card className="hidden lg:block border-border/50">
             <Table>
               <TableHeader>
-                <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/50">
+                <TableRow className="bg-primary/10 hover:bg-secondary/10 border-border/50">
                   <TableHead className="font-semibold text-foreground">Brand</TableHead>
                   <TableHead className="font-semibold text-foreground">Social Accounts</TableHead>
+                  <TableHead className="font-semibold text-foreground">Social Quick Actions</TableHead>
                   <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Array.from({ length: 3 }).map((_, i) => (
+                {Array.from({ length: 4 }).map((_, i) => (
                   <BrandRowSkeleton key={`desktop-skeleton-${i}`} />
                 ))}
               </TableBody>
@@ -244,8 +245,9 @@ export default function BrandsPage() {
           <Card className="hidden lg:block shadow-sm border-border/50 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-secondary/30 hover:bg-secondary/30 border-border/50">
-                  <TableHead className="font-semibold text-foreground w-[30%]">Brand</TableHead>
+                <TableRow className="bg-primary/10 hover:bg-secondary/10 border-border/50">
+                  <TableHead className="font-semibold text-foreground w-[5%]">S. No</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[25%]">Brand</TableHead>
                   <TableHead className="font-semibold text-foreground w-[25%]">Social Accounts</TableHead>
                   <TableHead className="font-semibold text-foreground w-[25%]">Quick Actions</TableHead>
                   <TableHead className="text-right font-semibold text-foreground w-[20%]">Actions</TableHead>
@@ -254,7 +256,7 @@ export default function BrandsPage() {
               <TableBody>
                 {brands?.data?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-64">
+                    <TableCell colSpan={5} className="h-64">
                       <div className="flex flex-col items-center justify-center text-center">
                         <div className="rounded-full bg-primary/10 p-4 mb-4">
                           <Sparkles className="h-8 w-8 text-primary" />
@@ -271,8 +273,13 @@ export default function BrandsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  brands?.data?.map((brand: BrandWithSocialAccounts) => (
+                  brands?.data?.map((brand: BrandWithSocialAccounts, index: number) => (
                     <TableRow key={brand.id} className="hover:bg-secondary/20 transition-colors border-border/50">
+                      {/* S. No */}
+                      <TableCell className="font-medium text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
+                      
                       {/* Brand */}
                       <TableCell>
                         <div
@@ -308,7 +315,7 @@ export default function BrandsPage() {
                               </Badge>
                             ))}
                             {brand.socialAccounts.length > 5 && (
-                              <Badge variant="secondary" className="p-2 bg-secondary/50">
+                              <Badge className="p-2 bg-primary/10">
                                 +{brand.socialAccounts.length - 5}
                               </Badge>
                             )}

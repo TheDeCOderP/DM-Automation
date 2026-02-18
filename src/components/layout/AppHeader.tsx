@@ -60,8 +60,7 @@ export default function AppHeader() {
             <SidebarTrigger />
           </div>
 
-          {/* Page Title - Visible on medium to large screens */}
-          <h1 className="hidden md:block font-bold text-xl lg:text-3xl text-foreground dark:text-white truncate max-w-[200px] lg:max-w-none">{activePage}</h1>
+      
         </div>
 
         {/* Center Section - Desktop Search */}
