@@ -3,6 +3,9 @@ import { uploadBase64 } from '@/lib/upload';
 import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
     const token = await getToken({ req });
     if (!token?.id) {
@@ -37,12 +40,18 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json(response, { status: 200 });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error in POST handler:", error);
+        
+        // Return structured error response
+        const statusCode = error?.code || 500;
+        const errorMessage = error?.message || "Failed to generate image";
+        
         return NextResponse.json({ 
-            error: "Internal server error",
-            details: error instanceof Error ? error.message : "Unknown error"
-        }, { status: 500 });
+            error: errorMessage,
+            code: statusCode,
+            status: error?.status || 'ERROR'
+        }, { status: statusCode });
     }
 }
 
@@ -181,15 +190,14 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
             description: result.text || 'Image generated successfully'
         };
         
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating image with Gemini:", error);
         
-        // Log detailed error information
-        if (error instanceof Error) {
-            console.error("Error details:", error.message);
-            console.error("Error stack:", error.stack);
-        }
-        
-        return null;
+        // Re-throw with structured error for proper handling in POST handler
+        throw {
+            code: error?.code || 500,
+            message: error?.message || 'Failed to generate image',
+            status: error?.status || 'UNKNOWN'
+        };
     }
 }

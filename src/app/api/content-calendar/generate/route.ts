@@ -4,91 +4,19 @@ import { prisma } from "@/lib/prisma";
 import { generateWithThinking, GEMINI_MODELS } from "@/lib/gemini";
 import { Platform } from "@prisma/client";
 
+// Extend timeout to maximum for Vercel Hobby tier
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 interface GenerateCalendarRequest {
   brandId: string;
   topic: string;
-  duration: number; // days (7-30)
-  startDate?: string; // ISO date string
-  endDate?: string; // ISO date string
+  duration: number;
+  startDate?: string;
+  endDate?: string;
   platforms: Platform[];
   postsPerWeek: number;
 }
-
-interface CalendarItemData {
-  day: number;
-  topic: string;
-  captionLinkedIn?: string;
-  captionTwitter?: string;
-  captionInstagram?: string;
-  captionFacebook?: string;
-  captionYouTube?: string;
-  captionPinterest?: string;
-  captionReddit?: string;
-  captionTikTok?: string;
-  hashtags: string[];
-  imagePrompt: string;
-  suggestedTime: Date;
-}
-
-// Platform-specific caption guidelines
-const PLATFORM_GUIDELINES = {
-  LINKEDIN: {
-    tone: "Professional, thought leadership",
-    length: "150-300 words",
-    style: "Educational, industry insights, personal stories",
-    hashtags: "3-5 relevant professional hashtags",
-    cta: "Ask questions, encourage discussion"
-  },
-  TWITTER: {
-    tone: "Concise, engaging, conversational",
-    length: "100-280 characters",
-    style: "Quick tips, stats, quotes, threads for longer content",
-    hashtags: "1-2 trending hashtags",
-    cta: "Retweet, reply, or share thoughts"
-  },
-  INSTAGRAM: {
-    tone: "Visual, engaging, storytelling",
-    length: "125-150 words",
-    style: "Emotional connection, behind-the-scenes, lifestyle",
-    hashtags: "10-15 relevant hashtags",
-    cta: "Save, share, tag a friend"
-  },
-  FACEBOOK: {
-    tone: "Conversational, community-focused",
-    length: "100-250 words",
-    style: "Stories, questions, polls, community building",
-    hashtags: "2-3 hashtags (optional)",
-    cta: "Comment, share, react"
-  },
-  YOUTUBE: {
-    tone: "Descriptive, SEO-optimized",
-    length: "200-300 words",
-    style: "Video description with timestamps, links, resources",
-    hashtags: "3-5 video-relevant hashtags",
-    cta: "Subscribe, like, comment"
-  },
-  PINTEREST: {
-    tone: "Inspirational, actionable",
-    length: "100-200 words",
-    style: "How-to, tips, ideas, visual descriptions",
-    hashtags: "5-10 niche hashtags",
-    cta: "Save pin, visit website"
-  },
-  REDDIT: {
-    tone: "Authentic, helpful, community-first",
-    length: "150-500 words",
-    style: "Detailed, value-driven, no self-promotion",
-    hashtags: "None (use subreddit flair)",
-    cta: "Discuss, share experience"
-  },
-  TIKTOK: {
-    tone: "Fun, trendy, authentic",
-    length: "100-150 characters",
-    style: "Hook in first 3 seconds, trending sounds",
-    hashtags: "3-5 trending + niche hashtags",
-    cta: "Follow, duet, stitch"
-  }
-};
 
 async function generateContentIdeas(
   topic: string,
@@ -119,11 +47,6 @@ Format your response as a JSON array:
     "day": 1,
     "topic": "5 Common Mistakes in [Topic]",
     "imagePrompt": "Modern office desk with laptop showing analytics dashboard, professional lighting, clean aesthetic"
-  },
-  {
-    "day": 2,
-    "topic": "How to Get Started with [Topic]",
-    "imagePrompt": "Person working on laptop with coffee, bright natural lighting, motivational workspace"
   }
 ]
 
@@ -131,11 +54,9 @@ Generate exactly ${totalPosts} content ideas now:`;
 
   try {
     const response = await generateWithThinking(prompt, {
-      // Remove thinking level as it's not supported
       model: GEMINI_MODELS.PRO_PREVIEW
     });
     
-    // Extract JSON from response
     const jsonMatch = response.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       throw new Error("Failed to parse content ideas from AI response");
@@ -149,90 +70,16 @@ Generate exactly ${totalPosts} content ideas now:`;
   }
 }
 
-async function generatePlatformCaption(
-  topic: string,
-  contentIdea: string,
-  platform: Platform,
-  brandName: string,
-  day: number
-): Promise<{ caption: string; hashtags: string[] }> {
-  // Skip 'ALL' platform as it's not a real platform
-  if (platform === 'ALL') {
-    return { caption: contentIdea, hashtags: [] };
-  }
-  
-  const guidelines = PLATFORM_GUIDELINES[platform as keyof typeof PLATFORM_GUIDELINES];
-  
-  if (!guidelines) {
-    return { caption: contentIdea, hashtags: [] };
-  }
-  
-  const prompt = `You are a social media copywriter for ${brandName}. Create a ${platform} post.
-
-Content Topic: ${contentIdea}
-Main Theme: ${topic}
-Post Day: ${day}
-
-Platform Guidelines for ${platform}:
-- Tone: ${guidelines.tone}
-- Length: ${guidelines.length}
-- Style: ${guidelines.style}
-- Hashtags: ${guidelines.hashtags}
-- CTA: ${guidelines.cta}
-
-Requirements:
-1. Write an engaging caption that follows the platform's best practices
-2. Include appropriate emojis (but don't overuse)
-3. Add a clear call-to-action
-4. Make it authentic and valuable
-5. DO NOT use markdown formatting
-6. For Twitter: Keep under 280 characters
-7. For Instagram: Use line breaks for readability
-
-Generate:
-1. The caption text
-2. A list of relevant hashtags (without # symbol)
-
-Format as JSON:
-{
-  "caption": "Your engaging caption here...",
-  "hashtags": ["Marketing", "DigitalMarketing", "Tips"]
-}`;
-
-  try {
-    const response = await generateWithThinking(prompt, {
-      thinkingLevel: 'low'
-    });
-    
-    // Extract JSON from response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Failed to parse caption from AI response");
-    }
-    
-    const result = JSON.parse(jsonMatch[0]);
-    return result;
-  } catch (error) {
-    console.error(`Error generating ${platform} caption:`, error);
-    // Fallback
-    return {
-      caption: `${contentIdea}\n\n#${topic.replace(/\s+/g, '')}`,
-      hashtags: [topic.replace(/\s+/g, '')]
-    };
-  }
-}
-
 function calculateSuggestedTime(day: number, platform: Platform): Date {
-  // Best posting times per platform (based on research)
   const bestTimes: Record<string, { hour: number; minute: number }> = {
-    LINKEDIN: { hour: 10, minute: 0 }, // 10 AM - Business hours
-    TWITTER: { hour: 12, minute: 0 },  // 12 PM - Lunch break
-    INSTAGRAM: { hour: 11, minute: 0 }, // 11 AM - Mid-morning
-    FACEBOOK: { hour: 13, minute: 0 },  // 1 PM - Early afternoon
-    YOUTUBE: { hour: 14, minute: 0 },   // 2 PM - Afternoon
-    PINTEREST: { hour: 20, minute: 0 }, // 8 PM - Evening
-    REDDIT: { hour: 9, minute: 0 },     // 9 AM - Morning
-    TIKTOK: { hour: 19, minute: 0 }     // 7 PM - Evening
+    LINKEDIN: { hour: 10, minute: 0 },
+    TWITTER: { hour: 12, minute: 0 },
+    INSTAGRAM: { hour: 11, minute: 0 },
+    FACEBOOK: { hour: 13, minute: 0 },
+    YOUTUBE: { hour: 14, minute: 0 },
+    PINTEREST: { hour: 20, minute: 0 },
+    REDDIT: { hour: 9, minute: 0 },
+    TIKTOK: { hour: 19, minute: 0 }
   };
   
   const time = bestTimes[platform] || { hour: 10, minute: 0 };
@@ -320,89 +167,23 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Step 3: Generate platform-specific captions for each idea (in batches)
-    console.log("[CALENDAR] Step 3: Generating platform-specific captions in batches...");
-    const calendarItems: CalendarItemData[] = [];
-    const BATCH_SIZE = 5; // Process 5 items at a time to avoid timeout
-
-    for (let i = 0; i < contentIdeas.length; i += BATCH_SIZE) {
-      const batch = contentIdeas.slice(i, i + BATCH_SIZE);
-      console.log(`[CALENDAR] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(contentIdeas.length / BATCH_SIZE)}`);
-
-      // Process batch in parallel
-      const batchPromises = batch.map(async (idea) => {
-        const item: CalendarItemData = {
-          day: idea.day,
-          topic: idea.topic,
-          hashtags: [],
-          imagePrompt: idea.imagePrompt,
-          suggestedTime: calculateSuggestedTime(idea.day, platforms[0]),
-        };
-
-        // Generate captions for all platforms in parallel
-        const captionPromises = platforms.map(async (platform) => {
-          console.log(`[CALENDAR] Generating ${platform} caption for day ${idea.day}...`);
-          
-          const { caption, hashtags } = await generatePlatformCaption(
-            topic,
-            idea.topic,
-            platform,
-            userBrand.brand.name,
-            idea.day
-          );
-
-          return { platform, caption, hashtags };
-        });
-
-        const results = await Promise.all(captionPromises);
-
-        // Store captions in appropriate fields
-        for (const result of results) {
-          if (result.platform === "LINKEDIN") item.captionLinkedIn = result.caption;
-          else if (result.platform === "TWITTER") item.captionTwitter = result.caption;
-          else if (result.platform === "INSTAGRAM") item.captionInstagram = result.caption;
-          else if (result.platform === "FACEBOOK") item.captionFacebook = result.caption;
-          else if (result.platform === "YOUTUBE") item.captionYouTube = result.caption;
-          else if (result.platform === "PINTEREST") item.captionPinterest = result.caption;
-          else if (result.platform === "REDDIT") item.captionReddit = result.caption;
-          else if (result.platform === "TIKTOK") item.captionTikTok = result.caption;
-
-          // Merge hashtags (avoid duplicates)
-          item.hashtags = Array.from(new Set([...item.hashtags, ...result.hashtags]));
-        }
-
-        return item;
-      });
-
-      const batchResults = await Promise.all(batchPromises);
-      calendarItems.push(...batchResults);
-    }
-
-    // Step 4: Save calendar items to database
-    console.log("[CALENDAR] Step 4: Saving calendar items...");
+    // Step 3: Save calendar items WITHOUT captions (will be generated separately)
+    console.log("[CALENDAR] Step 3: Saving calendar structure...");
     await prisma.contentCalendarItem.createMany({
-      data: calendarItems.map((item) => ({
+      data: contentIdeas.map((idea) => ({
         calendarId: calendar.id,
-        day: item.day,
-        topic: item.topic,
-        captionLinkedIn: item.captionLinkedIn,
-        captionTwitter: item.captionTwitter,
-        captionInstagram: item.captionInstagram,
-        captionFacebook: item.captionFacebook,
-        captionYouTube: item.captionYouTube,
-        captionPinterest: item.captionPinterest,
-        captionReddit: item.captionReddit,
-        captionTikTok: item.captionTikTok,
-        hashtags: item.hashtags,
-        imagePrompt: item.imagePrompt,
-        suggestedTime: item.suggestedTime,
+        day: idea.day,
+        topic: idea.topic,
+        hashtags: [],
+        imagePrompt: idea.imagePrompt,
+        suggestedTime: calculateSuggestedTime(idea.day, platforms[0]),
         status: "DRAFT",
       })),
     });
 
-    console.log(`[CALENDAR] ✓ Successfully generated calendar with ${calendarItems.length} items`);
+    console.log(`[CALENDAR] ✓ Successfully created calendar structure with ${contentIdeas.length} items`);
 
-    // Return the complete calendar
+    // Return the calendar with items (captions will be generated by frontend)
     const completeCalendar = await prisma.contentCalendar.findUnique({
       where: { id: calendar.id },
       include: {
@@ -421,8 +202,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: "Content calendar generated successfully",
+        message: "Content calendar structure created. Generating captions...",
         calendar: completeCalendar,
+        needsCaptions: true, // Signal to frontend to call caption generation
       },
       { status: 201 }
     );

@@ -138,9 +138,10 @@ export default function CreateCalendarModal({
     }
 
     setIsGenerating(true);
-    setProgress("Generating content ideas...");
+    setProgress("Creating calendar structure...");
 
     try {
+      // Step 1: Generate calendar structure
       const response = await fetch("/api/content-calendar/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -161,6 +162,34 @@ export default function CreateCalendarModal({
       }
 
       const data = await response.json();
+      
+      // Step 2: Generate captions if needed
+      if (data.needsCaptions && data.calendar?.items) {
+        setProgress(`Generating captions for ${data.calendar.items.length} posts...`);
+        
+        const itemIds = data.calendar.items.map((item: any) => item.id);
+        
+        // Generate captions in batches to avoid timeout
+        const BATCH_SIZE = 3;
+        for (let i = 0; i < itemIds.length; i += BATCH_SIZE) {
+          const batchIds = itemIds.slice(i, i + BATCH_SIZE);
+          setProgress(`Generating captions ${i + 1}-${Math.min(i + BATCH_SIZE, itemIds.length)} of ${itemIds.length}...`);
+          
+          const captionResponse = await fetch("/api/content-calendar/generate-captions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              calendarId: data.calendar.id,
+              itemIds: batchIds,
+            }),
+          });
+
+          if (!captionResponse.ok) {
+            console.error("Failed to generate captions for batch", i);
+            // Continue with next batch even if one fails
+          }
+        }
+      }
       
       toast.success(
         `Calendar generated! ${data.calendar.items.length} posts created.`

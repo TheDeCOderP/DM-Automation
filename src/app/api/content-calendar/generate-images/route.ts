@@ -144,6 +144,9 @@ function getBestImageSpecs(platforms: Platform[]): {
   return bestSpec;
 }
 
+export const maxDuration = 60; // Maximum for Vercel Hobby tier
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const token = await getToken({ req });
   if (!token?.id) {
@@ -217,14 +220,22 @@ export async function POST(req: NextRequest) {
 
     const results = [];
     const errors = [];
-    const BATCH_SIZE = 3; // Process 3 images at a time to avoid timeout
+    const BATCH_SIZE = 2; // Reduced to 2 images at a time to stay under 60s
 
     // Generate images in batches
     const itemsToProcess = calendar.items.filter(item => !item.imageUrl && item.imagePrompt);
     
-    for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
-      const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
-      console.log(`[IMAGE-GEN] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(itemsToProcess.length / BATCH_SIZE)}`);
+    // Limit to maximum 5 images per request to avoid timeout
+    const MAX_IMAGES_PER_REQUEST = 5;
+    if (itemsToProcess.length > MAX_IMAGES_PER_REQUEST) {
+      console.log(`[IMAGE-GEN] Limiting to ${MAX_IMAGES_PER_REQUEST} images per request (${itemsToProcess.length} total)`);
+    }
+    
+    const limitedItems = itemsToProcess.slice(0, MAX_IMAGES_PER_REQUEST);
+    
+    for (let i = 0; i < limitedItems.length; i += BATCH_SIZE) {
+      const batch = limitedItems.slice(i, i + BATCH_SIZE);
+      console.log(`[IMAGE-GEN] Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(limitedItems.length / BATCH_SIZE)}`);
 
       // Process batch sequentially to avoid rate limits
       for (const item of batch) {
@@ -279,37 +290,58 @@ Requirements:
             imageUrl,
             success: true,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[IMAGE-GEN] Error generating image for day ${item.day}:`, error);
+          
+          // Extract user-friendly error message
+          let errorMessage = "Unknown error";
+          if (error?.message) {
+            errorMessage = error.message;
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+          
           errors.push({
             itemId: item.id,
             day: item.day,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: errorMessage,
           });
         }
       }
     }
 
+    const remainingItems = itemsToProcess.length - limitedItems.length;
     console.log(`[IMAGE-GEN] ✓ Generated ${results.length} images with ${errors.length} errors`);
+    if (remainingItems > 0) {
+      console.log(`[IMAGE-GEN] ${remainingItems} images remaining - call this endpoint again with the same calendarId`);
+    }
 
     return NextResponse.json(
       {
         success: true,
         message: `Generated ${results.length} images`,
         generated: results.length,
+        remaining: remainingItems,
         errors: errors.length > 0 ? errors : undefined,
         results,
+        needsMoreGeneration: remainingItems > 0,
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("[IMAGE-GEN] Error:", error);
+    
+    // Extract structured error information
+    const statusCode = error?.code || 500;
+    const errorMessage = error?.message || "Failed to generate images";
+    
     return NextResponse.json(
       {
-        error: "Failed to generate images",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
+        code: statusCode,
+        status: error?.status || 'ERROR'
       },
-      { status: 500 }
+      { status: statusCode }
     );
   }
 }

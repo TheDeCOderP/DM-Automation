@@ -1,6 +1,9 @@
 import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 const FREEPIK_API_KEY = process.env.FREEPIK_API_KEY;
 const FREEPIK_API_BASE = "https://api.freepik.com/v1/ai";
 

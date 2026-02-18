@@ -114,37 +114,60 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
       return;
     }
 
-    if (!confirm(`Generate images for ${itemsWithoutImages.length} items? This may take 5-10 minutes.`)) {
+    if (!confirm(`Generate images for ${itemsWithoutImages.length} items? This will be done in batches to avoid timeouts.`)) {
       return;
     }
 
     setIsGeneratingImages(true);
+    let totalGenerated = 0;
     const toastId = toast.loading(`Generating images: 0 / ${itemsWithoutImages.length}`);
 
     try {
-      const response = await fetch(`/api/content-calendar/generate-images`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          calendarId: resolvedParams.id,
-        }),
-      });
+      // Keep calling the API until all images are generated
+      let hasMoreToGenerate = true;
+      let attempts = 0;
+      const MAX_ATTEMPTS = 20; // Safety limit
+      
+      while (hasMoreToGenerate && attempts < MAX_ATTEMPTS) {
+        attempts++;
+        
+        const response = await fetch(`/api/content-calendar/generate-images`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            calendarId: resolvedParams.id,
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate images");
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to generate images");
+        }
+
+        const data = await response.json();
+        totalGenerated += data.generated;
+        
+        // Update progress
+        toast.loading(
+          `Generating images: ${totalGenerated} / ${itemsWithoutImages.length}`,
+          { id: toastId }
+        );
+        
+        // Check if there are more images to generate
+        hasMoreToGenerate = data.needsMoreGeneration && data.remaining > 0;
+        
+        if (!hasMoreToGenerate) {
+          break;
+        }
+        
+        // Small delay between batches
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-
-      const data = await response.json();
       
       toast.success(
-        `Generated ${data.generated} images successfully!`,
+        `Generated ${totalGenerated} images successfully!`,
         { id: toastId }
       );
-      
-      if (data.errors && data.errors.length > 0) {
-        toast.warning(`${data.errors.length} images failed to generate`);
-      }
 
       mutate();
     } catch (error) {

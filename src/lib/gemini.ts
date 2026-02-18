@@ -54,9 +54,28 @@ export async function generateText(
     });
 
     return response.text;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gemini text generation error:', error);
-    throw error;
+    
+    // Create a user-friendly error object
+    const errorResponse = {
+      code: error?.status || error?.code || 500,
+      message: error?.message || 'Failed to generate text',
+      status: error?.status || 'UNKNOWN'
+    };
+
+    // Handle specific error cases
+    if (error?.status === 503 || error?.code === 503) {
+      errorResponse.message = 'The AI service is currently experiencing high demand. Please try again in a few moments.';
+    } else if (error?.status === 429 || error?.code === 429) {
+      errorResponse.message = 'Rate limit exceeded. Please wait a moment before trying again.';
+    } else if (error?.status === 400 || error?.code === 400) {
+      errorResponse.message = 'Invalid request. Please check your input and try again.';
+    } else if (error?.status === 401 || error?.code === 401) {
+      errorResponse.message = 'Authentication failed. Please check your API configuration.';
+    }
+
+    throw errorResponse;
   }
 }
 
@@ -102,9 +121,28 @@ export async function generateImage(
       images,
       text: textContent
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gemini image generation error:', error);
-    throw error;
+    
+    // Create a user-friendly error object
+    const errorResponse = {
+      code: error?.status || error?.code || 500,
+      message: error?.message || 'Failed to generate image',
+      status: error?.status || 'UNKNOWN'
+    };
+
+    // Handle specific error cases
+    if (error?.status === 503 || error?.code === 503) {
+      errorResponse.message = 'The AI image generation service is currently experiencing high demand. Please try again in a few moments.';
+    } else if (error?.status === 429 || error?.code === 429) {
+      errorResponse.message = 'Rate limit exceeded. Please wait a moment before trying again.';
+    } else if (error?.status === 400 || error?.code === 400) {
+      errorResponse.message = 'Invalid request. Please check your prompt and try again.';
+    } else if (error?.status === 401 || error?.code === 401) {
+      errorResponse.message = 'Authentication failed. Please check your API configuration.';
+    }
+
+    throw errorResponse;
   }
 }
 
@@ -153,9 +191,28 @@ export async function generateMultimodalContent(
       text: textParts.join('\n'),
       images: imageParts
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gemini multimodal generation error:', error);
-    throw error;
+    
+    // Create a user-friendly error object
+    const errorResponse = {
+      code: error?.status || error?.code || 500,
+      message: error?.message || 'Failed to generate content',
+      status: error?.status || 'UNKNOWN'
+    };
+
+    // Handle specific error cases
+    if (error?.status === 503 || error?.code === 503) {
+      errorResponse.message = 'The AI service is currently experiencing high demand. Please try again in a few moments.';
+    } else if (error?.status === 429 || error?.code === 429) {
+      errorResponse.message = 'Rate limit exceeded. Please wait a moment before trying again.';
+    } else if (error?.status === 400 || error?.code === 400) {
+      errorResponse.message = 'Invalid request. Please check your input and try again.';
+    } else if (error?.status === 401 || error?.code === 401) {
+      errorResponse.message = 'Authentication failed. Please check your API configuration.';
+    }
+
+    throw errorResponse;
   }
 }
 
