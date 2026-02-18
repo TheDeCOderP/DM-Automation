@@ -28,6 +28,6 @@ pm2 flush
 
 # Restart PM2 process safely
 echo "🔁 Restarting PM2 process..."
-pm2 restart dma --update-env
+pm2 restart dma-3010 --update-env
 
 echo "✅ Deployment completed successfully!"
