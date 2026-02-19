@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
                     include: {
                         socialAccounts: {
                             where: {
-                                connectedByUserId: token.id, // Only show accounts connected by this user
                                 socialAccount: {
                                     platform: {
                                         not: {
