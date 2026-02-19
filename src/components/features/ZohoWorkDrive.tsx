@@ -141,7 +141,7 @@ export default function ZohoWorkDrivePicker({
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
       return (
         <div className="w-full h-full bg-blue-50 rounded flex items-center justify-center">
-          <FileImage className="w-6 h-6 text-blue-500" />
+          <FileImage className="w-6 h-6 text-primary" />
         </div>
       );
     }
@@ -395,7 +395,7 @@ export default function ZohoWorkDrivePicker({
               <RefreshCw className={`h-4 w-4 ${navigationInProgress ? 'animate-spin' : ''}`} />
             </Button>
 
-            <div className="flex-1 px-3 py-1.5 bg-white rounded border border-gray-300 hover:border-blue-500 focus-within:border-blue-500 transition-colors">
+            <div className="flex-1 px-3 py-1.5 bg-white rounded border border-gray-300 hover:border-primary focus-within:border-primary transition-colors">
               <div className="flex items-center gap-1 overflow-x-auto text-xs">
                 {folderPath.map((folder, index) => (
                   <div key={folder.id} className="flex items-center gap-1 flex-shrink-0">
@@ -424,7 +424,7 @@ export default function ZohoWorkDrivePicker({
                 placeholder="Search files..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-sm border-gray-300 focus:border-blue-500"
+                className="pl-8 h-8 text-sm border-gray-300 focus:border-primary"
               />
             </div>
           </div>
@@ -482,7 +482,7 @@ export default function ZohoWorkDrivePicker({
                   
                   <div className="w-full mt-1 px-1">
                     <div className={`text-xs text-center break-words line-clamp-2 leading-tight px-1 py-0.5 rounded ${
-                      hoveredFile === file.id ? 'bg-blue-500 text-white' : 'text-gray-700'
+                      hoveredFile === file.id ? 'bg-primary text-white' : 'text-gray-700'
                     }`}>
                       {file.name}
                     </div>
@@ -547,7 +547,7 @@ export default function ZohoWorkDrivePicker({
             <Button
               onClick={handleConnect}
               disabled={isLoading}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              className="flex items-center gap-2 bg-primary hover:bg-primary"
             >
               {getPlatformIcon("ZOHO_WORKDRIVE", "h-5 w-5")}
               Connect Account

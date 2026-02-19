@@ -147,8 +147,8 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
       {/* Header */}
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-            <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 bg-blue-100 dark:bg-primary/20 rounded-lg">
+            <ImageIcon className="w-5 h-5 text-primary dark:text-blue-400" />
           </div>
           <div>
             <CardTitle className="text-xl">Upload Media</CardTitle>
@@ -222,7 +222,7 @@ export default function MediaUpload({ onFilesChange }: MediaUploadProps) {
                   <div
                     key={mediaFile.src}
                     className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-md overflow-hidden cursor-pointer group flex-shrink-0 ${
-                      selectedFile === mediaFile ? "border-2 border-blue-500" : "border"
+                      selectedFile === mediaFile ? "border-2 border-primary" : "border"
                     }`}
                     onClick={() => setSelectedFile(mediaFile)}
                   >

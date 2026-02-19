@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { toDateTimeLocalString } from "@/utils/format";
 
 interface ScheduleItemModalProps {
   item: any;
@@ -67,10 +68,13 @@ export default function ScheduleItemModal({
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [hasScheduled, setHasScheduled] = useState(false);
   const [suggestedTime, setSuggestedTime] = useState(
-    item.suggestedTime
-      ? new Date(item.suggestedTime).toISOString().slice(0, 16)
-      : ""
+    toDateTimeLocalString(item.suggestedTime)
   );
+
+  // Sync suggestedTime when item changes
+  useEffect(() => {
+    setSuggestedTime(toDateTimeLocalString(item.suggestedTime));
+  }, [item.suggestedTime]);
 
   // Fetch social accounts for the brand
   useEffect(() => {
@@ -174,8 +178,12 @@ export default function ScheduleItemModal({
     setIsScheduling(true);
 
     try {
-      // First update the suggested time if it changed
-      if (suggestedTime !== item.suggestedTime) {
+      // Normalize both times for comparison
+      const currentTime = suggestedTime;
+      const itemTime = toDateTimeLocalString(item.suggestedTime);
+      
+      // Only update the suggested time if it actually changed
+      if (currentTime !== itemTime) {
         const updateResponse = await fetch(`/api/content-calendar/items/${item.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -189,7 +197,7 @@ export default function ScheduleItemModal({
         }
       }
 
-      // Then schedule the post
+      // Then schedule the post using the database time
       const response = await fetch("/api/content-calendar/schedule-item", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

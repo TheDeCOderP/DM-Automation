@@ -39,3 +39,76 @@ export const formatDateTime = (date: Date | string | number): string => {
     const minutes = d.getMinutes().toString().padStart(2, '0')
     return `${dateStr}, ${hours}:${minutes}`
 }
+
+/**
+ * Format date and time with timezone info
+ * @param date - Date object, string, or timestamp
+ * @returns Formatted date and time string with timezone
+ */
+export const formatDateTimeWithTimezone = (date: Date | string | number): string => {
+    const d = new Date(date)
+    const dateStr = formatDate(d)
+    const hours = d.getHours().toString().padStart(2, '0')
+    const minutes = d.getMinutes().toString().padStart(2, '0')
+    
+    // Get timezone abbreviation
+    const timezone = new Intl.DateTimeFormat('en-US', { 
+        timeZoneName: 'short' 
+    }).formatToParts(d).find(part => part.type === 'timeZoneName')?.value || '';
+    
+    return `${dateStr}, ${hours}:${minutes} ${timezone}`
+}
+
+/**
+ * Format date and time for UK and India timezones
+ * @param date - Date object, string, or timestamp
+ * @returns Object with UK and India formatted times
+ */
+export const formatDateTimeUKIndia = (date: Date | string | number): { uk: string; india: string } => {
+    const d = new Date(date)
+    
+    // Format for UK (Europe/London)
+    const ukFormatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    
+    // Format for India (Asia/Kolkata)
+    const indiaFormatter = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    
+    return {
+        uk: ukFormatter.format(d),
+        india: indiaFormatter.format(d)
+    };
+}
+
+/**
+ * Convert ISO date string to datetime-local input format (local timezone)
+ * @param isoString - ISO date string from database
+ * @returns Formatted string for datetime-local input (YYYY-MM-DDTHH:mm)
+ */
+export const toDateTimeLocalString = (isoString: string | null | undefined): string => {
+    if (!isoString) return '';
+    
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}

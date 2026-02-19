@@ -15,7 +15,7 @@ export default function FacebookPreview({ post }: { post: PostData}) {
             <div className="flex items-start space-x-3">
                 <Avatar className="w-10 h-10">
                     <AvatarImage src={post.author.avatar || "/placeholder.svg?height=40&width=40"} />
-                    <AvatarFallback className="text-sm bg-blue-100 text-blue-700">
+                    <AvatarFallback className="text-sm bg-blue-100 text-primary">
                     {post.author.name
                         .split(" ")
                         .map((n) => n[0])
@@ -27,7 +27,7 @@ export default function FacebookPreview({ post }: { post: PostData}) {
                     <h3 className="font-semibold text-gray-900 text-base hover:underline cursor-pointer">
                         {post.author.name}
                     </h3>
-                    {post.author.verified && <Verified className="w-4 h-4 text-blue-600 fill-current" />}
+                    {post.author.verified && <Verified className="w-4 h-4 text-primary fill-current" />}
                     </div>
                     <div className="flex items-center space-x-1 text-sm text-gray-500">
                     <span>{formatTime(post.timestamp)}</span>
@@ -61,7 +61,7 @@ export default function FacebookPreview({ post }: { post: PostData}) {
         <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
           <div className="flex items-center space-x-1">
             <div className="flex -space-x-1">
-              <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
                 <ThumbsUp className="w-2 h-2 text-white fill-current" />
               </div>
               <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">

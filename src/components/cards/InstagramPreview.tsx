@@ -27,7 +27,7 @@ export default function InstagramPreview({ post }: { post: PostData }) {
           <div>
             <div className="flex items-center space-x-1">
               <span className="font-semibold text-sm">{post.author.username}</span>
-              {post.author.verified && <Verified className="w-3 h-3 text-blue-500 fill-current" />}
+              {post.author.verified && <Verified className="w-3 h-3 text-primary fill-current" />}
             </div>
             <span className="text-xs text-gray-500">{post.author.title || "Location"}</span>
           </div>

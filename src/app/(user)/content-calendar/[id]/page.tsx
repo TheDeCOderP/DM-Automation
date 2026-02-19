@@ -33,7 +33,7 @@ import EditCalendarItemModal from "../_components/EditCalendarItemModal";
 import AddCalendarItemModal from "../_components/AddCalendarItemModal";
 import ScheduleAllModal from "../_components/ScheduleAllModal";
 import ScheduleItemModal from "../_components/ScheduleItemModal";
-import { formatDateTime } from "@/utils/format";
+import { formatDateTime, formatDateTimeUKIndia } from "@/utils/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -188,7 +188,7 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
       case "EDITED":
         return "bg-yellow-500";
       case "SCHEDULED":
-        return "bg-blue-500";
+        return "bg-primary";
       case "PUBLISHED":
         return "bg-green-500";
       default:
@@ -512,9 +512,24 @@ function CalendarItemsTable({
                 </TableCell>
                 <TableCell>
                   {item.suggestedTime ? (
-                    <div className="flex items-center gap-1 text-sm">
-                      <Calendar className="w-3 h-3" />
-                      {formatDateTime(item.suggestedTime)}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        <span>UK / India</span>
+                      </div>
+                      {(() => {
+                        const times = formatDateTimeUKIndia(item.suggestedTime);
+                        return (
+                          <>
+                            <div className="text-xs font-medium">
+                              🇬🇧 {times.uk}
+                            </div>
+                            <div className="text-xs font-medium">
+                              🇮🇳 {times.india}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <span className="text-muted-foreground text-sm">Not set</span>

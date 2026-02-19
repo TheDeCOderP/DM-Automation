@@ -92,7 +92,7 @@ export default function MediaPage() {
                     </div>
                   )}
                   <div className="absolute top-2 right-2">
-                    <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                    <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">
                       Zoho
                     </span>
                   </div>

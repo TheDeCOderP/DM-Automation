@@ -202,7 +202,7 @@ export default function AcceptInvitePage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-            <Mail className="h-6 w-6 text-blue-600" />
+            <Mail className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="mt-4 text-2xl font-bold">Brand Invitation</CardTitle>
           <CardDescription>
@@ -239,7 +239,7 @@ export default function AcceptInvitePage() {
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
+                <p className="text-sm text-primary">
                   By accepting this invitation, you&apos;ll gain access to this brand&apos;s content,
                   social accounts, and collaboration features.
                 </p>

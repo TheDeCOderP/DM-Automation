@@ -25,7 +25,7 @@ export default function TwitterPreview({ post }: { post: PostData }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-1">
               <h3 className="font-bold text-gray-900 text-base hover:underline cursor-pointer">{post.author.name}</h3>
-              {post.author.verified && <Verified className="w-5 h-5 text-blue-500 fill-current" />}
+              {post.author.verified && <Verified className="w-5 h-5 text-primary fill-current" />}
               <span className="text-gray-500 text-base">@{post.author.username}</span>
               <span className="text-gray-500 text-base">·</span>
               <span className="text-gray-500 text-base hover:underline cursor-pointer">
@@ -50,7 +50,7 @@ export default function TwitterPreview({ post }: { post: PostData }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-500 hover:text-blue-500 hover:bg-blue-50 p-2 rounded-full group"
+                className="text-gray-500 hover:text-primary hover:bg-blue-50 p-2 rounded-full group"
               >
                 <MessageCircle className="w-5 h-5 group-hover:fill-current" />
                 <span className="ml-2 text-sm">{formatNumber(post.engagement?.comments || 24)}</span>
@@ -74,7 +74,7 @@ export default function TwitterPreview({ post }: { post: PostData }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-500 hover:text-blue-500 hover:bg-blue-50 p-2 rounded-full"
+                className="text-gray-500 hover:text-primary hover:bg-blue-50 p-2 rounded-full"
               >
                 <Share className="w-5 h-5" />
               </Button>

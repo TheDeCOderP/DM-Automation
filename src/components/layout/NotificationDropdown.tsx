@@ -84,7 +84,7 @@ function NotificationsList({ notifications = [] }: NotificationsListProps) {
       case NotificationType.POST_FAILED:
         return <AlertCircle className="h-5 w-5 text-red-500" />;
       case NotificationType.POST_SCHEDULED:
-        return <Clock className="h-5 w-5 text-blue-500" />;
+        return <Clock className="h-5 w-5 text-primary" />;
       case NotificationType.ACCOUNT_DISCONNECTED:
         return <Unlink className="h-5 w-5 text-orange-500" />;
       case NotificationType.SUBSCRIPTION_RENEWAL:

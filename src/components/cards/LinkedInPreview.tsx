@@ -15,7 +15,7 @@ export default function LinkedInPreview({ post }: { post: PostData }) {
         <div className="flex items-start space-x-3">
           <Avatar className="w-12 h-12 ring-2 ring-blue-100">
             <AvatarImage src={post.author.avatar || "/placeholder.svg?height=48&width=48"} />
-            <AvatarFallback className="text-sm font-semibold bg-blue-100 text-blue-700">
+            <AvatarFallback className="text-sm font-semibold bg-blue-100 text-primary">
               {post.author.name
                 .split(" ")
                 .map((n) => n[0])
@@ -24,13 +24,13 @@ export default function LinkedInPreview({ post }: { post: PostData }) {
           </Avatar>
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-1">
-              <h3 className="font-semibold text-gray-900 text-base hover:text-blue-700 cursor-pointer hover:underline">
+              <h3 className="font-semibold text-gray-900 text-base hover:text-primary cursor-pointer hover:underline">
                 {post.author.name}
               </h3>
-              {post.author.verified && <Verified className="w-4 h-4 text-blue-600 fill-current" />}
-              <span className="text-blue-600 text-sm font-medium">• 1st</span>
+              {post.author.verified && <Verified className="w-4 h-4 text-primary fill-current" />}
+              <span className="text-primary text-sm font-medium">• 1st</span>
             </div>
-            <p className="text-sm text-gray-600 hover:text-blue-700 cursor-pointer">
+            <p className="text-sm text-gray-600 hover:text-primary cursor-pointer">
               {post.author.title || "Software Engineer at Tech Company"}
             </p>
             <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
@@ -68,25 +68,25 @@ export default function LinkedInPreview({ post }: { post: PostData }) {
         <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
           <div className="flex items-center space-x-1">
             <div className="flex -space-x-1">
-              <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
                 <ThumbsUp className="w-2 h-2 text-white fill-current" />
               </div>
               <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                 <Heart className="w-2 h-2 text-white fill-current" />
               </div>
             </div>
-            <span className="hover:text-blue-700 cursor-pointer">{formatNumber(post.engagement?.likes || 127)}</span>
+            <span className="hover:text-primary cursor-pointer">{formatNumber(post.engagement?.likes || 127)}</span>
           </div>
           <div className="flex items-center space-x-4 text-sm">
-            <span className="hover:text-blue-700 cursor-pointer">{post.engagement?.comments || 23} comments</span>
-            <span className="hover:text-blue-700 cursor-pointer">{post.engagement?.shares || 8} reposts</span>
+            <span className="hover:text-primary cursor-pointer">{post.engagement?.comments || 23} comments</span>
+            <span className="hover:text-primary cursor-pointer">{post.engagement?.shares || 8} reposts</span>
           </div>
         </div>
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-blue-700 h-10 font-medium"
+            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-primary h-10 font-medium"
           >
             <ThumbsUp className="w-4 h-4 mr-2" />
             Like
@@ -94,7 +94,7 @@ export default function LinkedInPreview({ post }: { post: PostData }) {
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-blue-700 h-10 font-medium"
+            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-primary h-10 font-medium"
           >
             <MessageCircle className="w-4 h-4 mr-2" />
             Comment
@@ -102,7 +102,7 @@ export default function LinkedInPreview({ post }: { post: PostData }) {
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-blue-700 h-10 font-medium"
+            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-primary h-10 font-medium"
           >
             <Repeat2 className="w-4 h-4 mr-2" />
             Repost
@@ -110,7 +110,7 @@ export default function LinkedInPreview({ post }: { post: PostData }) {
           <Button
             variant="ghost"
             size="sm"
-            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-blue-700 h-10 font-medium"
+            className="flex-1 text-gray-600 hover:bg-blue-50 hover:text-primary h-10 font-medium"
           >
             <Send className="w-4 h-4 mr-2" />
             Send

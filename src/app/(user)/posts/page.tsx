@@ -128,7 +128,7 @@ export default function PostsListPage() {
       case "PUBLISHED":
         return "bg-green-500/10 text-green-700 dark:text-green-400";
       case "SCHEDULED":
-        return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
+        return "bg-primary/10 text-primary dark:text-blue-400";
       case "DRAFTED":
         return "bg-gray-500/10 text-gray-700 dark:text-gray-400";
       case "FAILED":

@@ -41,7 +41,7 @@ export function NotificationItem({
       case "post_failed":
         return <XCircle className={`${iconClass} text-red-500`} />;
       case "post_scheduled":
-        return <Calendar className={`${iconClass} text-blue-500`} />;
+        return <Calendar className={`${iconClass} text-primary`} />;
       case "account_disconnected":
         return <AlertCircle className={`${iconClass} text-amber-500`} />;
       default:

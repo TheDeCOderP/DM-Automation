@@ -82,7 +82,7 @@ export default function BrandDetailsModal({
       case "BrandAdmin":
         return <Shield className="h-4 w-4 text-amber-500" />;
       case "BrandEditor":
-        return <BadgeIcon className="h-4 w-4 text-blue-500" />;
+        return <BadgeIcon className="h-4 w-4 text-primary" />;
       default:
         return <User className="h-4 w-4 text-muted-foreground" />;
     }

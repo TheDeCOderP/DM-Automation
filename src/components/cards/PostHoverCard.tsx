@@ -54,7 +54,7 @@ const getStatusIcon = (status: string) => {
     case "FAILED":
       return <XCircle className="w-4 h-4 text-destructive" />
     case "SCHEDULED":
-      return <Clock className="w-4 h-4 text-blue-600" />
+      return <Clock className="w-4 h-4 text-primary" />
     case "DRAFTED":
       return <AlertCircle className="w-4 h-4 text-yellow-600" />
     default:

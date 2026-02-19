@@ -47,10 +47,10 @@ interface CreateCalendarModalProps {
 }
 
 const PLATFORMS = [
-  { value: "LINKEDIN", label: "LinkedIn", icon: Linkedin, color: "text-blue-600" },
+  { value: "LINKEDIN", label: "LinkedIn", icon: Linkedin, color: "text-primary" },
   { value: "TWITTER", label: "Twitter", icon: Twitter, color: "text-sky-500" },
   { value: "INSTAGRAM", label: "Instagram", icon: Instagram, color: "text-pink-600" },
-  { value: "FACEBOOK", label: "Facebook", icon: Facebook, color: "text-blue-700" },
+  { value: "FACEBOOK", label: "Facebook", icon: Facebook, color: "text-primary" },
   { value: "YOUTUBE", label: "YouTube", icon: Youtube, color: "text-red-600" },
   { value: "PINTEREST", label: "Pinterest", icon: Pin, color: "text-red-500" },
   { value: "REDDIT", label: "Reddit", icon: MessageCircle, color: "text-orange-600" },

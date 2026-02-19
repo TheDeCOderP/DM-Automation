@@ -736,7 +736,7 @@ export default function AnalyticsDashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+              <TrendingUp className="h-5 w-5 text-primary" />
               Traffic Trends & Engagement
             </CardTitle>
           </CardHeader>
@@ -868,7 +868,7 @@ export default function AnalyticsDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Chrome className="h-5 w-5 text-blue-600" />
+              <Chrome className="h-5 w-5 text-primary" />
               Browsers
             </CardTitle>
           </CardHeader>

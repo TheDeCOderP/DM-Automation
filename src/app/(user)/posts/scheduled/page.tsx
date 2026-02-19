@@ -204,7 +204,7 @@ export default function ScheduledPostsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                        <Badge className="bg-primary/10 text-primary dark:text-blue-400">
                           SCHEDULED
                         </Badge>
                       </TableCell>

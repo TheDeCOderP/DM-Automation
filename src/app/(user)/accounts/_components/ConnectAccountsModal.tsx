@@ -29,9 +29,9 @@ interface ConnectAccountsModalProps {
 const platforms = [
   { id: "TWITTER", name: "Twitter", color: "bg-sky-500" },
   { id: "YOUTUBE", name: "YouTube", color: "bg-red-600" },
-  { id: "LINKEDIN", name: "LinkedIn", color: "bg-blue-700" },
+  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary" },
   { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500" },
-  { id: "FACEBOOK", name: "Facebook", color: "bg-blue-600" },
+  { id: "FACEBOOK", name: "Facebook", color: "bg-primary" },
   { id: "REDDIT", name: "Reddit", color: "bg-green-600" },
   { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500" },
   { id: "TIKTOK", name: "TikTok", color: "bg-black" },

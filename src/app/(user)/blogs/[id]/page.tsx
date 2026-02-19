@@ -66,7 +66,7 @@ export default function BlogPage() {
         <div className="mb-6">
           <button
             onClick={() => router.push('/blogs/sites')}
-            className="text-blue-600 hover:text-blue-800 mb-4"
+            className="text-primary hover:text-primary mb-4"
           >
             ← Back to Sites
           </button>
@@ -143,7 +143,7 @@ export default function BlogPage() {
                           href={post.externalPostUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          className="text-primary hover:text-primary text-sm"
                         >
                           View Post
                         </a>
@@ -160,7 +160,7 @@ export default function BlogPage() {
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="font-semibold mb-4">Actions</h3>
               <div className="space-y-2">
-                <button className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-md">
+                <button className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-blue-50 rounded-md">
                   Test Connection
                 </button>
                 <button className="w-full text-left px-3 py-2 text-sm text-yellow-600 hover:bg-yellow-50 rounded-md">

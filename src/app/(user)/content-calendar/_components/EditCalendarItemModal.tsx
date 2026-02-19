@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { toDateTimeLocalString } from "@/utils/format";
 
 interface EditCalendarItemModalProps {
   item: any;
@@ -95,9 +96,7 @@ export default function EditCalendarItemModal({
   const [imagePreview, setImagePreview] = useState<string | null>(item.imageUrl || null);
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("");
   const [suggestedTime, setSuggestedTime] = useState(
-    item.suggestedTime
-      ? new Date(item.suggestedTime).toISOString().slice(0, 16)
-      : ""
+    toDateTimeLocalString(item.suggestedTime)
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -108,6 +107,11 @@ export default function EditCalendarItemModal({
       setImagePreview(item.imageUrl);
     }
   }, [item.imageUrl]);
+
+  // Sync suggestedTime when item changes
+  useEffect(() => {
+    setSuggestedTime(toDateTimeLocalString(item.suggestedTime));
+  }, [item.suggestedTime]);
 
   // Auto-select aspect ratio based on platforms
   useEffect(() => {
@@ -234,6 +238,7 @@ export default function EditCalendarItemModal({
     setIsSaving(true);
 
     try {
+      // Save all changes including suggestedTime to database
       const response = await fetch(`/api/content-calendar/items/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -249,7 +254,7 @@ export default function EditCalendarItemModal({
           captionTikTok: captions.TIKTOK,
           hashtags,
           imagePrompt,
-          imageUrl: imagePreview || item.imageUrl, // Save the generated image URL
+          imageUrl: imagePreview || item.imageUrl,
           suggestedTime: suggestedTime ? new Date(suggestedTime).toISOString() : null,
         }),
       });
@@ -406,90 +411,101 @@ export default function EditCalendarItemModal({
 
               {/* AI Generation Tab */}
               <TabsContent value="generate" className="space-y-3">
-                {/* Aspect Ratio Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="aspectRatio">
-                    Aspect Ratio <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={selectedAspectRatio}
-                    onValueChange={setSelectedAspectRatio}
-                    disabled={isGeneratingImage}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select aspect ratio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REFERENCE_IMAGES.map((ref) => (
-                        <SelectItem key={ref.value} value={ref.value}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{ref.label}</span>
-                            <Badge variant="outline" className="ml-2">
-                              {ref.size}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedAspectRatio && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Left Column - Form Fields */}
+                  <div className="space-y-3">
+                    {/* Aspect Ratio Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="aspectRatio">
+                        Aspect Ratio <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={selectedAspectRatio}
+                        onValueChange={setSelectedAspectRatio}
+                        disabled={isGeneratingImage}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select aspect ratio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REFERENCE_IMAGES.map((ref) => (
+                            <SelectItem key={ref.value} value={ref.value}>
+                              <div className="flex items-center justify-between w-full">
+                                <span>{ref.label}</span>
+                                <Badge variant="outline" className="ml-2">
+                                  {ref.size}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedAspectRatio && (
+                        <p className="text-xs text-muted-foreground">
+                          Best for: {REFERENCE_IMAGES.find(r => r.value === selectedAspectRatio)?.platforms.join(', ')}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Image Prompt */}
+                    <div className="space-y-2">
+                      <Label htmlFor="imagePrompt">
+                        Image Description <span className="text-red-500">*</span>
+                      </Label>
+                      <Textarea
+                        id="imagePrompt"
+                        placeholder="Describe the image you want AI to generate..."
+                        value={imagePrompt}
+                        onChange={(e) => setImagePrompt(e.target.value)}
+                        rows={4}
+                        disabled={isGeneratingImage}
+                        className="resize-none"
+                      />
+                    </div>
+
+                    {/* Generate Button */}
+                    <Button
+                      type="button"
+                      onClick={handleGenerateImage}
+                      disabled={!imagePrompt.trim() || !selectedAspectRatio || isGeneratingImage}
+                      className="w-full"
+                    >
+                      {isGeneratingImage ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Generating Image...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Generate Image with AI
+                        </>
+                      )}
+                    </Button>
+
                     <p className="text-xs text-muted-foreground">
-                      Best for: {REFERENCE_IMAGES.find(r => r.value === selectedAspectRatio)?.platforms.join(', ')}
+                      💡 AI will automatically generate image in the selected aspect ratio
                     </p>
-                  )}
-                </div>
-
-                {/* Image Prompt */}
-                <div className="space-y-2">
-                  <Label htmlFor="imagePrompt">
-                    Image Description <span className="text-red-500">*</span>
-                  </Label>
-                  <Textarea
-                    id="imagePrompt"
-                    placeholder="Describe the image you want AI to generate..."
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    rows={4}
-                    disabled={isGeneratingImage}
-                    className="resize-none"
-                  />
-                </div>
-
-                {/* Generate Button */}
-                <Button
-                  type="button"
-                  onClick={handleGenerateImage}
-                  disabled={!imagePrompt.trim() || !selectedAspectRatio || isGeneratingImage}
-                  className="w-full"
-                >
-                  {isGeneratingImage ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating Image...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate Image with AI
-                    </>
-                  )}
-                </Button>
-
-                {/* Preview */}
-                {imagePreview && (
-                  <div className="border rounded-lg p-4">
-                    <Label className="text-sm mb-2 block">Preview:</Label>
-                    <img
-                      src={imagePreview}
-                      alt="Generated"
-                      className="max-h-60 mx-auto rounded"
-                    />
                   </div>
-                )}
 
-                <p className="text-xs text-muted-foreground">
-                  💡 AI will automatically generate image in the selected aspect ratio
-                </p>
+                  {/* Right Column - Preview */}
+                  <div className="flex items-start justify-center">
+                    {imagePreview ? (
+                      <div className="border rounded-lg p-4 w-full">
+                        <Label className="text-sm mb-2 block">Preview:</Label>
+                        <img
+                          src={imagePreview}
+                          alt="Generated"
+                          className="max-h-60 mx-auto rounded"
+                        />
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed rounded-lg p-8 w-full flex items-center justify-center text-muted-foreground text-sm">
+                        Preview will appear here
+                      </div>
+                    )}
+                  </div>
+                </div>
               </TabsContent>
 
               {/* Upload Tab */}

@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get calendar item
+    // Get calendar item with the latest data from database
     const item = await prisma.contentCalendarItem.findUnique({
       where: { id: itemId },
       include: {
@@ -101,14 +101,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Ensure we have a suggested time from the database
     if (!item.suggestedTime) {
       return NextResponse.json(
-        { error: "Item must have a suggested time" },
+        { error: "Item must have a suggested time set. Please edit the item and set a schedule time first." },
         { status: 400 }
       );
     }
 
-    console.log(`[SCHEDULE-ITEM] Scheduling calendar item day ${item.day}`);
+    console.log(`[SCHEDULE-ITEM] Scheduling calendar item day ${item.day} at ${item.suggestedTime}`);
 
     // Validate that at least one platform has content
     let hasValidContent = false;

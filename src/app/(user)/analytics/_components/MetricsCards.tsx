@@ -55,7 +55,7 @@ export function MetricsCards({ data }: MetricsCardsProps) {
           <Calendar className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-600">{data.scheduledPosts}</div>
+          <div className="text-2xl font-bold text-primary">{data.scheduledPosts}</div>
           <p className="text-xs text-muted-foreground">Posts waiting to be published</p>
         </CardContent>
       </Card>

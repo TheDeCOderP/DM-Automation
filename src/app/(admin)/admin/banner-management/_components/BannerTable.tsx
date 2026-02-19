@@ -69,7 +69,7 @@ export default function BannerTable({ banners, onEdit, onDelete }: BannerTablePr
                           : banner.type === 'Vertical Ads'
                           ? 'bg-green-100 text-green-800'
                           : banner.type === 'Sidebar Ads'
-                          ? 'bg-blue-100 text-blue-800'
+                          ? 'bg-blue-100 text-primary'
                           : banner.type === 'Horizontal Ads'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-pink-100 text-pink-800'
@@ -91,7 +91,7 @@ export default function BannerTable({ banners, onEdit, onDelete }: BannerTablePr
                         href={banner.redirectUrl} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline truncate block max-w-xs"
+                        className="text-primary hover:underline truncate block max-w-xs"
                       >
                         {banner.redirectUrl}
                       </a>
@@ -111,7 +111,7 @@ export default function BannerTable({ banners, onEdit, onDelete }: BannerTablePr
                   <td className="px-6 py-4 text-sm">
                     <button
                       onClick={() => onEdit(banner)}
-                      className="text-blue-500 hover:text-blue-700 mr-3"
+                      className="text-primary hover:text-primary mr-3"
                     >
                       Edit
                     </button>

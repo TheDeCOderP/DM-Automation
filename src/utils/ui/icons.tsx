@@ -65,11 +65,11 @@ export function getPlatformIcon(platform: string, className?: string) {
 export function getPlatformColor(platform: string) {
   switch (platform) {
     case "LINKEDIN":
-      return "bg-blue-700";
+      return "bg-primary";
     case "TWITTER":
       return "bg-sky-500";
     case "FACEBOOK":
-      return "bg-blue-600";
+      return "bg-primary";
     case "INSTAGRAM":
       return "bg-gradient-to-r from-purple-500 to-pink-500";
     default:

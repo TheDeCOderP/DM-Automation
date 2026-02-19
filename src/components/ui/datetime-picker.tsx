@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock } from "lucide-react";
+import { Clock, Globe } from "lucide-react";
 
 interface DateTimePickerProps {
   value: string;
@@ -21,6 +21,54 @@ export function DateTimePicker({
   required = false,
 }: DateTimePickerProps) {
   const [timeUntil, setTimeUntil] = useState<string>("");
+  const [userTimezone, setUserTimezone] = useState<string>("");
+  const [ukTime, setUkTime] = useState<string>("");
+  const [indiaTime, setIndiaTime] = useState<string>("");
+
+  // Get user's timezone
+  useEffect(() => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setUserTimezone(timezone);
+  }, []);
+
+  // Calculate UK and India times whenever value changes
+  useEffect(() => {
+    if (!value) {
+      setUkTime("");
+      setIndiaTime("");
+      return;
+    }
+
+    try {
+      const date = new Date(value);
+      
+      // Format for UK (Europe/London)
+      const ukFormatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/London',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      setUkTime(ukFormatter.format(date));
+
+      // Format for India (Asia/Kolkata)
+      const indiaFormatter = new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      setIndiaTime(indiaFormatter.format(date));
+    } catch (error) {
+      console.error('Error formatting times:', error);
+    }
+  }, [value]);
 
   // Calculate time until scheduled
   useEffect(() => {
@@ -86,12 +134,18 @@ export function DateTimePicker({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <Label htmlFor="datetime-picker" className="flex items-center gap-2">
         <Clock className="w-4 h-4" />
         {label}
         {required && <span className="text-red-500">*</span>}
+        {userTimezone && (
+          <span className="text-xs text-muted-foreground font-normal ml-auto">
+            Your timezone: {userTimezone}
+          </span>
+        )}
       </Label>
+      
       <Input
         id="datetime-picker"
         type="datetime-local"
@@ -101,15 +155,53 @@ export function DateTimePicker({
         disabled={disabled}
         className="w-full"
       />
+
+      {/* UK and India Time Display */}
+      {value && (ukTime || indiaTime) && (
+        <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg border">
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Globe className="w-3 h-3" />
+              <span>UK Time</span>
+            </div>
+            <p className="text-sm font-semibold text-foreground">
+              {ukTime || 'N/A'}
+            </p>
+            <p className="text-xs text-muted-foreground">Europe/London</p>
+          </div>
+          
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Globe className="w-3 h-3" />
+              <span>India Time</span>
+            </div>
+            <p className="text-sm font-semibold text-foreground">
+              {indiaTime || 'N/A'}
+            </p>
+            <p className="text-xs text-muted-foreground">Asia/Kolkata (IST)</p>
+          </div>
+        </div>
+      )}
+
       {timeUntil && (
         <p className={`text-sm font-medium ${timeUntil.includes('⚠️') ? 'text-red-500' : 'text-green-600'}`}>
           {timeUntil}
         </p>
       )}
+      
       {!value && (
         <p className="text-xs text-muted-foreground">
-          Select a date and time at least 5 minutes in the future
+          Select a date and time at least 5 minutes in the future (in your local timezone)
         </p>
+      )}
+      
+      {value && (
+        <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-primary">
+          <span className="text-primary dark:text-blue-400 text-xs mt-0.5">ℹ️</span>
+          <p className="text-xs text-primary dark:text-blue-300">
+            You're setting the time in <strong>{userTimezone}</strong>. The post will publish at the same moment for everyone, but team members in other timezones will see their local time.
+          </p>
+        </div>
       )}
     </div>
   );

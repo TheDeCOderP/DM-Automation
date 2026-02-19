@@ -140,7 +140,7 @@ export default function TermsOfService() {
       <section className="space-y-2" id="contact">
         <h2 className="text-xl font-semibold">16. Contact</h2>
         <p>
-          Questions about these Terms? Contact us at <a className="text-blue-600 hover:underline" href="mailto:info@prabisha.com">info@prabisha.com</a>.
+          Questions about these Terms? Contact us at <a className="text-primary hover:underline" href="mailto:info@prabisha.com">info@prabisha.com</a>.
         </p>
       </section>
     </main>

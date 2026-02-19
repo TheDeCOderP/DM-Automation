@@ -53,7 +53,7 @@ export default function BlogsPage() {
           </div>
           <Button
             onClick={() => router.push('/blogs/create')}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-primary hover:bg-primary"
           >
             Create New Blog
           </Button>
@@ -74,7 +74,7 @@ export default function BlogsPage() {
               <p className="text-gray-500 mb-4">Get started by creating your first blog post.</p>
               <Button
                 onClick={() => router.push('/blogs/create')}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary"
               >
                 Create Your First Blog
               </Button>

@@ -39,7 +39,7 @@ export default function UserDashboard() {
       description: "Create and schedule new posts",
       icon: FileText,
       href: "/posts",
-      color: "text-blue-600"
+      color: "text-primary"
     },
     {
       title: "Social Accounts",

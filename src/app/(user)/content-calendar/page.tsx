@@ -124,7 +124,7 @@ export default function ContentCalendarPage() {
       case "DRAFT":
         return "bg-gray-500";
       case "SCHEDULED":
-        return "bg-blue-500";
+        return "bg-primary";
       case "COMPLETED":
         return "bg-green-500";
       default:
