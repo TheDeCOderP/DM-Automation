@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { Plus, Link as LinkIcon, FileText, Image as ImageIcon, Video, StickyNote, Search, Filter, Trash2, ExternalLink, Grid3x3, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -65,10 +66,10 @@ export default function KnowledgeBasePage() {
       const result = await getKnowledgeBaseItems();
       if (result.success && result.items) {
         // Transform the items to match the expected type
-        const transformedItems = result.items.map(item => ({
+        const transformedItems = result.items.map((item: any) => ({
           ...item,
           tags: Array.isArray(item.tags) 
-            ? item.tags.filter((tag): tag is string => typeof tag === 'string')
+            ? item.tags.filter((tag: any): tag is string => typeof tag === 'string')
             : undefined,
         }));
         setItems(transformedItems);
@@ -371,9 +372,9 @@ export default function KnowledgeBasePage() {
                     <div className="flex gap-1">
                       {(item.url || item.fileUrl) && (
                         <Button size="sm" variant="ghost" asChild>
-                          <a href={item.url || item.fileUrl || '#'} target="_blank" rel="noopener noreferrer">
+                          <Link href={item.url || item.fileUrl || '#'} target="_blank" rel="noopener noreferrer">
                             <ExternalLink className="w-4 h-4" />
-                          </a>
+                          </Link>
                         </Button>
                       )}
                       <Button size="sm" variant="ghost" onClick={() => handleDelete(item.id)}>
@@ -455,9 +456,9 @@ export default function KnowledgeBasePage() {
                       <div className="flex justify-end gap-1">
                         {(item.url || item.fileUrl) && (
                           <Button size="sm" variant="ghost" asChild>
-                            <a href={item.url || item.fileUrl || '#'} target="_blank" rel="noopener noreferrer">
+                            <Link href={item.url || item.fileUrl || '#'} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="w-4 h-4" />
-                            </a>
+                            </Link>
                           </Button>
                         )}
                         <Button size="sm" variant="ghost" onClick={() => handleDelete(item.id)}>
