@@ -4,12 +4,14 @@ import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { encryptToken } from "@/lib/encryption";
 
-const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/pages/callback`;
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
+  
+  // Build redirect URI dynamically from request origin
+  const origin = request.nextUrl.origin;
+  const redirectUri = `${origin}/api/accounts/linkedin/pages/callback`;
  
   if (!code || !state) {
     const errorUrl = new URL("/auth/error", request.nextUrl.origin);
@@ -217,7 +219,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 8️⃣ Redirect back to the return URL or dashboard
-    const redirectUrl = new URL(returnUrl || "/accounts", process.env.NEXTAUTH_URL!);
+    const redirectUrl = new URL(returnUrl || "/accounts", origin);
     redirectUrl.searchParams.set("linkedinPage", "connected");
     if (connectedPages > 0) {
       redirectUrl.searchParams.set("pages", connectedPages.toString());

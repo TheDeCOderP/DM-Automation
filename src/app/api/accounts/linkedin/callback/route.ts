@@ -4,13 +4,15 @@ import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { encryptToken } from '@/lib/encryption';
 
-const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/callback`;
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const { userId, brandId } = JSON.parse(state!);
+
+  // Build redirect URI dynamically from request origin
+  const origin = request.nextUrl.origin;
+  const redirectUri = `${origin}/api/accounts/linkedin/callback`;
 
   if (!code) {
     const errorUrl = new URL('/auth/error', request.nextUrl.origin);

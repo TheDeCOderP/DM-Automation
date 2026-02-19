@@ -2,8 +2,6 @@ import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 
-const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/pages/callback`;
-
 export async function GET(req: NextRequest) {
   const token = await getToken({ req });
   if(!token) {
@@ -14,6 +12,10 @@ export async function GET(req: NextRequest) {
     const userId = token.id;
     const brandId = req.nextUrl.searchParams.get('brandId');
     const returnUrl = req.nextUrl.searchParams.get('returnUrl') || '/accounts';
+
+    // Use the request's origin to build the redirect URI dynamically
+    const origin = req.nextUrl.origin;
+    const redirectUri = `${origin}/api/accounts/linkedin/pages/callback`;
 
     const state = JSON.stringify({
       userId,

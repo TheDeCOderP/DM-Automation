@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 
-const redirectUri = `${process.env.NEXTAUTH_URL}/api/accounts/linkedin/callback`;
-
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId');
   const brandId = req.nextUrl.searchParams.get('brandId');
@@ -13,6 +11,11 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  // Use the request's origin to build the redirect URI dynamically
+  const origin = req.nextUrl.origin;
+  const redirectUri = `${origin}/api/accounts/linkedin/callback`;
+
   const state = JSON.stringify({
     userId,
     brandId,
