@@ -146,19 +146,13 @@ export default function BrandsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="h-1 w-1 rounded-full bg-primary" />
-              <span className="text-sm font-semibold text-primary uppercase tracking-wider">Brand Management</span>
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-balance">Your Brands</h1>
-            <p className="text-base text-muted-foreground max-w-2xl leading-relaxed">
-              Create and manage separate business profiles for each of your brands. Connect social accounts and share
-              with team members.
-            </p>
           </div>
           <Button
             onClick={() => {

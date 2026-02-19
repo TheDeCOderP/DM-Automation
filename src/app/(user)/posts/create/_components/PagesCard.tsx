@@ -39,8 +39,7 @@ export default function PagesCard({
   connectButton,
   isSidebarOpen,
 }: PagesCardProps) {
-  const [pages, setPages] = useState<SocialAccountPage[]>(initialPages);
-  const [isRefreshing, setRefreshing] = useState(false);
+  const [pages] = useState<SocialAccountPage[]>(initialPages);
 
   const isPageSelected = (pageId: string) => selectedPageIds.includes(pageId);
 
@@ -61,32 +60,22 @@ export default function PagesCard({
     });
   };
 
-  const handleRefreshPages = async () => {
-    if (!platformUserId) {
-      toast.error('No platform user ID available');
-      return;
-    }
-
-    setRefreshing(true);
+  const handleReconnectPages = () => {
     try {
-      const response = await fetch(`/api/accounts/${platform.toLowerCase()}/pages?platformUserId=${platformUserId}&refresh=true`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      if (!brandId) {
+        console.error("No brand ID available");
+        toast.error('No brand ID available');
+        return;
       }
-
-      const data = await response.json();
-      setPages(data.pages || []);
       
-      if (data.newPagesCount > 0) {
-        toast.success(`Found ${data.newPagesCount} new page(s)!`);
-      } else {
-        toast.success('Pages refreshed - no new pages found');
-      }
+      // Get current URL to return to after OAuth
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      
+      // Redirect to OAuth flow to reconnect and fetch fresh pages
+      window.location.href = `/api/accounts/${platform.toLowerCase()}/pages/auth?brandId=${brandId}&returnUrl=${returnUrl}`;
     } catch (error) {
-      console.error('Error refreshing pages:', error);
-      toast.error('Failed to refresh pages');
-    } finally {
-      setRefreshing(false);
+      console.error(`Error redirecting to ${platform} auth:`, error);
+      toast.error('Failed to reconnect pages');
     }
   };
 
@@ -98,7 +87,10 @@ export default function PagesCard({
         return;
       }
       
-      window.location.href = `/api/accounts/${platform.toLowerCase()}/pages/auth?brandId=${brandId}`;
+      // Get current URL to return to after OAuth
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      
+      window.location.href = `/api/accounts/${platform.toLowerCase()}/pages/auth?brandId=${brandId}&returnUrl=${returnUrl}`;
     } catch (error) {
       console.error(`Error redirecting to ${platform} auth:`, error);
       toast.error('Failed to connect pages');
@@ -111,7 +103,7 @@ export default function PagesCard({
   }
 
   const showConnectButton = platformUserId && pages.length === 0;
-  const showRefreshButton = platformUserId;
+  const showReconnectButton = platformUserId && pages.length > 0;
 
   return (
     <Card>
@@ -155,14 +147,13 @@ export default function PagesCard({
             </>
           )}
 
-          {showRefreshButton && (
+          {showReconnectButton && (
             <Button 
-              onClick={handleRefreshPages}
+              onClick={handleReconnectPages}
               size="sm"
               variant="outline"
-              disabled={isRefreshing}
             >
-              {isRefreshing ? 'Refreshing...' : 'Refresh Pages'}
+              Reconnect
             </Button>
           )}
           

@@ -128,16 +128,25 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleRefreshToken(connectedAccount.id)}
-                          disabled={refreshingId === connectedAccount.id}
+                          onClick={() => {
+                            // For LinkedIn, reconnect instead of refresh
+                            if (platform.id === "LINKEDIN") {
+                              handleConnect(platform.id as Platform);
+                            } else {
+                              handleRefreshToken(connectedAccount.id);
+                            }
+                          }}
+                          disabled={refreshingId === connectedAccount.id || connectingPlatform === platform.id}
                         >
-                          {refreshingId === connectedAccount.id ? (
+                          {(refreshingId === connectedAccount.id || connectingPlatform === platform.id) ? (
                             <>
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Refreshing
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" /> 
+                              {platform.id === "LINKEDIN" ? "Reconnecting" : "Refreshing"}
                             </>
                           ) : (
                             <>
-                              <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+                              <RefreshCw className="h-4 w-4 mr-1" /> 
+                              {platform.id === "LINKEDIN" ? "Reconnect" : "Refresh"}
                             </>
                           )}
                         </Button>

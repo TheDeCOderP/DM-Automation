@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Parse state to get userId and brandId
-    const { brandId } = JSON.parse(state);
+    const { brandId, returnUrl } = JSON.parse(state);
 
     if (!brandId) {
       throw new Error("Invalid state: missing userId or brandId");
@@ -108,9 +108,10 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // 6️⃣ Fetch LinkedIn Pages (Organizations) where user is ADMIN
+    // 6️⃣ Fetch LinkedIn Pages (Organizations) where user has posting permissions
+    // Fetch all approved roles, then filter for posting-capable roles
     const aclsRes = await fetch(
-      "https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED",
+      "https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&state=APPROVED",
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -128,8 +129,14 @@ export async function GET(request: NextRequest) {
       // Continue even if ACLs fail
     } else {
       const aclsData = await aclsRes.json();
+      
+      // Filter for roles that allow posting content
+      const postingRoles = ['ADMINISTRATOR', 'CONTENT_ADMINISTRATOR', 'DIRECT_SPONSORED_CONTENT_POSTER'];
       const orgIds =
         aclsData.elements
+          ?.filter((el: { organization: string; role: string; state: string }) => 
+            postingRoles.includes(el.role)
+          )
           ?.map((el: { organization: string; role: string; state: string }) => el.organization?.split(":").pop())
           ?.filter(Boolean) || [];
 
@@ -209,13 +216,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 8️⃣ Redirect back to dashboard
-    const dashboardUrl = new URL("/accounts", process.env.NEXTAUTH_URL!);
-    dashboardUrl.searchParams.set("linkedinPage", "connected");
+    // 8️⃣ Redirect back to the return URL or dashboard
+    const redirectUrl = new URL(returnUrl || "/accounts", process.env.NEXTAUTH_URL!);
+    redirectUrl.searchParams.set("linkedinPage", "connected");
     if (connectedPages > 0) {
-      dashboardUrl.searchParams.set("pages", connectedPages.toString());
+      redirectUrl.searchParams.set("pages", connectedPages.toString());
     }
-    return NextResponse.redirect(dashboardUrl.toString());
+    return NextResponse.redirect(redirectUrl.toString());
   } catch (error) {
     console.error("LinkedIn Page callback error:", error);
     const errorUrl = new URL("/auth/error", request.nextUrl.origin);
