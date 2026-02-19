@@ -114,23 +114,24 @@ export async function GET(req: NextRequest) {
     const folderId = searchParams.get('folderId') || 'shared';
     const includeShared = searchParams.get('includeShared') === 'true';
 
-    const socialAccount = await prisma.socialAccount.findFirst({
+    // Get user's Zoho WorkDrive account through UserSocialAccount
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
       where: {
-        platform: 'ZOHO_WORKDRIVE',
-        brands: {
-          some: {
-            brand: {
-              members: {
-                some: { user: { id: token.id } },
-              },
-            },
-          },
-        },
+        userId: token.id,
+        socialAccount: {
+          platform: 'ZOHO_WORKDRIVE'
+        }
       },
+      include: {
+        socialAccount: true
+      }
     });
-    if (!socialAccount) {
+
+    if (!userSocialAccount) {
       return NextResponse.json({ error: 'No Zoho WorkDrive account connected' }, { status: 400 });
     }
+
+    const socialAccount = userSocialAccount.socialAccount;
 
     socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
     if(socialAccount.refreshToken) {

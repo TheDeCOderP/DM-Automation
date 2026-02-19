@@ -157,6 +157,7 @@ model User {
   // Add these two relations for BrandInvitation
   sentBrandInvitations     BrandInvitation[] @relation("SentBrandInvitations")
   acceptedBrandInvitations BrandInvitation[] @relation("AcceptedBrandInvitations")
+  knowledgeBase            KnowledgeBase[]
 }
 
 model Brand {
@@ -176,6 +177,7 @@ model Brand {
   contentCalendars ContentCalendar[]
 
   externalBlogSites ExternalBlogSite[]
+  knowledgeBase     KnowledgeBase[]
 }
 
 model UserBrand {
@@ -890,6 +892,40 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([userId, action, createdAt])
+}
+
+enum KnowledgeBaseItemType {
+  LINK
+  IMAGE
+  DOCUMENT
+  VIDEO
+  NOTE
+}
+
+model KnowledgeBase {
+  id          String                 @id @default(cuid())
+  title       String
+  description String?                @db.Text
+  type        KnowledgeBaseItemType
+  url         String?                @db.LongText
+  fileUrl     String?                @db.LongText
+  fileName    String?
+  fileSize    Int?
+  mimeType    String?
+  thumbnail   String?                @db.LongText
+  tags        Json?
+  metadata    Json?
+  brandId     String
+  brand       Brand                  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([brandId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 // banner management 

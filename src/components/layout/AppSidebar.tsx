@@ -158,18 +158,7 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
               <h1 className="font-bold text-lg bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
                 {siteName}
               </h1>
-              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                Powered by{" "}
-                <Link
-                  href="https://prabisha.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary font-medium hover:underline transition-colors flex items-center gap-1"
-                >
-                  Prabisha
-                  <Sparkles className="h-3 w-3 text-yellow-500" />
-                </Link>
-              </p>
+            DM Automation
             </div>
           </div>
 

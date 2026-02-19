@@ -141,23 +141,28 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const fileId = searchParams.get('fileId');
 
-    const socialAccount = await prisma.socialAccount.findFirst({
-        where: {
-        platform: 'ZOHO_WORKDRIVE',
-        brands: {
-            some: {
-            brand: {
-                members: {
-                some: { user: { id: token.id } },
-                },
-            },
-            },
-        },
-        },
-    });
-    if (!socialAccount) {
-        return NextResponse.json({ error: 'No Zoho WorkDrive account connected' }, { status: 400 });
+    if (!fileId) {
+      return NextResponse.json({ error: 'File ID is required' }, { status: 400 });
     }
+
+    // Get user's Zoho WorkDrive account through UserSocialAccount
+    const userSocialAccount = await prisma.userSocialAccount.findFirst({
+      where: {
+        userId: token.id,
+        socialAccount: {
+          platform: 'ZOHO_WORKDRIVE'
+        }
+      },
+      include: {
+        socialAccount: true
+      }
+    });
+
+    if (!userSocialAccount) {
+      return NextResponse.json({ error: 'No Zoho WorkDrive account connected' }, { status: 400 });
+    }
+
+    const socialAccount = userSocialAccount.socialAccount;
 
     socialAccount.accessToken = await decryptToken(socialAccount.accessToken);
     if(socialAccount.refreshToken) {
@@ -170,9 +175,6 @@ export async function GET(req: NextRequest) {
         accessToken = await refreshZohoToken(socialAccount);
     }
 
-    if (!fileId) {
-      return NextResponse.json({ error: 'File ID is required' }, { status: 400 });
-    }
     const { blob, fileName, mimeType, contentDisposition } = await downloadFile(accessToken, fileId);
 
     // Create response with file data
