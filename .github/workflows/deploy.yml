@@ -17,6 +17,8 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          # Uncomment the line below if using password instead of key
+          # password: ${{ secrets.VPS_PASSWORD }}
           script: |
             cd /var/www/dma
             bash deploy.sh

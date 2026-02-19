@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { Plus, Link as LinkIcon, FileText, Image as ImageIcon, Video, StickyNote, Search, Filter, Trash2, ExternalLink, Grid3x3, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -65,7 +64,14 @@ export default function KnowledgeBasePage() {
     try {
       const result = await getKnowledgeBaseItems();
       if (result.success && result.items) {
-        setItems(result.items);
+        // Transform the items to match the expected type
+        const transformedItems = result.items.map(item => ({
+          ...item,
+          tags: Array.isArray(item.tags) 
+            ? item.tags.filter((tag): tag is string => typeof tag === 'string')
+            : undefined,
+        }));
+        setItems(transformedItems);
       } else {
         toast.error(result.error || 'Failed to fetch items');
       }
