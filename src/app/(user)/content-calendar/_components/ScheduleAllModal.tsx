@@ -412,7 +412,7 @@ export default function ScheduleAllModal({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Continue Editing</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-white hover:bg-destructive/90">
             Close Without Scheduling
           </AlertDialogAction>
         </AlertDialogFooter>

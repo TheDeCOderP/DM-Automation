@@ -76,7 +76,7 @@ export default function ScheduleItemModal({
     setSuggestedTime(toDateTimeLocalString(item.suggestedTime));
   }, [item.suggestedTime]);
 
-  // Fetch social accounts for the brand
+  // Fetch social accounts for the brand and load previously saved selections
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
@@ -86,30 +86,58 @@ export default function ScheduleItemModal({
         const data = await response.json();
         setSocialAccounts(data.accounts || []);
         
-        // Auto-select first account for each platform
-        const autoSelected: AccountSelection[] = [];
+        // Check if this item has already been scheduled (has postGroupId)
+        let savedSelections: AccountSelection[] = [];
         
-        platforms.forEach((platform) => {
-          const account = data.accounts?.find((acc: SocialAccount) => acc.platform === platform);
-          if (account) {
-            // If account has pages, select first page, otherwise just the account
-            if (account.pages && account.pages.length > 0) {
-              autoSelected.push({
-                platform,
-                socialAccountId: account.id,
-                socialAccountPageId: account.pages[0].id,
-              });
-            } else {
-              autoSelected.push({
-                platform,
-                socialAccountId: account.id,
-                socialAccountPageId: null,
-              });
+        if (item.postGroupId) {
+          try {
+            // Fetch the existing posts for this calendar item
+            const postsResponse = await fetch(`/api/content-calendar/items/${item.id}/posts`);
+            if (postsResponse.ok) {
+              const postsData = await postsResponse.json();
+              if (postsData.posts && postsData.posts.length > 0) {
+                // Map existing posts to account selections
+                savedSelections = postsData.posts.map((post: any) => ({
+                  platform: post.platform,
+                  socialAccountId: post.socialAccountId,
+                  socialAccountPageId: post.socialAccountPageId,
+                }));
+                console.log("Loaded saved account selections:", savedSelections);
+              }
             }
+          } catch (error) {
+            console.error("Error fetching saved posts:", error);
           }
-        });
+        }
         
-        setSelectedAccounts(autoSelected);
+        // If we have saved selections, use them; otherwise auto-select first account
+        if (savedSelections.length > 0) {
+          setSelectedAccounts(savedSelections);
+        } else {
+          const autoSelected: AccountSelection[] = [];
+          
+          platforms.forEach((platform) => {
+            const account = data.accounts?.find((acc: SocialAccount) => acc.platform === platform);
+            if (account) {
+              // If account has pages, select first page, otherwise just the account
+              if (account.pages && account.pages.length > 0) {
+                autoSelected.push({
+                  platform,
+                  socialAccountId: account.id,
+                  socialAccountPageId: account.pages[0].id,
+                });
+              } else {
+                autoSelected.push({
+                  platform,
+                  socialAccountId: account.id,
+                  socialAccountPageId: null,
+                });
+              }
+            }
+          });
+          
+          setSelectedAccounts(autoSelected);
+        }
       } catch (error) {
         console.error("Error fetching accounts:", error);
         toast.error("Failed to load social accounts");
@@ -119,7 +147,7 @@ export default function ScheduleItemModal({
     };
 
     fetchAccounts();
-  }, [brandId, platforms]);
+  }, [brandId, platforms, item.postGroupId, item.id]);
 
   const handleAccountToggle = (platform: string, accountId: string, pageId: string | null = null) => {
     setSelectedAccounts(prev => {
@@ -424,7 +452,7 @@ export default function ScheduleItemModal({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Continue Editing</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-white hover:bg-destructive/90">
             Close Without Scheduling
           </AlertDialogAction>
         </AlertDialogFooter>
