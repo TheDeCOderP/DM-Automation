@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { Loader2, User, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,14 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLoginClick = () => {
-    setIsLoading(true);
-    router.push("/login");
+  const handleLogin = async (callbackUrl = "/calendar") => {
+    try {
+      await signIn("central-auth", { callbackUrl });
+    } catch (error) {
+      console.error("Central login error:", error);
+    }
   };
+
 
   const handleDashboardClick = () => {
     setIsLoading(true);
@@ -37,7 +41,7 @@ export default function HomePage() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await signOut({ callbackUrl: "/login?logout=success" });
+      await signOut({ callbackUrl: "/?logout=success" });
     } catch (error) {
       console.error("Logout error:", error);
       setIsLoggingOut(false);
@@ -186,7 +190,7 @@ export default function HomePage() {
           ) : (
             <div className="mt-10 flex justify-center animate-[fadeIn_1.6s_ease-out]">
               <Button
-                onClick={handleLoginClick}
+                onClick={() => handleLogin("/dashboard")}
                 disabled={isLoading}
                 size="lg"
                 className="relative flex items-center justify-center gap-2 bg-transparent text-white hover:bg-white/10 px-10 py-6 text-lg font-semibold rounded-full hover:scale-105 transition-all duration-300 shadow-2xl border-2 border-white/50 hover:border-white overflow-hidden group backdrop-blur-sm"
