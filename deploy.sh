@@ -1,24 +1,34 @@
-
+#!/bin/bash
 set -e
 
 echo "🚀 Starting deployment..."
 
-# Move to project directory (safety)
+# Move to project directory
 cd /var/www/dma
 
 # Pull latest changes
 echo "📥 Pulling latest changes from git..."
 git pull
 
-# Install dependencies (lockfile respected)
-echo "📦 Installing dependencies..."
-pnpm install 
+# Ensure pnpm is installed
+if ! command -v pnpm &> /dev/null; then
+    echo "📦 Installing pnpm..."
+    npm install -g pnpm
+fi
 
-# Build the application in a clean context
+# Show versions
+echo "📌 Node version: $(node -v)"
+echo "📌 pnpm version: $(pnpm -v)"
+
+# Install dependencies
+echo "📦 Installing dependencies..."
+pnpm install
+
+# Build the application
 echo "🏗️ Building application..."
 pnpm build
 
-# Cleanup any leftover build workers (important)
+# Cleanup any leftover build workers
 echo "🧹 Cleaning up build workers..."
 pkill -9 -f "jest-worker/processChild.js" || true
 
@@ -26,7 +36,7 @@ pkill -9 -f "jest-worker/processChild.js" || true
 echo "🧾 Flushing PM2 logs..."
 pm2 flush
 
-# Restart PM2 process safely
+# Restart PM2 process
 echo "🔁 Restarting PM2 process..."
 pm2 restart dma-3010 --update-env
 
