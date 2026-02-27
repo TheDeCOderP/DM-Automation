@@ -1,23 +1,24 @@
-name: Deploy to VPS
+name: Auto Deploy
 
 on:
   push:
     branches:
-      - main  # Change this to your default branch if different
+      - master
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Deploy to VPS
+      - name: Deploy to Server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: tvmcloud
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 18208
           script: |
             cd /var/www/dma
-            bash deploy.sh
+            chmod +x deploy.sh
+            ./deploy.sh
