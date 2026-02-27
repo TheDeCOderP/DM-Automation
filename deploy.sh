@@ -1,4 +1,4 @@
-#!/bin/bash
+
 set -e
 
 echo "🚀 Starting deployment..."
@@ -8,7 +8,8 @@ cd /var/www/dma
 
 # Pull latest changes
 echo "📥 Pulling latest changes from git..."
-git pull
+git fetch origin
+git reset --hard origin/main
 
 # Ensure pnpm is installed
 if ! command -v pnpm &> /dev/null; then
