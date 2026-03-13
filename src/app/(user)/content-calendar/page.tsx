@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import useSwr from "swr";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Calendar, Eye, CheckCircle2, Clock, FileText, Image as ImageIcon } from "lucide-react";
+import { Plus, Calendar, Eye, CheckCircle2, Clock, FileText, Image as ImageIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ export default function ContentCalendarPage() {
   const [selectedBrandId, setSelectedBrandId] = useState<string>("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [navigatingToCalendar, setNavigatingToCalendar] = useState<string | null>(null);
+  const [deletingCalendar, setDeletingCalendar] = useState<string | null>(null);
 
   // Fetch brands
   const { data: brandsData, isLoading: isLoadingBrands } = useSwr("/api/brands", fetcher);
@@ -141,6 +142,34 @@ export default function ContentCalendarPage() {
   const selectedBrand = brands.find(b => b.id === selectedBrandId);
   const calendars: ContentCalendar[] = selectedBrandCalendars?.calendars || [];
 
+  const handleDeleteCalendar = async (calendarId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm("Are you sure you want to delete this calendar? This will delete all posts in this calendar.")) {
+      return;
+    }
+
+    setDeletingCalendar(calendarId);
+    try {
+      const response = await fetch(`/api/content-calendar?calendarId=${calendarId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete calendar");
+      }
+
+      toast.success("Calendar deleted successfully");
+      mutate();
+      mutateSelectedBrand();
+    } catch (error) {
+      console.error("Error deleting calendar:", error);
+      toast.error("Failed to delete calendar");
+    } finally {
+      setDeletingCalendar(null);
+    }
+  };
+
   return (
     <div className="container mx-auto p-2 space-y-6">
       {/* Header */}
@@ -215,7 +244,7 @@ export default function ContentCalendarPage() {
                 {calendars.map((calendar) => (
                   <Card 
                     key={calendar.id} 
-                    className="hover:shadow-lg transition-all cursor-pointer hover:border-primary"
+                    className="hover:shadow-lg transition-all cursor-pointer hover:border-primary relative"
                     onClick={() => {
                       setNavigatingToCalendar(calendar.id);
                       router.push(`/content-calendar/${calendar.id}`);
@@ -229,9 +258,24 @@ export default function ContentCalendarPage() {
                             {calendar.duration} days • {calendar.items.length} posts
                           </CardDescription>
                         </div>
-                        <Badge className={getStatusColor(calendar.status)}>
-                          {calendar.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(calendar.status)}>
+                            {calendar.status}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => handleDeleteCalendar(calendar.id, e)}
+                            disabled={deletingCalendar === calendar.id}
+                          >
+                            {deletingCalendar === calendar.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive"></div>
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
