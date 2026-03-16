@@ -328,7 +328,7 @@ model ContentCalendar {
   brandId String
   brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-  topic        String
+  topic        String @db.Text
   duration     Int // Number of days
   startDate    DateTime? // When calendar starts
   endDate      DateTime? // When calendar ends
@@ -355,7 +355,7 @@ model ContentCalendarItem {
   calendar   ContentCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
 
   day   Int // Day number in the calendar (1-30)
-  topic String
+  topic String @db.Text
 
   // Platform-specific captions
   captionLinkedIn  String? @db.Text
