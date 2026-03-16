@@ -105,6 +105,10 @@ export async function PATCH(
       );
     }
 
+    // Determine new status: preserve SCHEDULED/PUBLISHED, otherwise mark as EDITED
+    const preservedStatuses = ["SCHEDULED", "PUBLISHED"];
+    const newStatus = body.status || (preservedStatuses.includes(item.status) ? item.status : "EDITED");
+
     // Update item
     const updatedItem = await prisma.contentCalendarItem.update({
       where: { id: itemId },
@@ -120,9 +124,9 @@ export async function PATCH(
         captionTikTok: body.captionTikTok,
         hashtags: body.hashtags,
         imagePrompt: body.imagePrompt,
-        imageUrl: body.imageUrl, // Save the image URL
+        imageUrl: body.imageUrl,
         suggestedTime: body.suggestedTime ? new Date(body.suggestedTime) : undefined,
-        status: body.status || "EDITED", // Mark as edited when user changes it
+        status: newStatus,
       },
     });
 
