@@ -134,29 +134,43 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1")
     const limit = parseInt(searchParams.get("limit") || "12")
     const skip = (page - 1) * limit
+    const brandId = searchParams.get("brandId")
+    const platform = searchParams.get("platform")
+    const status = searchParams.get("status")
+    const search = searchParams.get("search")
 
     // Get all brands the user has access to
     const userBrands = await prisma.userBrand.findMany({
       where: { userId: token.id },
-      select: { brandId: true }
+      select: { brandId: true, brand: { select: { id: true, name: true, logo: true } } }
     })
 
     const brandIds = userBrands.map(ub => ub.brandId)
 
-    // Build where clause to include all posts from user's brands
-    const whereClause = {
-      brandId: {
-        in: brandIds
-      },
-      status: {
-        in: [Status.SCHEDULED, Status.PUBLISHED],
-      },
+    // Build where clause
+    const whereClause: Record<string, unknown> = {
+      brandId: brandId && brandIds.includes(brandId) ? brandId : { in: brandIds },
+    }
+
+    if (platform && platform !== "ALL") {
+      whereClause.platform = platform as Platform
+    }
+
+    if (status && status !== "ALL") {
+      whereClause.status = status as Status
+    } else {
+      whereClause.status = { in: [Status.SCHEDULED, Status.PUBLISHED, Status.DRAFTED, Status.FAILED] }
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { content: { contains: search } },
+        { title: { contains: search } },
+      ]
     }
 
     // Get total count for pagination
-    const totalPosts = await prisma.post.count({
-      where: whereClause,
-    })
+    const totalPosts = await prisma.post.count({ where: whereClause })
 
     const posts = await prisma.post.findMany({
       where: whereClause,
@@ -164,6 +178,13 @@ export async function GET(req: NextRequest) {
         media: true,
         brand: true,
         socialAccountPage: true,
+        socialAccount: {
+          select: {
+            platform: true,
+            platformUsername: true,
+            platformUserImage: true,
+          }
+        },
         user: {
           select: {
             name: true,
@@ -172,17 +193,17 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
       skip,
       take: limit,
     })
 
     const totalPages = Math.ceil(totalPosts / limit)
+    const brands = userBrands.map(ub => ub.brand)
 
     return NextResponse.json({ 
       posts,
+      brands,
       pagination: {
         currentPage: page,
         totalPages,

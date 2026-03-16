@@ -626,7 +626,8 @@ export async function fetchLinkedInPostAnalytics(post: Post): Promise<LinkedInAn
       `https://api.linkedin.com/v2/socialActions/${encodeURIComponent(shareUrn)}`,
       {
         method: 'GET',
-        headers: headers
+        headers: headers,
+        signal: AbortSignal.timeout(8000)
       }
     );
 
@@ -671,7 +672,8 @@ export async function fetchLinkedInPostAnalytics(post: Post): Promise<LinkedInAn
         `https://api.linkedin.com/v2/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationUrn)}&shares=${encodeURIComponent(shareUrn)}`,
         {
           method: 'GET',
-          headers: headers
+          headers: headers,
+          signal: AbortSignal.timeout(8000)
         }
       );
 
@@ -708,7 +710,8 @@ export async function fetchLinkedInPostAnalytics(post: Post): Promise<LinkedInAn
         `https://api.linkedin.com/v2/ugcPosts/${encodeURIComponent(shareUrn)}`,
         {
           method: 'GET',
-          headers: headers
+          headers: headers,
+          signal: AbortSignal.timeout(8000)
         }
       );
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { X, Loader2, Save, Upload, Image as ImageIcon, Sparkles } from "lucide-react";
+import { X, Loader2, Save, Upload, Image as ImageIcon, Sparkles, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,26 @@ import {
 } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { toDateTimeLocalString } from "@/utils/format";
+
+const TONE_OPTIONS = [
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual & Friendly" },
+  { value: "inspirational", label: "Inspirational" },
+  { value: "educational", label: "Educational" },
+  { value: "humorous", label: "Humorous" },
+  { value: "authoritative", label: "Authoritative" },
+  { value: "conversational", label: "Conversational" },
+  { value: "storytelling", label: "Storytelling" },
+];
+
+const CTA_STYLES = [
+  { value: "engagement", label: "Engagement (comment, share, like)" },
+  { value: "traffic", label: "Drive Traffic (visit website)" },
+  { value: "leads", label: "Lead Gen (DM, sign up, download)" },
+  { value: "sales", label: "Sales (buy, get offer)" },
+  { value: "community", label: "Community (tag someone, join group)" },
+  { value: "awareness", label: "Awareness (follow, save, subscribe)" },
+];
 
 interface EditCalendarItemModalProps {
   item: any;
@@ -100,6 +120,15 @@ export default function EditCalendarItemModal({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  // Regenerate caption state
+  const [showRegenerate, setShowRegenerate] = useState(false);
+  const [regenTone, setRegenTone] = useState("professional");
+  const [regenCta, setRegenCta] = useState("engagement");
+  const [regenHashtagCount, setRegenHashtagCount] = useState(5);
+  const [regenCustom, setRegenCustom] = useState("");
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [regeneratingPlatform, setRegeneratingPlatform] = useState<string | null>(null);
 
   // Update imagePreview when item changes (when modal reopens with updated data)
   useEffect(() => {
@@ -219,6 +248,53 @@ export default function EditCalendarItemModal({
     }
   };
 
+  const handleRegenerateCaptions = async (platformFilter?: string) => {
+    if (platformFilter) setRegeneratingPlatform(platformFilter);
+    else setIsRegenerating(true);
+
+    try {
+      const res = await fetch("/api/content-calendar/regenerate-caption", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId: item.id,
+          platforms: platformFilter ? [platformFilter] : platforms,
+          tone: regenTone,
+          ctaStyle: regenCta,
+          hashtagCount: regenHashtagCount,
+          customInstructions: regenCustom.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to regenerate");
+      }
+
+      const data = await res.json();
+      const updated = data.captions as Record<string, { caption: string; hashtags: string[] }>;
+
+      setCaptions((prev) => {
+        const next = { ...prev };
+        for (const [platform, val] of Object.entries(updated)) {
+          if (platform in next) next[platform as keyof typeof next] = val.caption;
+        }
+        return next;
+      });
+
+      // Merge new hashtags
+      const newTags = Object.values(updated).flatMap((v) => v.hashtags);
+      setHashtags((prev) => Array.from(new Set([...prev, ...newTags])));
+
+      toast.success(platformFilter ? `${platformFilter} caption regenerated` : "All captions regenerated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to regenerate");
+    } finally {
+      setIsRegenerating(false);
+      setRegeneratingPlatform(null);
+    }
+  };
+
   const handleSave = async () => {
     if (!topic.trim()) {
       toast.error("Please enter a topic");
@@ -320,6 +396,116 @@ export default function EditCalendarItemModal({
             label="Suggested Posting Time"
             required
           />
+
+          {/* Regenerate Captions */}
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50 transition-colors"
+              onClick={() => setShowRegenerate(!showRegenerate)}
+              disabled={isSaving}
+            >
+              <span className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 text-primary" />
+                Regenerate Captions with AI
+              </span>
+              {showRegenerate ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showRegenerate && (
+              <div className="px-4 pb-4 pt-2 space-y-4 border-t bg-muted/20">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Tone / Voice</Label>
+                    <Select value={regenTone} onValueChange={setRegenTone}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {TONE_OPTIONS.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CTA Goal</Label>
+                    <Select value={regenCta} onValueChange={setRegenCta}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CTA_STYLES.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Hashtags Per Post</Label>
+                  <div className="flex gap-2">
+                    {[3, 5, 10, 15, 20].map((n) => (
+                      <Button
+                        key={n}
+                        type="button"
+                        variant={regenHashtagCount === n ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setRegenHashtagCount(n)}
+                      >
+                        {n}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Custom Instructions</Label>
+                  <Textarea
+                    placeholder="e.g., Mention our free trial. Use UK English. Include a statistic."
+                    value={regenCustom}
+                    onChange={(e) => setRegenCustom(e.target.value)}
+                    rows={2}
+                    className="resize-none"
+                  />
+                </div>
+
+                {/* Per-platform buttons + regenerate all */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Regenerate specific platform</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {platforms.map((platform) => (
+                      <Button
+                        key={platform}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isRegenerating || regeneratingPlatform !== null}
+                        onClick={() => handleRegenerateCaptions(platform)}
+                      >
+                        {regeneratingPlatform === platform ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                        )}
+                        {getPlatformIcon(platform)} {platform}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => handleRegenerateCaptions()}
+                  disabled={isRegenerating || regeneratingPlatform !== null}
+                >
+                  {isRegenerating ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Regenerating all platforms...</>
+                  ) : (
+                    <><Sparkles className="w-4 h-4 mr-2" />Regenerate All Platforms</>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
 
           {/* Platform Captions */}
           <div className="space-y-2">
