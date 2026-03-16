@@ -14,13 +14,16 @@ import {
   Youtube,
   Pin,
   MessageCircle,
-  Music
+  Music,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/utils/format";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +41,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Platform } from "@prisma/client";
 
 interface CreateCalendarModalProps {
@@ -57,40 +68,84 @@ const PLATFORMS = [
   { value: "TIKTOK", label: "TikTok", icon: Music, color: "text-black dark:text-white" },
 ];
 
+const TONE_OPTIONS = [
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual & Friendly" },
+  { value: "inspirational", label: "Inspirational" },
+  { value: "educational", label: "Educational" },
+  { value: "humorous", label: "Humorous" },
+  { value: "authoritative", label: "Authoritative" },
+  { value: "conversational", label: "Conversational" },
+  { value: "storytelling", label: "Storytelling" },
+];
+
+const CTA_STYLES = [
+  { value: "engagement", label: "Engagement (comment, share, like)" },
+  { value: "traffic", label: "Drive Traffic (visit website, read more)" },
+  { value: "leads", label: "Lead Gen (DM, sign up, download)" },
+  { value: "sales", label: "Sales (buy, get offer, limited time)" },
+  { value: "community", label: "Community (tag someone, join group)" },
+  { value: "awareness", label: "Awareness (follow, save, subscribe)" },
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: "English", label: "English" },
+  { value: "Spanish", label: "Spanish" },
+  { value: "French", label: "French" },
+  { value: "German", label: "German" },
+  { value: "Portuguese", label: "Portuguese" },
+  { value: "Hindi", label: "Hindi" },
+  { value: "Arabic", label: "Arabic" },
+  { value: "Italian", label: "Italian" },
+  { value: "Dutch", label: "Dutch" },
+  { value: "Japanese", label: "Japanese" },
+];
+
+const CONTENT_PILLAR_OPTIONS = [
+  "Educational", "Inspirational", "Promotional", "Behind-the-scenes",
+  "User-generated", "Trending/News", "Case studies", "Tips & Tricks",
+  "Product showcase", "Community", "Storytelling", "How-to guides",
+];
+
 export default function CreateCalendarModal({
   brandId,
   onClose,
   onSuccess,
 }: CreateCalendarModalProps) {
+  // Basic fields
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState(30);
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [postsPerWeek, setPostsPerWeek] = useState(5);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
+
+  // Enhanced prompt fields
+  const [tone, setTone] = useState("professional");
+  const [ctaStyle, setCtaStyle] = useState("engagement");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [language, setLanguage] = useState("English");
+  const [hashtagCount, setHashtagCount] = useState(5);
+  const [selectedPillars, setSelectedPillars] = useState<string[]>([]);
+  const [customInstructions, setCustomInstructions] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // UI state
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState("");
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
-  // Check if form has any data
-  const hasFormData = () => {
-    return (
-      topic.trim() !== "" ||
-      selectedPlatforms.length > 0 ||
-      duration !== 30 ||
-      postsPerWeek !== 5 ||
-      startDate !== new Date().toISOString().split("T")[0]
-    );
-  };
+  const hasFormData = () =>
+    topic.trim() !== "" ||
+    selectedPlatforms.length > 0 ||
+    duration !== 30 ||
+    postsPerWeek !== 5 ||
+    startDate !== new Date().toISOString().split("T")[0];
 
   const handleCloseAttempt = () => {
-    // Prevent closing while generating
     if (isGenerating) {
       toast.error("Please wait while content is being generated...");
       return;
     }
-    
     if (hasFormData()) {
       setShowCloseConfirm(true);
     } else {
@@ -98,55 +153,37 @@ export default function CreateCalendarModal({
     }
   };
 
-  const handleConfirmClose = () => {
-    setShowCloseConfirm(false);
-    onClose();
-  };
-
-  // Calculate end date based on start date and duration
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + duration);
   const endDateStr = endDate.toISOString().split("T")[0];
 
   const handlePlatformToggle = (platform: Platform) => {
     setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform]
+      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
+    );
+  };
+
+  const handlePillarToggle = (pillar: string) => {
+    setSelectedPillars((prev) =>
+      prev.includes(pillar) ? prev.filter((p) => p !== pillar) : [...prev, pillar]
     );
   };
 
   const handleGenerate = async () => {
-    if (!topic.trim()) {
-      toast.error("Please enter a topic");
-      return;
-    }
-
-    if (selectedPlatforms.length === 0) {
-      toast.error("Please select at least one platform");
-      return;
-    }
-
-    if (duration < 7 || duration > 90) {
-      toast.error("Duration must be between 7 and 90 days");
-      return;
-    }
-
-    if (postsPerWeek < 1 || postsPerWeek > 14) {
-      toast.error("Posts per week must be between 1 and 14");
-      return;
-    }
+    if (!topic.trim()) { toast.error("Please enter a topic"); return; }
+    if (selectedPlatforms.length === 0) { toast.error("Please select at least one platform"); return; }
+    if (duration < 7 || duration > 90) { toast.error("Duration must be between 7 and 90 days"); return; }
+    if (postsPerWeek < 1 || postsPerWeek > 14) { toast.error("Posts per week must be between 1 and 14"); return; }
 
     setIsGenerating(true);
     setProgress("Creating calendar structure...");
 
     try {
-      // Step 1: Generate calendar structure with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
-      
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+
       setProgress("Generating content ideas (this may take 30-60 seconds)...");
-      
+
       const response = await fetch("/api/content-calendar/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,6 +195,14 @@ export default function CreateCalendarModal({
           endDate: endDate.toISOString(),
           platforms: selectedPlatforms,
           postsPerWeek,
+          // Enhanced fields
+          tone,
+          ctaStyle,
+          targetAudience: targetAudience.trim() || undefined,
+          language,
+          hashtagCount,
+          contentPillars: selectedPillars.length > 0 ? selectedPillars : undefined,
+          customInstructions: customInstructions.trim() || undefined,
         }),
         signal: controller.signal,
       });
@@ -166,72 +211,59 @@ export default function CreateCalendarModal({
 
       if (!response.ok) {
         const error = await response.json();
-        
-        // Handle specific error cases
-        if (response.status === 503) {
-          throw new Error("AI service is experiencing high demand. Please try again in a few moments.");
-        } else if (response.status === 429) {
-          throw new Error("Rate limit exceeded. Please wait a moment and try again.");
-        }
-        
+        if (response.status === 503) throw new Error("AI service is experiencing high demand. Please try again in a few moments.");
+        else if (response.status === 429) throw new Error("Rate limit exceeded. Please wait a moment and try again.");
         throw new Error(error.error || "Failed to generate calendar");
       }
 
       const data = await response.json();
-      
-      // Step 2: Generate captions if needed
+
       if (data.needsCaptions && data.calendar?.items) {
         setProgress(`Generating captions for ${data.calendar.items.length} posts...`);
-        
         const itemIds = data.calendar.items.map((item: any) => item.id);
-        
-        // Generate captions in batches to avoid timeout
         const BATCH_SIZE = 3;
+
         for (let i = 0; i < itemIds.length; i += BATCH_SIZE) {
           const batchIds = itemIds.slice(i, i + BATCH_SIZE);
           setProgress(`Generating captions ${i + 1}-${Math.min(i + BATCH_SIZE, itemIds.length)} of ${itemIds.length}...`);
-          
+
           try {
             const captionController = new AbortController();
-            const captionTimeoutId = setTimeout(() => captionController.abort(), 120000); // 120 second timeout per batch
-            
-            const captionResponse = await fetch("/api/content-calendar/generate-captions", {
+            const captionTimeoutId = setTimeout(() => captionController.abort(), 120000);
+
+            await fetch("/api/content-calendar/generate-captions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 calendarId: data.calendar.id,
                 itemIds: batchIds,
+                // Pass enhanced settings to caption generation
+                tone,
+                ctaStyle,
+                targetAudience: targetAudience.trim() || undefined,
+                language,
+                hashtagCount,
+                contentPillars: selectedPillars.length > 0 ? selectedPillars : undefined,
+                customInstructions: customInstructions.trim() || undefined,
               }),
               signal: captionController.signal,
             });
 
             clearTimeout(captionTimeoutId);
-
-            if (!captionResponse.ok) {
-              console.error("Failed to generate captions for batch", i);
-              // Continue with next batch even if one fails
-            }
           } catch (batchError) {
             console.error(`Error in caption batch ${i}:`, batchError);
-            // Continue with next batch
           }
         }
       }
-      
-      toast.success(
-        `Calendar generated! ${data.calendar.items.length} posts created.`
-      );
+
+      toast.success(`Calendar generated! ${data.calendar.items.length} posts created.`);
       onSuccess();
     } catch (error: any) {
       console.error("Error generating calendar:", error);
-      
-      // Handle abort/timeout errors
-      if (error.name === 'AbortError') {
-        toast.error("Request timed out. The AI service might be experiencing high demand. Please try again.");
+      if (error.name === "AbortError") {
+        toast.error("Request timed out. Please try again.");
       } else {
-        toast.error(
-          error instanceof Error ? error.message : "Failed to generate calendar"
-        );
+        toast.error(error instanceof Error ? error.message : "Failed to generate calendar");
       }
     } finally {
       setIsGenerating(false);
@@ -244,21 +276,13 @@ export default function CreateCalendarModal({
   return (
     <>
       <Dialog open onOpenChange={handleCloseAttempt}>
-        <DialogContent 
+        <DialogContent
           className="!max-w-[1200px] !w-[95vw] max-h-[90vh] overflow-y-auto"
           onPointerDownOutside={(e) => {
-            // Prevent closing by clicking outside while generating
-            if (isGenerating) {
-              e.preventDefault();
-              toast.error("Please wait while content is being generated...");
-            }
+            if (isGenerating) { e.preventDefault(); toast.error("Please wait while content is being generated..."); }
           }}
           onEscapeKeyDown={(e) => {
-            // Prevent closing with Escape key while generating
-            if (isGenerating) {
-              e.preventDefault();
-              toast.error("Please wait while content is being generated...");
-            }
+            if (isGenerating) { e.preventDefault(); toast.error("Please wait while content is being generated..."); }
           }}
         >
           <DialogHeader>
@@ -271,241 +295,249 @@ export default function CreateCalendarModal({
             </DialogDescription>
           </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Topic */}
-          <div className="space-y-2">
-            <Label htmlFor="topic">
-              Topic / Theme <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="topic"
-              placeholder="e.g., Digital Marketing Tips, Fitness Motivation, Cooking Recipes"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              disabled={isGenerating}
-            />
-            <p className="text-sm text-muted-foreground">
-              Main theme for your content calendar
-            </p>
-          </div>
-
-          {/* Start Date and Duration in one row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Start Date */}
+          <div className="space-y-6 py-4">
+            {/* Topic */}
             <div className="space-y-2">
-              <Label htmlFor="startDate">
-                Start Date <span className="text-red-500">*</span>
+              <Label htmlFor="topic">
+                Topic / Theme <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="startDate"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                id="topic"
+                placeholder="e.g., Digital Marketing Tips, Fitness Motivation, Cooking Recipes"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
                 disabled={isGenerating}
-                min={new Date().toISOString().split("T")[0]}
               />
-              <p className="text-sm text-muted-foreground">
-                When should the calendar start?
-              </p>
             </div>
 
-            {/* Duration */}
-            <div className="space-y-2">
-              <Label htmlFor="duration">
-                Duration (Days) <span className="text-red-500">*</span>
-              </Label>
-              
-              {/* Quick Presets */}
-              <div className="flex gap-2 mb-2">
-                <Button
-                  type="button"
-                  variant={duration === 7 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setDuration(7)}
+            {/* Date + Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date <span className="text-red-500">*</span></Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
                   disabled={isGenerating}
-                >
-                  1 Week
-                </Button>
-                <Button
-                  type="button"
-                  variant={duration === 14 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setDuration(14)}
-                  disabled={isGenerating}
-                >
-                  2 Weeks
-                </Button>
-                <Button
-                  type="button"
-                  variant={duration === 30 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setDuration(30)}
-                  disabled={isGenerating}
-                >
-                  1 Month
-                </Button>
-                <Button
-                  type="button"
-                  variant={duration === 90 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setDuration(90)}
-                  disabled={isGenerating}
-                >
-                  3 Months
-                </Button>
+                  min={new Date().toISOString().split("T")[0]}
+                />
               </div>
-              
-              <Input
-                id="duration"
-                type="number"
-                min={7}
-                max={90}
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value))}
-                disabled={isGenerating}
-              />
-              <p className="text-sm text-muted-foreground">
-                Number of days (7-90) - Use presets or enter custom value
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (Days) <span className="text-red-500">*</span></Label>
+                <div className="flex gap-2 mb-2">
+                  {[7, 14, 30, 90].map((d) => (
+                    <Button key={d} type="button" variant={duration === d ? "default" : "outline"} size="sm"
+                      onClick={() => setDuration(d)} disabled={isGenerating}>
+                      {d === 7 ? "1W" : d === 14 ? "2W" : d === 30 ? "1M" : "3M"}
+                    </Button>
+                  ))}
+                </div>
+                <Input id="duration" type="number" min={7} max={90} value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))} disabled={isGenerating} />
+              </div>
             </div>
-          </div>
 
-          {/* Posts Per Week */}
-          <div className="space-y-2">
-            <Label htmlFor="postsPerWeek">
-              Posts Per Week <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="postsPerWeek"
-              type="number"
-              min={1}
-              max={14}
-              value={postsPerWeek}
-              onChange={(e) => setPostsPerWeek(parseInt(e.target.value))}
-              disabled={isGenerating}
-            />
-            <p className="text-sm text-muted-foreground">
-              How many posts per week (1-14)
-            </p>
-          </div>
-
-          {/* Platforms */}
-          <div className="space-y-3">
-            <Label>
-              Select Platforms <span className="text-red-500">*</span>
-            </Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {PLATFORMS.map((platform) => {
-                const IconComponent = platform.icon;
-                return (
-                  <div
-                    key={platform.value}
-                    className={`flex items-center space-x-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                      selectedPlatforms.includes(platform.value as Platform)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => handlePlatformToggle(platform.value as Platform)}
-                  >
-                    <Checkbox
-                      checked={selectedPlatforms.includes(platform.value as Platform)}
-                      onCheckedChange={() =>
-                        handlePlatformToggle(platform.value as Platform)
-                      }
-                    />
-                    <IconComponent className={`w-5 h-5 ${platform.color}`} />
-                    <Label className="cursor-pointer flex-1">
-                      {platform.label}
-                    </Label>
-                  </div>
-                );
-              })}
+            {/* Posts Per Week */}
+            <div className="space-y-2">
+              <Label htmlFor="postsPerWeek">Posts Per Week <span className="text-red-500">*</span></Label>
+              <Input id="postsPerWeek" type="number" min={1} max={14} value={postsPerWeek}
+                onChange={(e) => setPostsPerWeek(parseInt(e.target.value))} disabled={isGenerating} />
             </div>
-          </div>
 
-          {/* Summary */}
-          {selectedPlatforms.length > 0 && (
-            <div className="p-4 bg-muted rounded-lg space-y-2">
-              <h4 className="font-semibold">Summary:</h4>
-              <ul className="text-sm space-y-1">
-                <li>
-                  • <strong>Date Range:</strong> {formatDate(startDate)} - {formatDate(endDate)}
-                </li>
-                <li>
-                  • {Math.ceil((duration / 7) * postsPerWeek)} content ideas will be
-                  generated
-                </li>
-                <li>• {totalPosts} total posts (across all platforms)</li>
-                <li>
-                  • Each post will have platform-specific captions and hashtags
-                </li>
-                <li>• Estimated time: 2-5 minutes</li>
-              </ul>
+            {/* Platforms */}
+            <div className="space-y-3">
+              <Label>Select Platforms <span className="text-red-500">*</span></Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {PLATFORMS.map((platform) => {
+                  const IconComponent = platform.icon;
+                  return (
+                    <div key={platform.value}
+                      className={`flex items-center space-x-2 p-3 rounded-lg border cursor-pointer transition-all ${
+                        selectedPlatforms.includes(platform.value as Platform)
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                      onClick={() => handlePlatformToggle(platform.value as Platform)}
+                    >
+                      <Checkbox checked={selectedPlatforms.includes(platform.value as Platform)}
+                        onCheckedChange={() => handlePlatformToggle(platform.value as Platform)} />
+                      <IconComponent className={`w-5 h-5 ${platform.color}`} />
+                      <Label className="cursor-pointer flex-1">{platform.label}</Label>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          )}
 
-          {/* Progress */}
-          {isGenerating && (
-            <div className="p-4 bg-primary/5 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                <div className="flex-1">
-                  <p className="font-medium">{progress}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {progress.includes("content ideas") 
-                      ? "AI is generating creative content ideas. This may take 30-60 seconds..."
-                      : progress.includes("captions")
-                      ? "Creating platform-specific captions and hashtags..."
-                      : "Please don't close this window. This may take 2-5 minutes."}
-                  </p>
+            {/* Tone + Language */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Brand Tone / Voice <span className="text-red-500">*</span></Label>
+                <Select value={tone} onValueChange={setTone} disabled={isGenerating}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TONE_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Language <span className="text-red-500">*</span></Label>
+                <Select value={language} onValueChange={setLanguage} disabled={isGenerating}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGE_OPTIONS.map((l) => (
+                      <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* CTA Style + Hashtag Count */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>CTA Goal <span className="text-red-500">*</span></Label>
+                <Select value={ctaStyle} onValueChange={setCtaStyle} disabled={isGenerating}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CTA_STYLES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hashtagCount">Hashtags Per Post</Label>
+                <div className="flex gap-2">
+                  {[3, 5, 10, 15, 20].map((n) => (
+                    <Button key={n} type="button" variant={hashtagCount === n ? "default" : "outline"} size="sm"
+                      onClick={() => setHashtagCount(n)} disabled={isGenerating}>
+                      {n}
+                    </Button>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={handleCloseAttempt} disabled={isGenerating}>
-            Cancel
-          </Button>
-          <Button onClick={handleGenerate} disabled={isGenerating}>
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Calendar
-              </>
+            {/* Target Audience */}
+            <div className="space-y-2">
+              <Label htmlFor="targetAudience">Target Audience</Label>
+              <Input
+                id="targetAudience"
+                placeholder="e.g., Small business owners aged 25-45, fitness enthusiasts, B2B SaaS founders"
+                value={targetAudience}
+                onChange={(e) => setTargetAudience(e.target.value)}
+                disabled={isGenerating}
+              />
+            </div>
+
+            {/* Content Pillars */}
+            <div className="space-y-2">
+              <Label>Content Pillars (optional)</Label>
+              <div className="flex flex-wrap gap-2">
+                {CONTENT_PILLAR_OPTIONS.map((pillar) => (
+                  <Badge
+                    key={pillar}
+                    variant={selectedPillars.includes(pillar) ? "default" : "outline"}
+                    className="cursor-pointer select-none"
+                    onClick={() => !isGenerating && handlePillarToggle(pillar)}
+                  >
+                    {pillar}
+                  </Badge>
+                ))}
+              </div>
+              {selectedPillars.length > 0 && (
+                <p className="text-xs text-muted-foreground">{selectedPillars.length} pillar(s) selected</p>
+              )}
+            </div>
+
+            {/* Advanced / Custom Instructions toggle */}
+            <div>
+              <Button type="button" variant="ghost" size="sm" className="gap-1 px-0 text-muted-foreground"
+                onClick={() => setShowAdvanced(!showAdvanced)} disabled={isGenerating}>
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {showAdvanced ? "Hide" : "Show"} custom instructions
+              </Button>
+              {showAdvanced && (
+                <div className="mt-3 space-y-2">
+                  <Label htmlFor="customInstructions">Custom Instructions</Label>
+                  <Textarea
+                    id="customInstructions"
+                    placeholder="e.g., Always mention our free trial. Avoid competitor names. Use UK English spelling. Include a statistic in every post."
+                    value={customInstructions}
+                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    rows={3}
+                    disabled={isGenerating}
+                    className="resize-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Summary */}
+            {selectedPlatforms.length > 0 && (
+              <div className="p-4 bg-muted rounded-lg space-y-1 text-sm">
+                <p className="font-semibold mb-2">Summary</p>
+                <p>• Date range: {formatDate(startDate)} — {formatDate(endDateStr)}</p>
+                <p>• {Math.ceil((duration / 7) * postsPerWeek)} content ideas across {selectedPlatforms.length} platform(s)</p>
+                <p>• Tone: {TONE_OPTIONS.find(t => t.value === tone)?.label} · Language: {language}</p>
+                <p>• CTA goal: {CTA_STYLES.find(c => c.value === ctaStyle)?.label}</p>
+                <p>• ~{hashtagCount} hashtags per post</p>
+                {selectedPillars.length > 0 && <p>• Pillars: {selectedPillars.join(", ")}</p>}
+                {targetAudience && <p>• Audience: {targetAudience}</p>}
+                <p className="text-muted-foreground pt-1">Estimated time: 2–5 minutes</p>
+              </div>
             )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
 
-    {/* Close Confirmation Dialog */}
-    <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
-            Discard Changes?
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            You have unsaved changes in the form. Are you sure you want to close? All your entered data will be lost.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Continue Editing</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirmClose} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Discard & Close
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            {/* Progress */}
+            {isGenerating && (
+              <div className="p-4 bg-primary/5 rounded-lg flex items-center gap-3">
+                <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" />
+                <div>
+                  <p className="font-medium">{progress}</p>
+                  <p className="text-sm text-muted-foreground">Please don't close this window.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={handleCloseAttempt} disabled={isGenerating}>Cancel</Button>
+            <Button onClick={handleGenerate} disabled={isGenerating}>
+              {isGenerating ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</>
+              ) : (
+                <><Sparkles className="w-4 h-4 mr-2" />Generate Calendar</>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Discard Changes?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Are you sure you want to close?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continue Editing</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowCloseConfirm(false); onClose(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Discard & Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

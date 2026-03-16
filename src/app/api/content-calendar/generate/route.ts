@@ -16,6 +16,13 @@ interface GenerateCalendarRequest {
   endDate?: string;
   platforms: Platform[];
   postsPerWeek: number;
+  tone?: string;
+  ctaStyle?: string;
+  targetAudience?: string;
+  language?: string;
+  hashtagCount?: number;
+  contentPillars?: string[];
+  customInstructions?: string;
 }
 
 async function generateContentIdeas(
@@ -24,19 +31,25 @@ async function generateContentIdeas(
   postsPerWeek: number,
   brandName: string,
   brandDescription?: string | null,
-  brandWebsite?: string | null
+  brandWebsite?: string | null,
+  options?: {
+    tone?: string;
+    targetAudience?: string;
+    contentPillars?: string[];
+    customInstructions?: string;
+  }
 ): Promise<Array<{ day: number; topic: string; imagePrompt: string }>> {
   const totalPosts = Math.ceil((duration / 7) * postsPerWeek);
   
-  // Build brand context
   let brandContext = `Brand Name: ${brandName}`;
-  if (brandDescription) {
-    brandContext += `\nBrand Description: ${brandDescription}`;
-  }
-  if (brandWebsite) {
-    brandContext += `\nBrand Website: ${brandWebsite}`;
-  }
+  if (brandDescription) brandContext += `\nBrand Description: ${brandDescription}`;
+  if (brandWebsite) brandContext += `\nBrand Website: ${brandWebsite}`;
   
+  const toneNote = options?.tone ? `\n- Tone/Voice: ${options.tone}` : '';
+  const audienceNote = options?.targetAudience ? `\n- Target Audience: ${options.targetAudience}` : '';
+  const pillarsNote = options?.contentPillars?.length ? `\n- Content Pillars to use: ${options.contentPillars.join(', ')}` : '';
+  const customNote = options?.customInstructions ? `\n- Custom Instructions: ${options.customInstructions}` : '';
+
   const prompt = `You are a content strategist for ${brandName}. Generate ${totalPosts} content ideas for a ${duration}-day content calendar.
 
 ${brandContext}
@@ -48,8 +61,7 @@ Requirements:
 - Each idea should be specific and actionable
 - Vary content types: tips, how-tos, case studies, statistics, quotes, behind-the-scenes
 - Make ideas relevant to both the topic AND the brand's industry/niche
-- Include seasonal/trending angles where appropriate
-- Consider the brand's target audience and tone
+- Include seasonal/trending angles where appropriate${toneNote}${audienceNote}${pillarsNote}${customNote}
 ${brandWebsite ? `- Reference the brand's website context when relevant` : ''}
 
 For each content idea, provide:
@@ -124,7 +136,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: GenerateCalendarRequest = await req.json();
-    const { brandId, topic, duration, startDate, endDate, platforms, postsPerWeek } = body;
+    const { brandId, topic, duration, startDate, endDate, platforms, postsPerWeek,
+      tone, ctaStyle, targetAudience, language, hashtagCount, contentPillars, customInstructions } = body;
 
     // Validate input
     if (!brandId || !topic || !duration || !platforms || !postsPerWeek) {
@@ -201,7 +214,8 @@ export async function POST(req: NextRequest) {
       postsPerWeek,
       userBrand.brand.name,
       userBrand.brand.description,
-      userBrand.brand.website
+      userBrand.brand.website,
+      { tone, targetAudience, contentPillars, customInstructions }
     );
     const ideaGenTime = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[CALENDAR] ✅ Generated ${contentIdeas.length} content ideas in ${ideaGenTime}s\n`);

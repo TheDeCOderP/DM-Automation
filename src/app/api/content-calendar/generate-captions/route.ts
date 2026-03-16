@@ -130,7 +130,16 @@ async function generateAllPlatformCaptions(
   brandName: string,
   brandDescription: string | null | undefined,
   brandWebsite: string | null | undefined,
-  day: number
+  day: number,
+  options?: {
+    tone?: string;
+    ctaStyle?: string;
+    targetAudience?: string;
+    language?: string;
+    hashtagCount?: number;
+    contentPillars?: string[];
+    customInstructions?: string;
+  }
 ): Promise<Record<Platform, { caption: string; hashtags: string[] }>> {
   const validPlatforms = platforms.filter(p => p !== 'ALL');
   
@@ -159,20 +168,39 @@ CTA Examples: ${g.cta.join(' | ')}
   
   // Build brand context
   let brandContext = `Brand: ${brandName}`;
-  if (brandDescription) {
-    brandContext += `\nBrand Description: ${brandDescription}`;
-  }
-  if (brandWebsite) {
-    brandContext += `\nBrand Website: ${brandWebsite}`;
-  }
-  
+  if (brandDescription) brandContext += `\nBrand Description: ${brandDescription}`;
+  if (brandWebsite) brandContext += `\nBrand Website: ${brandWebsite}`;
+
+  // Build enhanced context from options
+  const toneLabel = options?.tone || "professional";
+  const ctaGoal = options?.ctaStyle || "engagement";
+  const hashtagTarget = options?.hashtagCount ?? 5;
+  const lang = options?.language || "English";
+  const audience = options?.targetAudience ? `\nTarget Audience: ${options.targetAudience}` : '';
+  const pillars = options?.contentPillars?.length ? `\nContent Pillars: ${options.contentPillars.join(', ')}` : '';
+  const custom = options?.customInstructions ? `\n\nCUSTOM INSTRUCTIONS (must follow):\n${options.customInstructions}` : '';
+
+  const ctaGuide: Record<string, string> = {
+    engagement: "Drive comments, shares, and reactions",
+    traffic: "Direct users to visit a website or read more",
+    leads: "Encourage DMs, sign-ups, or downloads",
+    sales: "Promote a product/offer with urgency",
+    community: "Invite tagging, joining groups, or community participation",
+    awareness: "Grow followers, saves, and subscriptions",
+  };
+  const ctaDescription = ctaGuide[ctaGoal] || ctaGoal;
+
   const prompt = `You are an expert social media copywriter for ${brandName}. Create high-performing posts for multiple platforms.
 
-${brandContext}
+${brandContext}${audience}${pillars}
 
 Content Topic: ${contentIdea}
 Main Theme: ${topic}
 Post Day: ${day}
+Language: Write ALL captions in ${lang}
+Tone/Voice: ${toneLabel}
+CTA Goal: ${ctaDescription}
+Hashtags: Generate exactly ${hashtagTarget} relevant hashtags per platform${custom}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PLATFORM-SPECIFIC GUIDELINES:
@@ -184,18 +212,19 @@ ${platformsInfo}
 CRITICAL REQUIREMENTS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. HOOK: Follow each platform's hook strategy precisely
-2. STRUCTURE: Use the exact structure specified for each platform
-3. FORMATTING: Apply platform-specific formatting rules
-4. TONE: Match the brand's identity while adapting to platform tone
-5. LENGTH: Stay within specified character/word limits
-6. ENGAGEMENT: Include platform-specific engagement triggers
-7. ALGORITHM: Optimize for each platform's algorithm priorities
-8. CTA: Use strong, platform-appropriate calls-to-action
-9. AUTHENTICITY: Make it sound human, not AI-generated
-10. VALUE: Provide genuine value, not just promotional content
-${brandWebsite ? `11. BRAND CONTEXT: Reference brand website/offerings when relevant` : ''}
-${brandDescription ? `12. BRAND VOICE: Reflect the brand's mission and values` : ''}
+1. LANGUAGE: Write every caption in ${lang} only
+2. TONE: Apply "${toneLabel}" tone consistently across all platforms
+3. CTA: Every post must end with a CTA aligned to goal: "${ctaDescription}"
+4. HASHTAGS: Include exactly ${hashtagTarget} hashtags per platform (no more, no less)
+5. HOOK: Follow each platform's hook strategy precisely
+6. STRUCTURE: Use the exact structure specified for each platform
+7. LENGTH: Stay within specified character/word limits
+8. FORMATTING: Apply platform-specific formatting rules
+9. ENGAGEMENT: Include platform-specific engagement triggers
+10. AUTHENTICITY: Sound human, not AI-generated
+11. VALUE: Provide genuine value, not just promotional content
+${brandWebsite ? `12. BRAND CONTEXT: Reference brand website/offerings when relevant` : ''}
+${brandDescription ? `13. BRAND VOICE: Reflect the brand's mission and values` : ''}
 
 ⚠️ DO NOT:
 - Use markdown formatting (**, __, etc.)
@@ -247,7 +276,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { calendarId, itemIds } = await req.json();
+    const { calendarId, itemIds, tone, ctaStyle, targetAudience, language, hashtagCount, contentPillars, customInstructions } = await req.json();
 
     if (!calendarId || !itemIds || !Array.isArray(itemIds)) {
       return NextResponse.json(
@@ -318,7 +347,8 @@ export async function POST(req: NextRequest) {
         calendar.brand.name,
         calendar.brand.description,
         calendar.brand.website,
-        item.day
+        item.day,
+        { tone, ctaStyle, targetAudience, language, hashtagCount, contentPillars, customInstructions }
       );
 
       const updateData: any = {
