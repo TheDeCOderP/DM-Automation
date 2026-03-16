@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
   const { userId, brandId } = JSON.parse(state!);
 
-  // Build redirect URI dynamically from request origin
-  const origin = request.nextUrl.origin;
+  // Use NEXTAUTH_URL as canonical base to handle reverse proxy (Apache, Nginx, etc.)
+  const origin = process.env.NEXTAUTH_URL || request.nextUrl.origin;
   const redirectUri = `${origin}/api/accounts/linkedin/callback`;
 
   if (!code) {

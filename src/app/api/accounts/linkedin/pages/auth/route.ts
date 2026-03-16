@@ -13,12 +13,8 @@ export async function GET(req: NextRequest) {
     const brandId = req.nextUrl.searchParams.get('brandId');
     const returnUrl = req.nextUrl.searchParams.get('returnUrl') || '/accounts';
 
-    // Use the request's origin to build the redirect URI dynamically
-    // Trust proxy headers for production environments (Vercel, etc.)
-    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || req.nextUrl.host;
-    const forwardedProto = req.headers.get('x-forwarded-proto');
-    const protocol = forwardedProto === 'https' ? 'https' : (process.env.NODE_ENV === 'production' ? 'https' : 'http');
-    const origin = `${protocol}://${host}`;
+    // Use NEXTAUTH_URL as canonical base to handle reverse proxy (Apache, Nginx, etc.)
+    const origin = process.env.NEXTAUTH_URL || req.nextUrl.origin;
     const redirectUri = `${origin}/api/accounts/linkedin/pages/callback`;
 
     const state = encodeURIComponent(JSON.stringify({
