@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Parse state to get userId and brandId
-    const { brandId, returnUrl } = JSON.parse(state);
+    const { brandId, returnUrl } = JSON.parse(decodeURIComponent(state));
 
     if (!brandId) {
       throw new Error("Invalid state: missing userId or brandId");

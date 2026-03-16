@@ -21,11 +21,11 @@ export async function GET(req: NextRequest) {
     const origin = `${protocol}://${host}`;
     const redirectUri = `${origin}/api/accounts/linkedin/pages/callback`;
 
-    const state = JSON.stringify({
+    const state = encodeURIComponent(JSON.stringify({
       userId,
       brandId,
       returnUrl,
-    });
+    }));
 
     const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_PAGES_CLIENT_ID}&redirect_uri=${encodeURIComponent(
       redirectUri
