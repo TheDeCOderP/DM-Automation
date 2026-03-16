@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Label } from '@/components/ui/label';
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,7 +26,7 @@ interface PagesCardProps {
 }
 
 export default function PagesCard({
-  pages: initialPages,
+  pages,
   title,
   platform,
   selectedPageIds,
@@ -39,7 +39,6 @@ export default function PagesCard({
   connectButton,
   isSidebarOpen,
 }: PagesCardProps) {
-  const [pages] = useState<SocialAccountPage[]>(initialPages);
 
   const isPageSelected = (pageId: string) => selectedPageIds.includes(pageId);
 
