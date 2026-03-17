@@ -177,6 +177,13 @@ export async function POST(req: NextRequest) {
             continue;
           }
 
+          // Append hashtags to caption if present
+          const hashtags = item.hashtags as string[] | null;
+          if (hashtags && hashtags.length > 0) {
+            const hashtagString = hashtags.map((h: string) => h.startsWith('#') ? h : `#${h}`).join(' ');
+            caption = `${caption}\n\n${hashtagString}`;
+          }
+
           // Prepare post data
           const postData: any = {
             title: item.topic,
