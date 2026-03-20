@@ -1,11 +1,8 @@
-import cronParser from "cron-parser"
 import { getToken } from "next-auth/jwt"
 import { prisma } from "@/lib/prisma"
 import { uploadFile } from "@/lib/upload"
 import { NextResponse, type NextRequest } from "next/server"
 import { type MediaType, Status, Frequency, type Platform } from "@prisma/client"
-
-import type { ScheduleData } from "@/types/scheduled-data"
 
 import { publishToTwitter } from "@/services/twitter.service";
 import { publishToYouTube } from "@/services/youtube.service";
@@ -15,113 +12,6 @@ import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.se
 import { publishToReddit } from "@/services/reddit.service"
 import { publishToInstagram } from "@/services/instagram.service"
 import { publishToTikTok } from "@/services/tiktok.service"
-
-function generateCronExpression(schedule: ScheduleData) {
-  // Convert the user's local date/time + offset to UTC components for cron
-  const [hours, minutes] = schedule.startTime.split(":").map(Number)
-
-  // Normalize startDate to string YYYY-MM-DD
-  const startDateStr = typeof schedule.startDate === "string"
-    ? schedule.startDate
-    : new Date(schedule.startDate).toISOString().split("T")[0]
-
-  const [y, m, d] = startDateStr.split("-").map(Number)
-  const offset = schedule.timezoneOffset ?? 0 // minutes to add to local to get UTC
-
-  let totalMins = hours * 60 + minutes + offset // UTC = local + offset
-  let dayAdjust = 0
-  if (totalMins < 0) { totalMins += 1440; dayAdjust = -1 }
-  if (totalMins >= 1440) { totalMins -= 1440; dayAdjust = 1 }
-
-  const utcHours = Math.floor(totalMins / 60)
-  const utcMinutes = totalMins % 60
-  const baseDateUtc = new Date(Date.UTC(y, m - 1, d + dayAdjust, 0, 0, 0, 0))
-  const utcDay = baseDateUtc.getUTCDate()
-  const utcMonth = baseDateUtc.getUTCMonth() + 1
-
-  switch (schedule.frequency) {
-    case "once":
-      return {
-        // Run once at the exact UTC H:M on the (possibly adjusted) day/month
-        cron: `${utcMinutes} ${utcHours} ${utcDay} ${utcMonth} *`,
-        // expire one hour after trigger time
-        expiresAt: Math.floor(Date.UTC(baseDateUtc.getUTCFullYear(), baseDateUtc.getUTCMonth(), baseDateUtc.getUTCDate(), utcHours, utcMinutes, 0) / 1000) + 3600,
-      }
-
-    case "minutes":
-      return {
-        cron: `*/${schedule.interval || 15} * * * *`,
-        expiresAt: 0,
-      }
-
-    case "daily":
-      return {
-        // At the UTC time every day
-        cron: `${utcMinutes} ${utcHours} * * *`,
-        expiresAt: 0,
-      }
-
-    case "monthly":
-      return {
-        cron: `${utcMinutes} ${utcHours} ${schedule.dayOfMonth || utcDay} * *`,
-        expiresAt: 0,
-      }
-
-    case "yearly":
-      return {
-        cron: `${utcMinutes} ${utcHours} ${schedule.dayOfMonth || utcDay} ${schedule.month || utcMonth} *`,
-        expiresAt: 0,
-      }
-
-    case "custom":
-      try {
-        cronParser.parse(schedule.customExpression ?? "")
-        return {
-          cron: schedule.customExpression,
-          expiresAt: 0,
-        }
-      } catch (error) {
-        throw new Error("Invalid custom cron expression: " + error)
-      }
-
-    default:
-      throw new Error("Invalid frequency")
-  }
-}
-
-// Helper function to convert cron expression to cron-job.org format
-function convertCronToScheduleFormat(cronExpression: string, expiresAt: number) {
-  const parts = cronExpression.split(' ')
-  
-  if (parts.length === 5) {
-    const [minute, hour, dayOfMonth, month, dayOfWeek] = parts
-    
-    return {
-      timezone: 'UTC',
-      expiresAt: expiresAt,
-      // Convert minute part
-      minutes: minute === '*' ? [-1] : minute.startsWith('*/') ? 
-        Array.from({length: Math.floor(60 / parseInt(minute.substring(2)))}, (_, i) => i * parseInt(minute.substring(2))) :
-        minute.split(',').map(m => parseInt(m)),
-      // Convert hour part  
-      hours: hour === '*' ? [-1] : hour.startsWith('*/') ?
-        Array.from({length: Math.floor(24 / parseInt(hour.substring(2)))}, (_, i) => i * parseInt(hour.substring(2))) :
-        hour.split(',').map(h => parseInt(h)),
-      // Convert day of month part
-      mdays: dayOfMonth === '*' ? [-1] : dayOfMonth.split(',').map(d => parseInt(d)),
-      // Convert month part
-      months: month === '*' ? [-1] : month.split(',').map(m => parseInt(m)),
-      // Convert day of week part (cron uses 0-7, cron-job.org uses 0-6)
-      wdays: dayOfWeek === '*' ? [-1] : dayOfWeek.split(',').map(w => {
-        const day = parseInt(w)
-        return day === 7 ? 0 : day // Convert Sunday from 7 to 0
-      })
-    }
-  }
-  
-  // Fallback for invalid cron format
-  throw new Error(`Invalid cron expression format: ${cronExpression}`)
-}
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
@@ -273,9 +163,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let scheduledAt, status, frequency, cronExpression, expiresAt;
+    let scheduledAt, status, frequency;
     if (schedule) {
-      const startDate = new Date(schedule.startDate) // "2025-09-17"
+      const startDate = new Date(schedule.startDate)
       const [hours, minutes] = schedule.startTime.split(":").map(Number)
       const userOffsetMinutes = schedule.timezoneOffset ?? 0
 
@@ -289,32 +179,26 @@ export async function POST(req: NextRequest) {
         0
       ));
 
-      // Convert local time to UTC: UTC = local + offset (getTimezoneOffset minutes)
       utcDate.setMinutes(utcDate.getMinutes() + userOffsetMinutes)
       scheduledAt = utcDate.toISOString()
 
       status = Status.SCHEDULED
       
-      // Map frontend frequency values to Prisma enum
       const frequencyMap: Record<string, Frequency> = {
         'once': Frequency.ONCE,
         'minutes': Frequency.HOURLY,
         'daily': Frequency.DAILY,
         'monthly': Frequency.MONTHLY,
         'yearly': Frequency.MONTHLY,
-        'custom': Frequency.ONCE, // Custom cron expressions stored as ONCE
+        'custom': Frequency.ONCE,
       };
       
       frequency = frequencyMap[schedule.frequency.toLowerCase()] || Frequency.ONCE;
-      
-      ;({ cron: cronExpression, expiresAt } = generateCronExpression(schedule))
-      console.log("Generated cron:", cronExpression, "timezone:", "UTC", "scheduledAt:", scheduledAt)
+      console.log("Post scheduled for UTC:", scheduledAt)
     } else {
       scheduledAt = new Date().toISOString();
       status = Status.PUBLISHED;
       frequency = Frequency.ONCE;
-      cronExpression = null;
-      expiresAt = null;
     }
 
     const createdPosts = []
@@ -482,66 +366,10 @@ export async function POST(req: NextRequest) {
       createdPosts.push(post)
     }
 
-    // Only create a cron job if the post is scheduled
-    if (schedule && cronExpression) {
-      const callbackUrl = `${process.env.NEXTAUTH_URL}/api/cron-jobs/publish-post`
-      
-      try {
-        // Convert cron expression to cron-job.org schedule format
-        const scheduleFormat = convertCronToScheduleFormat(cronExpression, expiresAt || 0)
-        
-        const scheduleData = {
-          job: {
-            title: `Post Schedule - User: ${token.id} - ${new Date().toISOString()}`,
-            url: callbackUrl,
-            enabled: true,
-            saveResponses: true,
-            schedule: scheduleFormat,
-            requestMethod: 1, // POST method
-            requestTimeout: 30,
-            // Add authentication header for callback
-            extendedData: {
-              headers: {
-                "Authorization": `Bearer ${process.env.CRON_SECRET_TOKEN}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                postIds: createdPosts.map(p => p.id),
-                userId: token.id,
-                brandId: brandId
-              })
-            }
-          },
-        };
-
-        console.log("Creating cron job with schedule:", JSON.stringify(scheduleFormat, null, 2))
-
-        const response = await fetch("https://api.cron-job.org/jobs", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.CRON_JOB_API_KEY}`,
-          },
-          body: JSON.stringify(scheduleData),
-        })
-
-        const responseData = await response.json()
-        if (!response.ok) {
-          console.error("Cron job creation failed:", {
-            status: response.status,
-            statusText: response.statusText,
-            error: responseData,
-            sentData: scheduleData
-          })
-          throw new Error(`Failed to create cron job: ${response.statusText} - ${JSON.stringify(responseData)}`)
-        }
-
-        console.log("Cron job created successfully:", responseData)
-      } catch (cronError) {
-        console.error("Error creating cron job:", cronError)
-        // You might want to handle this error differently - maybe still save the posts but mark them as failed to schedule
-        throw new Error(`Failed to schedule posts: ${cronError}`)
-      }
+    // VPS cron job runs every minute and picks up all posts where scheduledAt <= now
+    // No need to register with external cron service
+    if (schedule) {
+      console.log(`[SCHEDULE] ${createdPosts.length} post(s) saved with scheduledAt=${scheduledAt}, VPS cron will publish them automatically.`)
     } else {
       // Immediate publishing
       const now = new Date()
