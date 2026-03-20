@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const redirectUri = `${origin}/api/accounts/linkedin/callback`;
 
   if (!code) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', process.env.NEXTAUTH_URL || request.nextUrl.origin);
     errorUrl.searchParams.set('message', 'missing_code');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -123,15 +123,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Use absolute URL for redirect
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
+    // Use NEXTAUTH_URL as canonical base to handle reverse proxy (Apache, Nginx, etc.)
+    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+    const dashboardUrl = new URL('/accounts', baseUrl);
     dashboardUrl.searchParams.set('linkedin', 'connected');
     return NextResponse.redirect(dashboardUrl.toString());
   } catch (error) {
     console.error('LinkedIn callback error:', error);
     
-    // Use absolute URL for error redirect
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+    const errorUrl = new URL('/auth/error', baseUrl);
     errorUrl.searchParams.set(
       'message', 
       error instanceof Error ? error.message : 'Unknown error'
