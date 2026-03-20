@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
         media: true,
         brand: true,
         socialAccountPage: true,
+        socialAccount: true,
         user: {
           select: {
             id: true,

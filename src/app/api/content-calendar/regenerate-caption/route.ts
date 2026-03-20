@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   if (!token?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { itemId, platforms, tone, ctaStyle, hashtagCount, customInstructions } = await req.json();
+    const { itemId, platforms, tone, ctaStyle, hashtagCount, customInstructions, keepExisting, existingCaptions } = await req.json();
 
     if (!itemId || !platforms?.length) {
       return NextResponse.json({ error: "itemId and platforms are required" }, { status: 400 });
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const ctaGoal = ctaStyle || "engagement";
     const hashtagTarget = hashtagCount ?? 5;
     const ctaDescription = CTA_GUIDE[ctaGoal] || ctaGoal;
-    const custom = customInstructions ? `\n\nCUSTOM INSTRUCTIONS (must follow):\n${customInstructions}` : "";
+    const custom = customInstructions ? `\n\nADDITIONAL INSTRUCTIONS (must follow):\n${customInstructions}` : "";
 
     const platformsInfo = (platforms as string[])
       .filter((p) => p in PLATFORM_GUIDELINES)
@@ -69,7 +69,38 @@ export async function POST(req: NextRequest) {
     if (brand.description) brandContext += `\nDescription: ${brand.description}`;
     if (brand.website) brandContext += `\nWebsite: ${brand.website}`;
 
-    const prompt = `You are an expert social media copywriter for ${brand.name}.
+    let prompt: string;
+
+    if (keepExisting && existingCaptions) {
+      // Build existing captions block for each platform
+      const existingBlock = (platforms as string[])
+        .filter((p) => existingCaptions[p]?.trim())
+        .map((p) => `${p}:\n"""\n${existingCaptions[p]}\n"""`)
+        .join("\n\n");
+
+      prompt = `You are an expert social media copywriter for ${brand.name}.
+
+${brandContext}
+
+Content Topic: ${item.topic}
+Main Theme: ${item.calendar.topic}
+
+TASK: Enhance the existing captions below. DO NOT rewrite them from scratch.
+- Keep the original message, hook, and structure intact
+- Append or weave in a CTA aligned to: "${ctaDescription}"
+${customInstructions ? `- Apply these additional instructions: ${customInstructions}` : ""}
+- Ensure exactly ${hashtagTarget} hashtags per platform
+- No markdown formatting (**, __, etc.)
+
+EXISTING CAPTIONS TO ENHANCE:
+${existingBlock}
+
+Respond as JSON only:
+{
+  "PLATFORM": { "caption": "...", "hashtags": ["tag1", "tag2"] }
+}`;
+    } else {
+      prompt = `You are an expert social media copywriter for ${brand.name}.
 
 ${brandContext}
 
@@ -96,6 +127,7 @@ Respond as JSON only:
 {
   "PLATFORM": { "caption": "...", "hashtags": ["tag1", "tag2"] }
 }`;
+    }
 
     const response = await generateWithThinking(prompt, { thinkingLevel: "low", maxRetries: 2 });
 

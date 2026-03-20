@@ -127,6 +127,7 @@ export default function EditCalendarItemModal({
   const [regenCta, setRegenCta] = useState("engagement");
   const [regenHashtagCount, setRegenHashtagCount] = useState(5);
   const [regenCustom, setRegenCustom] = useState("");
+  const [keepExisting, setKeepExisting] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regeneratingPlatform, setRegeneratingPlatform] = useState<string | null>(null);
 
@@ -263,6 +264,8 @@ export default function EditCalendarItemModal({
           ctaStyle: regenCta,
           hashtagCount: regenHashtagCount,
           customInstructions: regenCustom.trim() || undefined,
+          keepExisting,
+          existingCaptions: keepExisting ? captions : undefined,
         }),
       });
 
@@ -465,6 +468,24 @@ export default function EditCalendarItemModal({
                     rows={2}
                     className="resize-none"
                   />
+                </div>
+
+                <div className="flex items-start gap-3 rounded-md border p-3 bg-muted/40">
+                  <input
+                    type="checkbox"
+                    id="keepExisting"
+                    checked={keepExisting}
+                    onChange={(e) => setKeepExisting(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 cursor-pointer"
+                  />
+                  <div>
+                    <label htmlFor="keepExisting" className="text-sm font-medium cursor-pointer">
+                      Keep existing content, only enhance
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      AI will keep your current captions and only append the CTA, custom instructions, or additional content — without rewriting from scratch.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Per-platform buttons + regenerate all */}

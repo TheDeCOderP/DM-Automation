@@ -15,6 +15,7 @@ import {
   Loader2,
   Eye,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ import EditCalendarItemModal from "../_components/EditCalendarItemModal";
 import AddCalendarItemModal from "../_components/AddCalendarItemModal";
 import ScheduleAllModal from "../_components/ScheduleAllModal";
 import ScheduleItemModal from "../_components/ScheduleItemModal";
+import BulkRegenerateModal from "../_components/BulkRegenerateModal";
 import { formatDateTime, formatDateTimeUKIndia } from "@/utils/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -67,6 +69,7 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [schedulingItem, setSchedulingItem] = useState<CalendarItem | null>(null);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
+  const [showBulkRegenerate, setShowBulkRegenerate] = useState(false);
 
   const { data, mutate, isLoading } = useSwr(
     `/api/content-calendar/${resolvedParams.id}`,
@@ -256,6 +259,10 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
               </>
             )}
           </Button>
+          <Button variant="outline" onClick={() => setShowBulkRegenerate(true)}>
+            <Sparkles className="w-4 h-4 mr-2" />
+            Bulk Regenerate
+          </Button>
           <Button variant="outline" onClick={() => setShowAddModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Post
@@ -440,6 +447,15 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
             mutate();
             setSchedulingItem(null);
           }}
+        />
+      )}
+
+      {showBulkRegenerate && (
+        <BulkRegenerateModal
+          items={items}
+          platforms={platforms}
+          onClose={() => setShowBulkRegenerate(false)}
+          onSuccess={() => mutate()}
         />
       )}
     </div>

@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
         media: true,
         brand: true,
         socialAccountPage: true,
+        socialAccount: true,
         user: {
           select: {
             id: true,
@@ -54,9 +55,9 @@ export async function POST(req: NextRequest) {
         },
       },
       orderBy: {
-        scheduledAt: 'asc', // Process oldest first
+        scheduledAt: 'asc',
       },
-      take: 50, // Process max 50 posts per run to avoid timeout
+      take: 50,
     });
 
     console.log(`[CRON] Found ${scheduledPosts.length} posts to publish`);
