@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
   const { userId, brandId } = JSON.parse(decodeURIComponent(state!));
 
+  const base = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+
   if (!code) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'missing_code');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -120,15 +122,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Use absolute URL for redirect
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
+    const dashboardUrl = new URL('/accounts', base);
     dashboardUrl.searchParams.set('twitter', 'connected');
     return NextResponse.redirect(dashboardUrl.toString());
   } catch (error) {
     console.error('Twitter callback error:', error);
     
-    // Use absolute URL for error redirect
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set(
       'message', 
       error instanceof Error ? error.message : 'Unknown error'

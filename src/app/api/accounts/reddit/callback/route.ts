@@ -12,14 +12,16 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state')
   const error = searchParams.get('error')
 
+  const base = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+
   if (error) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin)
+    const errorUrl = new URL('/auth/error', base)
     errorUrl.searchParams.set('message', `Reddit auth failed: ${error}`)
     return NextResponse.redirect(errorUrl.toString())
   }
 
   if (!code || !state) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin)
+    const errorUrl = new URL('/auth/error', base)
     errorUrl.searchParams.set('message', 'missing_code_or_state')
     return NextResponse.redirect(errorUrl.toString())
   }
@@ -134,14 +136,13 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    /** 4️⃣ Redirect back to dashboard */
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin)
+    const dashboardUrl = new URL('/accounts', base)
     dashboardUrl.searchParams.set('reddit', 'connected')
     return NextResponse.redirect(dashboardUrl.toString())
 
   } catch (error) {
     console.error('Reddit callback error:', error)
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin)
+    const errorUrl = new URL('/auth/error', base)
     errorUrl.searchParams.set(
       'message',
       error instanceof Error ? error.message : 'Unknown error'

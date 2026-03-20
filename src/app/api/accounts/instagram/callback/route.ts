@@ -287,7 +287,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Redirect to success page
-    const successUrl = new URL('/accounts', request.nextUrl.origin);
+    const successUrl = new URL('/accounts', process.env.NEXTAUTH_URL || request.nextUrl.origin);
     successUrl.searchParams.set('instagram', 'connected');
     successUrl.searchParams.set('username', profileData.username);
     return NextResponse.redirect(successUrl.toString());
@@ -302,7 +302,7 @@ export async function GET(request: NextRequest) {
 }
 
 function redirectWithError(request: NextRequest, message: string) {
-  const errorUrl = new URL('/accounts', request.nextUrl.origin);
+  const errorUrl = new URL('/accounts', process.env.NEXTAUTH_URL || request.nextUrl.origin);
   errorUrl.searchParams.set('error', 'instagram_connection_failed');
   errorUrl.searchParams.set('message', encodeURIComponent(message));
   return NextResponse.redirect(errorUrl.toString());

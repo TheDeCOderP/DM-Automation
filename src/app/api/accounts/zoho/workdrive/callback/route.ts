@@ -18,17 +18,18 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code')
   const error = searchParams.get('error')
 
-  // Handle OAuth errors from Zoho
+  const base = process.env.NEXTAUTH_URL || req.nextUrl.origin;
+
   if (error) {
     console.error('Zoho OAuth error:', error);
     const errorDescription = searchParams.get('error_description');
-    const errorUrl = new URL('/accounts', req.nextUrl.origin)
+    const errorUrl = new URL('/accounts', base)
     errorUrl.searchParams.set('error', `Zoho authentication failed: ${errorDescription || error}`)
     return NextResponse.redirect(errorUrl.toString())
   }
 
   if (!code) {
-    const errorUrl = new URL('/accounts', req.nextUrl.origin)
+    const errorUrl = new URL('/accounts', base)
     errorUrl.searchParams.set('error', 'missing_code')
     return NextResponse.redirect(errorUrl.toString())
   }
@@ -198,13 +199,13 @@ console.log("Access Token:", access_token, "Refresh Token:", refresh_token);
 
     console.log('Zoho account successfully connected');
     
-    const dashboardUrl = new URL('/accounts', req.nextUrl.origin)
+    const dashboardUrl = new URL('/accounts', base)
     dashboardUrl.searchParams.set('success', 'zoho_connected')
     return NextResponse.redirect(dashboardUrl.toString())
     
   } catch (error) {
     console.error('Zoho callback error:', error);
-    const errorUrl = new URL('/accounts', req.nextUrl.origin)
+    const errorUrl = new URL('/accounts', base)
     errorUrl.searchParams.set('error', error instanceof Error ? error.message : 'Unknown Zoho error')
     return NextResponse.redirect(errorUrl.toString())
   }

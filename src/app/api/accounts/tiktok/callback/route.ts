@@ -15,16 +15,17 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
 
-  // Parse state to retrieve userId and brandId passed during initiation
+  const base = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+
   if (!state) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'missing_state_parameter');
     return NextResponse.redirect(errorUrl.toString());
   }
   const { userId, brandId } = JSON.parse(state);
 
   if (!code) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'missing_authorization_code_or_user_denied');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -154,15 +155,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Use absolute URL for redirect
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
+    const dashboardUrl = new URL('/accounts', base);
     dashboardUrl.searchParams.set('tiktok', 'connected');
     return NextResponse.redirect(dashboardUrl.toString());
   } catch (error) {
     console.error('TikTok callback error:', error);
     
-    // Use absolute URL for error redirect
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set(
       'message', 
       error instanceof Error ? error.message : 'Unknown TikTok connection error'

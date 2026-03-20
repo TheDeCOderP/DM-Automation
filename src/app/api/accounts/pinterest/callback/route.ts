@@ -10,8 +10,10 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   
+  const base = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+  
   if (!code || !state) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'missing_code_or_state');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -121,14 +123,13 @@ console.log('Pinterest token data:', tokenData);
       }
     }
 
-    // Redirect to success page
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
+    const dashboardUrl = new URL('/accounts', base);
     dashboardUrl.searchParams.set('pinterest', 'connected');
     return NextResponse.redirect(dashboardUrl.toString());
   } catch (error) {
     console.error('Pinterest callback error:', error);
     
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set(
       'message', 
       error instanceof Error ? error.message : 'Unknown error'

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const redirectUri = `${origin}/api/accounts/linkedin/pages/callback`;
  
   if (!code || !state) {
-    const errorUrl = new URL("/auth/error", request.nextUrl.origin);
+    const errorUrl = new URL("/auth/error", process.env.NEXTAUTH_URL || request.nextUrl.origin);
     errorUrl.searchParams.set("message", "missing_code_or_state");
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirectUrl.toString());
   } catch (error) {
     console.error("LinkedIn Page callback error:", error);
-    const errorUrl = new URL("/auth/error", request.nextUrl.origin);
+    const errorUrl = new URL("/auth/error", process.env.NEXTAUTH_URL || request.nextUrl.origin);
     errorUrl.searchParams.set(
       "message",
       error instanceof Error ? error.message : "Unknown error"

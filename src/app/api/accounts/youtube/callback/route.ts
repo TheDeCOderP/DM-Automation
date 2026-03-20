@@ -9,22 +9,23 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
   const error = searchParams.get('error');
 
-  // Handle OAuth errors
+  const base = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+
   if (error) {
     console.error('OAuth error:', error);
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', `OAuth error: ${error}`);
     return NextResponse.redirect(errorUrl.toString());
   }
 
   if (!code) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'Authorization code missing');
     return NextResponse.redirect(errorUrl.toString());
   }
 
   if (!state) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'State parameter missing');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     brandId = stateData.brandId;
   } catch (error) {
     console.error('Invalid state parameter:', error);
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'Invalid state parameter');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -163,8 +164,7 @@ export async function GET(request: NextRequest) {
     console.log("Linking YouTube account to brand:", { brandId, socialAccountId: account.id });
     console.log('YouTube account connected successfully');
 
-    // 4. Redirect to dashboard
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
+    const dashboardUrl = new URL('/accounts', base);
     dashboardUrl.searchParams.set('youtube', 'connected');
     dashboardUrl.searchParams.set('channel', channel.snippet.title);
     return NextResponse.redirect(dashboardUrl.toString());
@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('YouTube callback error:', error);
     
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set(
       'message', 
       error instanceof Error ? error.message : 'Unknown error during YouTube connection'

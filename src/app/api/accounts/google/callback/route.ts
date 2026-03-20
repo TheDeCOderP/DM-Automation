@@ -12,15 +12,16 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
 
+  const base = process.env.NEXTAUTH_URL || request.nextUrl.origin;
+
   if (!code) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'missing_code');
     return NextResponse.redirect(errorUrl.toString());
   }
 
-  // Validate that user is authenticated and has a brand
   if (!token?.id) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'Unauthorized');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (!brand) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set('message', 'No brand found for user');
     return NextResponse.redirect(errorUrl.toString());
   }
@@ -136,13 +137,13 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Redirect to dashboard
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin);
+    const dashboardUrl = new URL('/accounts', base);
     dashboardUrl.searchParams.set('google', 'connected');
     return NextResponse.redirect(dashboardUrl.toString());
   } catch (error) {
     console.error('Google callback error:', error);
 
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin);
+    const errorUrl = new URL('/auth/error', base);
     errorUrl.searchParams.set(
       'message',
       error instanceof Error ? error.message : 'Unknown error'

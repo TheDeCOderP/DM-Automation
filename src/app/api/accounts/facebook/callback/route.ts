@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const { userId, brandId } = JSON.parse(state!)
 
   if (!code) {
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin)
+    const errorUrl = new URL('/auth/error', process.env.NEXTAUTH_URL || request.nextUrl.origin)
     errorUrl.searchParams.set('message', 'missing_code')
     return NextResponse.redirect(errorUrl.toString())
   }
@@ -138,12 +138,12 @@ export async function GET(request: NextRequest) {
     }
 
     /** 5️⃣ Redirect back to dashboard */
-    const dashboardUrl = new URL('/accounts', request.nextUrl.origin)
+    const dashboardUrl = new URL('/accounts', process.env.NEXTAUTH_URL || request.nextUrl.origin)
     dashboardUrl.searchParams.set('facebook', 'connected')
     return NextResponse.redirect(dashboardUrl.toString())
   } catch (error) {
     console.error('Facebook callback error:', error)
-    const errorUrl = new URL('/auth/error', request.nextUrl.origin)
+    const errorUrl = new URL('/auth/error', process.env.NEXTAUTH_URL || request.nextUrl.origin)
     errorUrl.searchParams.set(
       'message',
       error instanceof Error ? error.message : 'Unknown error'
