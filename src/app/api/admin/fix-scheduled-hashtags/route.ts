@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getToken } from "next-auth/jwt";
 
 export async function POST(req: NextRequest) {
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const scheduledPosts = await prisma.post.findMany({
       where: {
         status: "SCHEDULED",
-        platformMetadata: { not: null },
+        NOT: { platformMetadata: { equals: Prisma.JsonNull } },
       },
       select: {
         id: true,
