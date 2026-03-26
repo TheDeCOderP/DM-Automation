@@ -169,7 +169,7 @@ export default function UserProfile() {
                             variant="destructive"
                             onClick={() => {
                                 setLogoutOpen(false);
-                                signOut({ callbackUrl: '/login' });
+                                signOut({ callbackUrl: '/' });
                             }}
                             className="flex-1 sm:flex-none"
                         >

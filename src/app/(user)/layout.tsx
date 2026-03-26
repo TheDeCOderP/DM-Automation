@@ -13,8 +13,10 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const { data: session, status } = useSession();
 
   useEffect(() => {
+    if(status === 'loading') return;
+
     if (status === 'unauthenticated') {
-      router.push('/login');
+      router.push('/');
     }
   }, [status, router]);
 
