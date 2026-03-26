@@ -42,11 +42,17 @@ interface ContentCalendar {
   }[];
 }
 
+interface SocialAccount {
+  id: string;
+  platform: string;
+}
+
 interface Brand {
   id: string;
   name: string;
   logo?: string;
   description?: string;
+  socialAccounts?: SocialAccount[];
 }
 
 export default function ContentCalendarPage() {
@@ -77,7 +83,6 @@ export default function ContentCalendarPage() {
   const { data: allCalendarsData, mutate } = useSwr(
     brands.length > 0 ? `/api/content-calendar/all-brands` : null,
     async () => {
-      // Fetch calendars for each brand
       const calendarsPromises = brands.map(async (brand) => {
         try {
           const response = await fetch(`/api/content-calendar?brandId=${brand.id}`);
@@ -122,14 +127,10 @@ export default function ContentCalendarPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "DRAFT":
-        return "bg-gray-500";
-      case "SCHEDULED":
-        return "bg-primary";
-      case "COMPLETED":
-        return "bg-green-500";
-      default:
-        return "bg-gray-500";
+      case "DRAFT": return "bg-gray-500";
+      case "SCHEDULED": return "bg-primary";
+      case "COMPLETED": return "bg-green-500";
+      default: return "bg-gray-500";
     }
   };
 
@@ -141,6 +142,14 @@ export default function ContentCalendarPage() {
 
   const selectedBrand = brands.find(b => b.id === selectedBrandId);
   const calendars: ContentCalendar[] = selectedBrandCalendars?.calendars || [];
+
+  // Derive connected platform values for the selected brand (used by the modal)
+  const getConnectedPlatforms = (brandId: string): string[] => {
+    const brand = brands.find(b => b.id === brandId);
+    if (!brand?.socialAccounts?.length) return [];
+    // Deduplicate — a brand may have multiple accounts on the same platform
+    return [...new Set(brand.socialAccounts.map(sa => sa.platform))];
+  };
 
   const handleDeleteCalendar = async (calendarId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -155,9 +164,7 @@ export default function ContentCalendarPage() {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete calendar");
-      }
+      if (!response.ok) throw new Error("Failed to delete calendar");
 
       toast.success("Calendar deleted successfully");
       mutate();
@@ -212,7 +219,7 @@ export default function ContentCalendarPage() {
                 <div>
                   <CardTitle>{selectedBrand.name} - Content Calendars</CardTitle>
                   <CardDescription>
-                    {calendars.length} calendar{calendars.length !== 1 ? 's' : ''} generated
+                    {calendars.length} calendar{calendars.length !== 1 ? "s" : ""} generated
                   </CardDescription>
                 </div>
               </div>
@@ -279,7 +286,6 @@ export default function ContentCalendarPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {/* Platforms */}
                       <div>
                         <p className="text-sm font-medium mb-2">Platforms:</p>
                         <div className="flex flex-wrap gap-1">
@@ -296,7 +302,6 @@ export default function ContentCalendarPage() {
                         </div>
                       </div>
 
-                      {/* Stats */}
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                         <div>
                           <p className="text-xs text-muted-foreground">Posts/Week</p>
@@ -310,14 +315,12 @@ export default function ContentCalendarPage() {
                         </div>
                       </div>
 
-                      {/* Dates */}
                       {calendar.startDate && calendar.endDate && (
                         <div className="text-xs text-muted-foreground pt-2 border-t">
                           📅 {formatDate(calendar.startDate)} - {formatDate(calendar.endDate)}
                         </div>
                       )}
 
-                      {/* Action Button */}
                       <div className="pt-2">
                         {navigatingToCalendar === calendar.id ? (
                           <div className="flex items-center justify-center gap-2 p-3 bg-primary/5 rounded-lg text-primary font-medium text-sm">
@@ -339,195 +342,188 @@ export default function ContentCalendarPage() {
           </CardContent>
         </Card>
       ) : (
-        /* Brands Table with Calendar Status */
-      <Card>
-        <CardHeader>
-          <CardTitle>Brands & Content Status</CardTitle>
-          <CardDescription>
-            View content calendar status for each brand and generate new calendars
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">S. No.</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead className="text-center">Calendars</TableHead>
-                <TableHead className="text-center">Total Posts</TableHead>
-                <TableHead className="text-center">With Images</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingBrands ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Brands & Content Status</CardTitle>
+            <CardDescription>
+              View content calendar status for each brand and generate new calendars
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                      <p className="text-muted-foreground">Loading brands...</p>
-                    </div>
-                  </TableCell>
+                  <TableHead className="w-16">S. No.</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead className="text-center">Calendars</TableHead>
+                  <TableHead className="text-center">Total Posts</TableHead>
+                  <TableHead className="text-center">With Images</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : brands.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No brands found. Create a brand first to generate content calendars.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                brands.map((brand, index) => {
-                  const stats = getBrandStats(brand.id);
-                  const hasContent = stats.total > 0;
-                  
-                  return (
-                    <TableRow key={brand.id}>
-                      {/* S. No. */}
-                      <TableCell className="font-medium text-muted-foreground">
-                        {index + 1}
-                      </TableCell>
-                      
-                      {/* Brand Info */}
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          {brand.logo ? (
-                            <img
-                              src={brand.logo}
-                              alt={brand.name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-lg font-bold text-primary">
-                                {brand.name.charAt(0)}
-                              </span>
+              </TableHeader>
+              <TableBody>
+                {isLoadingBrands ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                        <p className="text-muted-foreground">Loading brands...</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : brands.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No brands found. Create a brand first to generate content calendars.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  brands.map((brand, index) => {
+                    const stats = getBrandStats(brand.id);
+                    const hasContent = stats.total > 0;
+                    
+                    return (
+                      <TableRow key={brand.id}>
+                        <TableCell className="font-medium text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {brand.logo ? (
+                              <img
+                                src={brand.logo}
+                                alt={brand.name}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-lg font-bold text-primary">
+                                  {brand.name.charAt(0)}
+                                </span>
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium">{brand.name}</p>
+                              {brand.description && (
+                                <p className="text-xs text-muted-foreground truncate max-w-xs">
+                                  {brand.description}
+                                </p>
+                              )}
                             </div>
-                          )}
-                          <div>
-                            <p className="font-medium">{brand.name}</p>
-                            {brand.description && (
-                              <p className="text-xs text-muted-foreground truncate max-w-xs">
-                                {brand.description}
-                              </p>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-2xl font-bold">{stats.total}</span>
+                            {stats.total > 0 && (
+                              <div className="flex gap-1 text-xs">
+                                {stats.draft > 0 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {stats.draft} Draft
+                                  </Badge>
+                                )}
+                                {stats.scheduled > 0 && (
+                                  <Badge variant="outline" className="text-xs bg-blue-50">
+                                    {stats.scheduled} Scheduled
+                                  </Badge>
+                                )}
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Calendars Count */}
-                      <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-2xl font-bold">{stats.total}</span>
-                          {stats.total > 0 && (
-                            <div className="flex gap-1 text-xs">
-                              {stats.draft > 0 && (
-                                <Badge variant="outline" className="text-xs">
-                                  {stats.draft} Draft
-                                </Badge>
-                              )}
-                              {stats.scheduled > 0 && (
-                                <Badge variant="outline" className="text-xs bg-blue-50">
-                                  {stats.scheduled} Scheduled
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Total Posts */}
-                      <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-2xl font-bold">{stats.totalPosts}</span>
-                          <span className="text-xs text-muted-foreground">posts</span>
-                        </div>
-                      </TableCell>
-
-                      {/* Images */}
-                      <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="flex items-center gap-1">
-                            <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-lg font-semibold">{stats.withImages}</span>
-                            <span className="text-muted-foreground">/ {stats.totalPosts}</span>
-                          </div>
-                          {stats.totalPosts > 0 && (
-                            <div className="w-full bg-muted rounded-full h-1.5">
-                              <div
-                                className="bg-primary h-1.5 rounded-full transition-all"
-                                style={{
-                                  width: `${(stats.withImages / stats.totalPosts) * 100}%`,
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell className="text-center">
-                        {hasContent ? (
+                        <TableCell className="text-center">
                           <div className="flex flex-col items-center gap-1">
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Content Ready
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {stats.completed} completed
-                            </span>
+                            <span className="text-2xl font-bold">{stats.totalPosts}</span>
+                            <span className="text-xs text-muted-foreground">posts</span>
                           </div>
-                        ) : (
-                          <Badge variant="outline" className="bg-gray-50">
-                            <Clock className="w-3 h-3 mr-1" />
-                            No Content
-                          </Badge>
-                        )}
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Actions */}
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {hasContent && (
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-1">
+                              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-lg font-semibold">{stats.withImages}</span>
+                              <span className="text-muted-foreground">/ {stats.totalPosts}</span>
+                            </div>
+                            {stats.totalPosts > 0 && (
+                              <div className="w-full bg-muted rounded-full h-1.5">
+                                <div
+                                  className="bg-primary h-1.5 rounded-full transition-all"
+                                  style={{
+                                    width: `${(stats.withImages / stats.totalPosts) * 100}%`,
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          {hasContent ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Content Ready
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {stats.completed} completed
+                              </span>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="bg-gray-50">
+                              <Clock className="w-3 h-3 mr-1" />
+                              No Content
+                            </Badge>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {hasContent && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedBrandId(brand.id);
+                                  router.push(`/content-calendar?brand=${brand.id}`);
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View ({stats.total})
+                              </Button>
+                            )}
                             <Button
-                              variant="outline"
+                              variant="default"
                               size="sm"
                               onClick={() => {
                                 setSelectedBrandId(brand.id);
-                                router.push(`/content-calendar?brand=${brand.id}`);
+                                setShowCreateModal(true);
                               }}
                             >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View ({stats.total})
+                              <Plus className="w-4 h-4 mr-1" />
+                              Generate
                             </Button>
-                          )}
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedBrandId(brand.id);
-                              setShowCreateModal(true);
-                            }}
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Generate
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Create Calendar Modal */}
       {showCreateModal && selectedBrandId && (
         <CreateCalendarModal
           brandId={selectedBrandId}
+          connectedPlatforms={getConnectedPlatforms(selectedBrandId)}
           onClose={() => {
             setShowCreateModal(false);
             setSelectedBrandId("");

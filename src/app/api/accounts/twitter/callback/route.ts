@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
   const { userId, brandId } = JSON.parse(decodeURIComponent(state!));
-
+console.log('Twitter callback received with code:', code, 'state:', state);
+console.log('Extracted userId:', userId, 'brandId:', brandId);
   const base = process.env.NEXTAUTH_URL || request.nextUrl.origin;
 
   if (!code) {
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // 1. Exchange code for token
-    const tokenRes = await fetch('https://api.twitter.com/2/oauth2/token', {
+    const tokenRes = await fetch('https://api.x.com/2/oauth2/token', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -43,11 +44,13 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Fetch Twitter profile
-    const profileRes = await fetch('https://api.twitter.com/2/users/me', {
+    const profileRes = await fetch('https://api.x.com/2/users/me', {
       headers: { 
         'Authorization': `Bearer ${tokenData.access_token}`,
       },
     });
+
+    console.log('Twitter profile response status:', profileRes);
     
     if (!profileRes.ok) {
       throw new Error('Failed to fetch Twitter profile');
