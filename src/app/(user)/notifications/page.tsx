@@ -25,7 +25,7 @@ export default function NotificationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
 
-  const { data: notifications, mutate } = useSWR("/api./_components", fetcher);
+  const { data: notifications, mutate } = useSWR("/api/notifications", fetcher);
 
   const allNotifications = useMemo(() => notifications?.data || [], [notifications]);
 
@@ -69,7 +69,7 @@ export default function NotificationsPage() {
   const handleMarkAsRead = async (id: string) => {
     setSubmitting(true);
     try {
-      await fetch(`/api./_components/${id}`, { method: "PUT" });
+      await fetch(`/api/notifications/${id}`, { method: "PUT" });
       mutate();
       toast.success("Notification marked as read");
     } catch (error) {
@@ -85,7 +85,7 @@ export default function NotificationsPage() {
     try {
       await Promise.all(
         selectedNotifications.map((id) =>
-          fetch(`/api./_components/${id}`, { method: "PUT" })
+          fetch(`/api/notifications/${id}`, { method: "PUT" })
         )
       );
       setSelectedNotifications([]);
@@ -102,7 +102,7 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     setSubmitting(true);
     try {
-      await fetch("/api./_components/mark-all-read", { method: "POST" });
+      await fetch("/api/notifications?action=mark-all-read", { method: "POST" });
       mutate();
       toast.success("All notifications marked as read");
     } catch (error) {
@@ -114,13 +114,36 @@ export default function NotificationsPage() {
   };
 
   const handleBulkDelete = async () => {
-    // Implement bulk delete functionality
-    toast.info("Bulk delete functionality to be implemented");
+    setSubmitting(true);
+    try {
+      await Promise.all(
+        selectedNotifications.map((id) =>
+          fetch(`/api/notifications/${id}`, { method: "DELETE" })
+        )
+      );
+      setSelectedNotifications([]);
+      mutate();
+      toast.success("Selected notifications deleted");
+    } catch (error) {
+      console.error("Failed to delete notifications:", error);
+      toast.error("Failed to delete notifications");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDeleteNotification = async () => {
-    // Implement single delete functionality
-    toast.info("Delete functionality to be implemented");
+  const handleDeleteNotification = async (id: string) => {
+    setSubmitting(true);
+    try {
+      await fetch(`/api/notifications/${id}`, { method: "DELETE" });
+      mutate();
+      toast.success("Notification deleted");
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+      toast.error("Failed to delete notification");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSearchChange = (query: string) => {
