@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 import React from "react";
 import useSwr from "swr";
 import { useRouter } from "next/navigation";
@@ -542,6 +542,38 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
   );
 }
 
+function useTimeRemaining(targetDate: string | undefined) {
+  const [label, setLabel] = useState("");
+
+  useEffect(() => {
+    if (!targetDate) return;
+
+    const calc = () => {
+      const diff = new Date(targetDate).getTime() - Date.now();
+      if (diff <= 0) {
+        setLabel("overdue");
+        return;
+      }
+      const totalMinutes = Math.floor(diff / 60000);
+      const days = Math.floor(totalMinutes / 1440);
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+      const minutes = totalMinutes % 60;
+
+      const parts: string[] = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`);
+      setLabel(parts.join(" ") + " remaining");
+    };
+
+    calc();
+    const id = setInterval(calc, 60000);
+    return () => clearInterval(id);
+  }, [targetDate]);
+
+  return label;
+}
+
 // Calendar Items Table Component
 function CalendarItemsTable({
   items,
@@ -586,196 +618,18 @@ function CalendarItemsTable({
         <TableBody>
           {items.map((item, index) => (
             <React.Fragment key={item.id}>
-              <TableRow className="cursor-pointer hover:bg-muted/50">
-                <TableCell className="font-medium">{index + 1}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">Day {item.day}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{item.topic}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {item.suggestedTime ? (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        <span>UK / India</span>
-                      </div>
-                      {(() => {
-                        const times = formatDateTimeUKIndia(item.suggestedTime);
-                        return (
-                          <>
-                            <div className="text-xs font-medium">
-                              🇬🇧 {times.uk}
-                            </div>
-                            <div className="text-xs font-medium">
-                              🇮🇳 {times.india}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">Not set</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {item.imageUrl ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex items-center gap-1 text-sm text-green-600 hover:text-green-700"
-                      onClick={() => setImagePreview(item.imageUrl!)}
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                      Yes
-                    </Button>
-                  ) : item.imagePrompt ? (
-                    <span className="text-muted-foreground text-sm">Pending</span>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">No</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex gap-1 justify-end">
-                    {item.status === "PUBLISHED" && item.postGroup?.posts?.some((post: any) => post.status === "PUBLISHED" && post.url) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const publishedPost = item.postGroup?.posts?.find((post: any) => post.status === "PUBLISHED" && post.url);
-                          if (publishedPost?.url) window.open(publishedPost.url, '_blank');
-                        }}
-                        title="View published post"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                    )}
-                    {(item.status === "DRAFT" || item.status === "EDITED") && (
-                      <Button
-                        variant="default"
-                        size="icon"
-                        onClick={() => onSchedule(item)}
-                        title="Schedule Now"
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(item.id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-              
-              {/* Expanded Row Details */}
-              {expandedRow === item.id && (
-                <TableRow>
-                  <TableCell colSpan={7} className="bg-muted/30">
-                    <div className="p-4 space-y-4">
-                      {/* Captions */}
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-sm">Captions:</h4>
-                        {platforms.map((platform: string) => {
-                          const captionKey = `caption${platform.charAt(0) + platform.slice(1).toLowerCase()}` as keyof CalendarItem;
-                          const caption = item[captionKey] as string;
-                          
-                          if (!caption) return null;
-
-                          return (
-                            <div key={platform} className="p-3 bg-background rounded-lg border">
-                              <p className="text-sm font-semibold mb-1">{platform}</p>
-                              <p className="text-sm whitespace-pre-wrap">{caption}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Hashtags */}
-                      {item.hashtags && item.hashtags.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-sm mb-2">Hashtags:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {item.hashtags.map((tag: string, idx: number) => (
-                              <Badge key={idx} variant="secondary">
-                                #{tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Image */}
-                      {item.imageUrl ? (
-                        <div>
-                          <h4 className="font-semibold text-sm mb-2">Generated Image:</h4>
-                          <div className="border rounded-lg overflow-hidden max-w-md">
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.topic}
-                              className="w-full h-64 object-cover"
-                            />
-                          </div>
-                        </div>
-                      ) : item.imagePrompt ? (
-                        <div>
-                          <h4 className="font-semibold text-sm mb-2">Image Prompt:</h4>
-                          <div className="p-3 bg-background rounded-lg border">
-                            <p className="text-sm text-muted-foreground">{item.imagePrompt}</p>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {/* Published Posts */}
-                      {item.postGroup && item.postGroup.posts.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-sm mb-2">Published Posts:</h4>
-                          <div className="space-y-2">
-                            {item.postGroup.posts.map((post: any) => (
-                              <div key={post.id} className="flex items-center justify-between text-sm p-2 bg-background rounded border">
-                                <span>{post.platform}</span>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline">{post.status}</Badge>
-                                  {post.status === "PUBLISHED" && post.url && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      onClick={() => window.open(post.url, '_blank')}
-                                      title="View published post"
-                                    >
-                                      <ExternalLink className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+              <CalendarItemRow
+                item={item}
+                index={index}
+                platforms={platforms}
+                expandedRow={expandedRow}
+                setExpandedRow={setExpandedRow}
+                setImagePreview={setImagePreview}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onSchedule={onSchedule}
+                getStatusColor={getStatusColor}
+              />
             </React.Fragment>
           ))}
         </TableBody>
@@ -806,5 +660,203 @@ function CalendarItemsTable({
         </div>
       )}
     </div>
+  );
+}
+
+function CalendarItemRow({
+  item,
+  index,
+  platforms,
+  expandedRow,
+  setExpandedRow,
+  setImagePreview,
+  onEdit,
+  onDelete,
+  onSchedule,
+  getStatusColor,
+}: {
+  item: CalendarItem;
+  index: number;
+  platforms: string[];
+  expandedRow: string | null;
+  setExpandedRow: (id: string | null) => void;
+  setImagePreview: (url: string | null) => void;
+  onEdit: (item: CalendarItem) => void;
+  onDelete: (id: string) => void;
+  onSchedule: (item: CalendarItem) => void;
+  getStatusColor: (status: string) => string;
+}) {
+  const timeRemaining = useTimeRemaining(
+    item.status === "SCHEDULED" ? item.suggestedTime : undefined
+  );
+
+  return (
+    <React.Fragment>
+      <TableRow className="cursor-pointer hover:bg-muted/50">
+        <TableCell className="font-medium">{index + 1}</TableCell>
+        <TableCell>
+          <Badge variant="outline">Day {item.day}</Badge>
+        </TableCell>
+        <TableCell>
+          <Badge className={getStatusColor(item.status)}>{item.status}</Badge>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{item.topic}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpandedRow(expandedRow === item.id ? null : item.id)}
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+          </div>
+        </TableCell>
+        <TableCell>
+          {item.suggestedTime ? (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                <Calendar className="w-3 h-3" />
+                <span>UK / India</span>
+              </div>
+              {(() => {
+                const times = formatDateTimeUKIndia(item.suggestedTime);
+                return (
+                  <>
+                    <div className="text-xs font-medium">🇬🇧 {times.uk}</div>
+                    <div className="text-xs font-medium">🇮🇳 {times.india}</div>
+                  </>
+                );
+              })()}
+              {timeRemaining && (
+                <div className={`text-xs font-medium mt-1 ${timeRemaining === "overdue" ? "text-destructive" : "text-primary"}`}>
+                  ⏱ {timeRemaining}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-muted-foreground text-sm">Not set</span>
+          )}
+        </TableCell>
+        <TableCell>
+          {item.imageUrl ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1 text-sm text-green-600 hover:text-green-700"
+              onClick={() => setImagePreview(item.imageUrl!)}
+            >
+              <ImageIcon className="w-4 h-4" />
+              Yes
+            </Button>
+          ) : item.imagePrompt ? (
+            <span className="text-muted-foreground text-sm">Pending</span>
+          ) : (
+            <span className="text-muted-foreground text-sm">No</span>
+          )}
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex gap-1 justify-end">
+            {item.status === "PUBLISHED" && item.postGroup?.posts?.some((post: any) => post.status === "PUBLISHED" && post.url) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  const publishedPost = item.postGroup?.posts?.find((post: any) => post.status === "PUBLISHED" && post.url);
+                  if (publishedPost?.url) window.open(publishedPost.url, "_blank");
+                }}
+                title="View published post"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+            )}
+            {(item.status === "DRAFT" || item.status === "EDITED") && (
+              <Button
+                variant="default"
+                size="icon"
+                onClick={() => onSchedule(item)}
+                title="Schedule Now"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+              <Edit className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)}>
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+
+      {expandedRow === item.id && (
+        <TableRow>
+          <TableCell colSpan={7} className="bg-muted/30">
+            <div className="p-4 space-y-4">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Captions:</h4>
+                {platforms.map((platform: string) => {
+                  const captionKey = `caption${platform.charAt(0) + platform.slice(1).toLowerCase()}` as keyof CalendarItem;
+                  const caption = item[captionKey] as string;
+                  if (!caption) return null;
+                  return (
+                    <div key={platform} className="p-3 bg-background rounded-lg border">
+                      <p className="text-sm font-semibold mb-1">{platform}</p>
+                      <p className="text-sm whitespace-pre-wrap">{caption}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              {item.hashtags && item.hashtags.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">Hashtags:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {item.hashtags.map((tag: string, idx: number) => (
+                      <Badge key={idx} variant="secondary">#{tag}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {item.imageUrl ? (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">Generated Image:</h4>
+                  <div className="border rounded-lg overflow-hidden max-w-md">
+                    <img src={item.imageUrl} alt={item.topic} className="w-full h-64 object-cover" />
+                  </div>
+                </div>
+              ) : item.imagePrompt ? (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">Image Prompt:</h4>
+                  <div className="p-3 bg-background rounded-lg border">
+                    <p className="text-sm text-muted-foreground">{item.imagePrompt}</p>
+                  </div>
+                </div>
+              ) : null}
+              {item.postGroup && item.postGroup.posts.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">Posts:</h4>
+                  <div className="space-y-2">
+                    {item.postGroup.posts.map((post: any) => (
+                      <div key={post.id} className="flex items-center justify-between text-sm p-2 bg-background rounded border">
+                        <span>{post.platform}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{post.status}</Badge>
+                          {post.status === "PUBLISHED" && post.url && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(post.url, "_blank")}>
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </React.Fragment>
   );
 }
