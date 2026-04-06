@@ -32,7 +32,7 @@ function AuthErrorContent() {
           </p>
         )}
         <Button asChild className="bg-white text-black hover:bg-white/90">
-          <Link href="/">Back to Login</Link>
+          <a href="https://auth.prabisha.com/login">Back to Login</a>
         </Button>
       </div>
     </div>

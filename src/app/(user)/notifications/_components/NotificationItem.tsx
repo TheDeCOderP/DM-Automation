@@ -121,9 +121,9 @@ export function NotificationItem({
                 {formatNotificationType(notification.type)}
               </Badge>
               <span>•</span>
-              <time dateTime={notification.createdAt.toISOString()} className="flex items-center gap-1">
+              <time dateTime={new Date(notification.createdAt).toISOString()} className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {formatDateTime(notification.createdAt)}
+                {formatDateTime(new Date(notification.createdAt))}
               </time>
             </div>
           </div>
