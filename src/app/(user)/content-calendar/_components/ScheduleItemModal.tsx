@@ -206,23 +206,17 @@ export default function ScheduleItemModal({
     setIsScheduling(true);
 
     try {
-      // Normalize both times for comparison
-      const currentTime = suggestedTime;
-      const itemTime = toDateTimeLocalString(item.suggestedTime);
-      
-      // Only update the suggested time if it actually changed
-      if (currentTime !== itemTime) {
-        const updateResponse = await fetch(`/api/content-calendar/items/${item.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            suggestedTime: new Date(suggestedTime).toISOString(),
-          }),
-        });
+      // Always update the suggested time to ensure DB has the latest value
+      const updateResponse = await fetch(`/api/content-calendar/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          suggestedTime: new Date(suggestedTime).toISOString(),
+        }),
+      });
 
-        if (!updateResponse.ok) {
-          throw new Error("Failed to update schedule time");
-        }
+      if (!updateResponse.ok) {
+        throw new Error("Failed to update schedule time");
       }
 
       // Then schedule the post using the database time
@@ -290,7 +284,9 @@ export default function ScheduleItemModal({
           }}
         >
           <DialogHeader>
-            <DialogTitle>Schedule Post - Day {item.day}</DialogTitle>
+            <DialogTitle>
+              {item.postGroupId ? "Reschedule Post" : "Schedule Post"} - Day {item.day}
+            </DialogTitle>
             <DialogDescription>
               {item.topic}
             </DialogDescription>
@@ -303,6 +299,14 @@ export default function ScheduleItemModal({
             </div>
           ) : (
             <>
+              {item.postGroupId && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <AlertDescription>
+                    This post is already scheduled. Saving will cancel the existing schedule and replace it with your new selections.
+                  </AlertDescription>
+                </Alert>
+              )}
               {/* Schedule Time Selector */}
               <DateTimePicker
                 value={suggestedTime}
@@ -429,7 +433,7 @@ export default function ScheduleItemModal({
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Schedule {selectedAccounts.length} Post{selectedAccounts.length !== 1 ? 's' : ''}
+                {item.postGroupId ? "Reschedule" : "Schedule"} {selectedAccounts.length} Post{selectedAccounts.length !== 1 ? 's' : ''}
               </>
             )}
           </Button>

@@ -35,6 +35,7 @@ import AddCalendarItemModal from "../_components/AddCalendarItemModal";
 import ScheduleAllModal from "../_components/ScheduleAllModal";
 import ScheduleItemModal from "../_components/ScheduleItemModal";
 import BulkRegenerateModal from "../_components/BulkRegenerateModal";
+import EditPlatformAccountModal from "../_components/EditPlatformAccountModal";
 import { formatDateTime, formatDateTimeUKIndia } from "@/utils/format";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -56,6 +57,7 @@ interface CalendarItem {
   imageUrl?: string;
   suggestedTime?: string;
   status: string;
+  postGroupId?: string;
   postGroup?: {
     posts: any[];
   };
@@ -70,6 +72,7 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
   const [schedulingItem, setSchedulingItem] = useState<CalendarItem | null>(null);
   const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [showBulkRegenerate, setShowBulkRegenerate] = useState(false);
+  const [editingPlatform, setEditingPlatform] = useState<string | null>(null);
 
   const { data, mutate, isLoading } = useSwr(
     `/api/content-calendar/${resolvedParams.id}`,
@@ -79,6 +82,49 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
   const calendar = data?.calendar;
   const items: CalendarItem[] = calendar?.items || [];
   const platforms = calendar?.platforms || [];
+
+  // Fetch social accounts to show account names in the platforms card
+  const { data: accountsData } = useSwr(
+    calendar?.brandId ? `/api/brands/${calendar.brandId}/social-accounts` : null,
+    fetcher
+  );
+  const socialAccounts = accountsData?.accounts || [];
+
+  // Derive the selected account/page per platform from the first scheduled item
+  const getAccountLabelForPlatform = (platform: string) => {
+    const scheduledItem = items.find(
+      (item) => item.postGroupId && item.postGroup?.posts && item.postGroup.posts.length > 0
+    );
+    if (!scheduledItem) return null;
+
+    const posts = scheduledItem.postGroup?.posts?.filter(
+      (p: any) => p.platform === platform
+    );
+    if (!posts || posts.length === 0) return null;
+
+    return posts.map((post: any) => {
+      const account = socialAccounts.find((a: any) => a.id === post.socialAccountId);
+      if (!account) return null;
+      if (post.socialAccountPageId) {
+        const page = account.pages?.find((pg: any) => pg.id === post.socialAccountPageId);
+        return page ? `${account.platformUsername} › ${page.pageName}` : account.platformUsername;
+      }
+      return account.platformUsername;
+    }).filter(Boolean).join(", ");
+  };
+
+  const getCurrentSelectionsForPlatform = (platform: string) => {
+    const scheduledItem = items.find(
+      (item) => item.postGroupId && item.postGroup?.posts && item.postGroup.posts.length > 0
+    );
+    if (!scheduledItem) return [];
+    return (scheduledItem.postGroup?.posts || [])
+      .filter((p: any) => p.platform === platform)
+      .map((p: any) => ({
+        socialAccountId: p.socialAccountId,
+        socialAccountPageId: p.socialAccountPageId ?? null,
+      }));
+  };
 
   const handleDeleteItem = async (itemId: string) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
@@ -318,12 +364,31 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
           <CardTitle>Platforms</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {platforms.map((platform: string) => (
-              <Badge key={platform} variant="outline" className="text-sm">
-                {platform}
-              </Badge>
-            ))}
+          <div className="flex flex-wrap gap-3">
+            {platforms.map((platform: string) => {
+              const accountLabel = getAccountLabelForPlatform(platform);
+              return (
+                <div
+                  key={platform}
+                  className="flex flex-col gap-1 cursor-pointer group"
+                  onClick={() => setEditingPlatform(platform)}
+                  title="Click to change account"
+                >
+                  <Badge variant="outline" className="text-sm group-hover:border-primary group-hover:text-primary transition-colors">
+                    {platform}
+                  </Badge>
+                  {accountLabel ? (
+                    <span className="text-xs text-muted-foreground pl-1 group-hover:text-primary transition-colors">
+                      {accountLabel}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/50 pl-1">
+                      no account selected
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -397,6 +462,20 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
       </Card>
 
       {/* Modals */}
+      {editingPlatform && (
+        <EditPlatformAccountModal
+          calendarId={resolvedParams.id}
+          platform={editingPlatform}
+          accounts={socialAccounts}
+          currentSelections={getCurrentSelectionsForPlatform(editingPlatform)}
+          onClose={() => setEditingPlatform(null)}
+          onSuccess={() => {
+            mutate();
+            setEditingPlatform(null);
+          }}
+        />
+      )}
+
       {editingItem && (
         <EditCalendarItemModal
           item={editingItem}
@@ -428,6 +507,7 @@ export default function CalendarDetailPage({ params }: { params: Promise<{ id: s
           itemsCount={draftItems.length}
           platforms={platforms}
           brandId={calendar.brandId}
+          items={items}
           onClose={() => setShowScheduleModal(false)}
           onSuccess={() => {
             mutate();

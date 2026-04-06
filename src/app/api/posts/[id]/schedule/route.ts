@@ -69,9 +69,9 @@ export async function POST(
     }
 
     // Check if post can be scheduled
-    if (post.status !== "DRAFTED" && post.status !== "FAILED") {
+    if (post.status !== "DRAFTED" && post.status !== "FAILED" && post.status !== "SCHEDULED") {
       return NextResponse.json(
-        { error: "Only drafted or failed posts can be scheduled" },
+        { error: "Only drafted, failed, or scheduled posts can be rescheduled" },
         { status: 400 }
       );
     }

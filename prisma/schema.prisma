@@ -314,9 +314,10 @@ model CommentReply {
 }
 
 model PostGroup {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  cronJobId  String?  // cron-job.org job ID for cleanup on reschedule
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   posts         Post[]
   calendarItems ContentCalendarItem[]

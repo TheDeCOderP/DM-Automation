@@ -31,6 +31,7 @@ interface ScheduleAllModalProps {
   itemsCount: number;
   platforms: string[];
   brandId: string;
+  items?: any[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -58,6 +59,7 @@ export default function ScheduleAllModal({
   itemsCount,
   platforms,
   brandId,
+  items = [],
   onClose,
   onSuccess,
 }: ScheduleAllModalProps) {
@@ -79,30 +81,45 @@ export default function ScheduleAllModal({
         const data = await response.json();
         setSocialAccounts(data.accounts || []);
         
-        // Auto-select first account for each platform
-        const autoSelected: AccountSelection[] = [];
-        
-        platforms.forEach((platform) => {
-          const account = data.accounts?.find((acc: SocialAccount) => acc.platform === platform);
-          if (account) {
-            // If account has pages, select first page, otherwise just the account
-            if (account.pages && account.pages.length > 0) {
-              autoSelected.push({
-                platform,
-                socialAccountId: account.id,
-                socialAccountPageId: account.pages[0].id,
-              });
-            } else {
-              autoSelected.push({
-                platform,
-                socialAccountId: account.id,
-                socialAccountPageId: null,
-              });
+        // Try to prefill from an already-scheduled item's posts
+        const scheduledItem = items.find(
+          (item) => item.postGroupId && item.postGroup?.posts?.length > 0
+        );
+
+        if (scheduledItem) {
+          const savedSelections: AccountSelection[] = scheduledItem.postGroup.posts.map(
+            (post: any) => ({
+              platform: post.platform,
+              socialAccountId: post.socialAccountId,
+              socialAccountPageId: post.socialAccountPageId,
+            })
+          );
+          setSelectedAccounts(savedSelections);
+        } else {
+          // Auto-select first account for each platform
+          const autoSelected: AccountSelection[] = [];
+          
+          platforms.forEach((platform) => {
+            const account = data.accounts?.find((acc: SocialAccount) => acc.platform === platform);
+            if (account) {
+              if (account.pages && account.pages.length > 0) {
+                autoSelected.push({
+                  platform,
+                  socialAccountId: account.id,
+                  socialAccountPageId: account.pages[0].id,
+                });
+              } else {
+                autoSelected.push({
+                  platform,
+                  socialAccountId: account.id,
+                  socialAccountPageId: null,
+                });
+              }
             }
-          }
-        });
-        
-        setSelectedAccounts(autoSelected);
+          });
+          
+          setSelectedAccounts(autoSelected);
+        }
       } catch (error) {
         console.error("Error fetching accounts:", error);
         toast.error("Failed to load social accounts");
@@ -112,7 +129,7 @@ export default function ScheduleAllModal({
     };
 
     fetchAccounts();
-  }, [brandId, platforms]);
+  }, [brandId, platforms, items]);
 
   const handleAccountToggle = (platform: string, accountId: string, pageId: string | null = null) => {
     setSelectedAccounts(prev => {

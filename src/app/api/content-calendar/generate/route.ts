@@ -190,7 +190,7 @@ Generate exactly ${totalPosts} content ideas now, ensuring holiday posts are inc
   }
 }
 
-function calculateSuggestedTime(day: number, platform: Platform): Date {
+function calculateSuggestedTime(day: number, platform: Platform, startDate: Date): Date {
   const bestTimes: Record<string, { hour: number; minute: number }> = {
     LINKEDIN: { hour: 10, minute: 0 },
     TWITTER: { hour: 12, minute: 0 },
@@ -204,8 +204,9 @@ function calculateSuggestedTime(day: number, platform: Platform): Date {
 
   const time = bestTimes[platform] || { hour: 10, minute: 0 };
 
-  const date = new Date();
-  date.setDate(date.getDate() + day);
+  // Use the calendar's startDate as the base, not today
+  const date = new Date(startDate);
+  date.setDate(date.getDate() + (day - 1));
   date.setHours(time.hour, time.minute, 0, 0);
 
   return date;
@@ -356,7 +357,7 @@ export async function POST(req: NextRequest) {
           topic: idea.topic,
           hashtags: [],
           imagePrompt: idea.imagePrompt,
-          suggestedTime: calculateSuggestedTime(idea.day, platforms[0]),
+          suggestedTime: calculateSuggestedTime(idea.day, platforms[0], calendarStart),
           status: "DRAFT",
           // Store holiday metadata in the topic or a notes field if your schema supports it
           // If you have a `notes` or `holidayName` field, use it:

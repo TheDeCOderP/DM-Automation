@@ -138,6 +138,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // If item already has a postGroup, delete old posts, cron job, and postGroup (reschedule)
+    if (item.postGroupId) {
+      console.log(`[SCHEDULE-ITEM] Item already scheduled, replacing old postGroup ${item.postGroupId}`);
+
+      // Delete old cron job from cron-job.org if we have its ID
+      const oldPostGroup = await prisma.postGroup.findUnique({ where: { id: item.postGroupId } });
+      if (oldPostGroup?.cronJobId) {
+        try {
+          await fetch(`https://api.cron-job.org/jobs/${oldPostGroup.cronJobId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${process.env.CRON_JOB_API_KEY}` },
+          });
+          console.log(`[SCHEDULE-ITEM] Deleted old cron job ${oldPostGroup.cronJobId}`);
+        } catch (e) {
+          console.warn(`[SCHEDULE-ITEM] Failed to delete old cron job:`, e);
+        }
+      }
+
+      await prisma.contentCalendarItem.update({
+        where: { id: item.id },
+        data: { postGroupId: null, status: "DRAFT" },
+      });
+      await prisma.post.deleteMany({ where: { postGroupId: item.postGroupId } });
+      await prisma.postGroup.delete({ where: { id: item.postGroupId } });
+    }
+
     // Create a post group for this calendar item
     const postGroup = await prisma.postGroup.create({
       data: {},
@@ -283,7 +309,17 @@ export async function POST(req: NextRequest) {
         throw new Error(`Cron job creation failed: ${JSON.stringify(errorData)}`);
       }
 
-      console.log(`[SCHEDULE-ITEM] Created cron job for day ${item.day}`);
+      const cronData = await response.json();
+      const cronJobId = cronData?.jobId?.toString();
+
+      if (cronJobId) {
+        await prisma.postGroup.update({
+          where: { id: postGroup.id },
+          data: { cronJobId },
+        });
+      }
+
+      console.log(`[SCHEDULE-ITEM] Created cron job ${cronJobId} for day ${item.day}`);
     } catch (cronError) {
       console.error(`[SCHEDULE-ITEM] Cron job error:`, cronError);
       // Don't fail the whole operation if cron job fails

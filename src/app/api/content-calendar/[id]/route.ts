@@ -86,11 +86,18 @@ export async function PATCH(
   try {
     const { id: calendarId } = await params;
     const body = await req.json();
-    const { status } = body;
+    const { status, platforms } = body;
 
-    if (!status || !["DRAFT", "SCHEDULED", "COMPLETED"].includes(status)) {
+    if (status && !["DRAFT", "SCHEDULED", "COMPLETED"].includes(status)) {
       return NextResponse.json(
         { error: "Invalid status" },
+        { status: 400 }
+      );
+    }
+
+    if (!status && !platforms) {
+      return NextResponse.json(
+        { error: "Nothing to update" },
         { status: 400 }
       );
     }
@@ -122,10 +129,14 @@ export async function PATCH(
       );
     }
 
-    // Update calendar status
+    // Update calendar
+    const updateData: any = {};
+    if (status) updateData.status = status;
+    if (platforms) updateData.platforms = platforms;
+
     const updatedCalendar = await prisma.contentCalendar.update({
       where: { id: calendarId },
-      data: { status },
+      data: updateData,
     });
 
     return NextResponse.json(
