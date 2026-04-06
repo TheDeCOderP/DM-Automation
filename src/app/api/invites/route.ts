@@ -28,9 +28,12 @@ export async function GET(req: NextRequest) {
         }
 
         const invites = await prisma.brandInvitation.findMany({
-            where: {
-                invitedById: token.id,
+            where: { invitedById: token.id },
+            include: {
+                brand: { select: { id: true, name: true, logo: true } },
+                invitedTo: { select: { id: true, name: true, email: true, image: true } },
             },
+            orderBy: { createdAt: "desc" },
         });
 
         return NextResponse.json({ invites }, { status: 200 });
