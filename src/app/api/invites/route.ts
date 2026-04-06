@@ -8,6 +8,25 @@ export async function GET(req: NextRequest) {
     if (!token || !token.sub) return new NextResponse('Unauthorized', { status: 401 });
 
     try {
+        const { searchParams } = new URL(req.url);
+        const type = searchParams.get('type'); // 'received' for invites sent to me
+
+        if (type === 'received') {
+            const invites = await prisma.brandInvitation.findMany({
+                where: {
+                    invitedToId: token.id,
+                    status: 'PENDING',
+                    expiresAt: { gt: new Date() },
+                },
+                include: {
+                    brand: { select: { id: true, name: true, logo: true, description: true } },
+                    invitedBy: { select: { name: true, email: true, image: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+            return NextResponse.json({ invites }, { status: 200 });
+        }
+
         const invites = await prisma.brandInvitation.findMany({
             where: {
                 invitedById: token.id,

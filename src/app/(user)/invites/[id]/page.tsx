@@ -68,9 +68,9 @@ export default function AcceptInvitePage() {
     }
 
     if (sessionStatus === 'unauthenticated') {
-      // Redirect to login with callback URL
+      // Redirect to home (login) with callback URL
       const callbackUrl = `/invites/${invitationId}?token=${token}`;
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      router.push(`/?callbackUrl=${encodeURIComponent(callbackUrl)}`);
       return;
     }
 

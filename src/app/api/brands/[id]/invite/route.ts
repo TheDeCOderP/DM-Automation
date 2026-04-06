@@ -78,42 +78,45 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
             });
             if (existingMember) continue; // Skip if already a member
 
-            // Check for existing pending invitation
+            // Check for any existing pending invitation (including expired ones)
             const existingInvitation = await prisma.brandInvitation.findFirst({
                 where: {
                     brandId,
                     invitedToId: user.id,
-                    invitedById: token.id,
                     status: 'PENDING',
-                    expiresAt: { gt: new Date() }
                 }
             });
-            if (existingInvitation) continue; // Skip if there's already a pending invitation
 
-            const existingUserBrand = await prisma.userBrand.findUnique({
-                where: {
-                    userId_brandId: {
-                        userId: user.id,
-                        brandId,
-                    },
-                },
-            });
-            if(existingUserBrand) continue;
-
-            // Generate unique token
             const uniqueToken = crypto.randomBytes(32).toString('hex');
+            const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-            // Create a new invitation for the user to join the brand
-            const invitation = await prisma.brandInvitation.create({
-                data: {
-                    brandId,
-                    token: uniqueToken,
-                    invitedToId: user.id,
-                    invitedById: token.id,
-                    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
-                    ...(roleId && { metadata: { roleId } }), // Store roleId in metadata only if provided
-                },
-            });
+            let invitation;
+
+            if (existingInvitation) {
+                // If still valid, skip; if expired, refresh it
+                if (existingInvitation.expiresAt > new Date()) continue;
+
+                invitation = await prisma.brandInvitation.update({
+                    where: { id: existingInvitation.id },
+                    data: {
+                        token: uniqueToken,
+                        invitedById: token.id,
+                        expiresAt: newExpiry,
+                        ...(roleId && { metadata: { roleId } }),
+                    },
+                });
+            } else {
+                invitation = await prisma.brandInvitation.create({
+                    data: {
+                        brandId,
+                        token: uniqueToken,
+                        invitedToId: user.id,
+                        invitedById: token.id,
+                        expiresAt: newExpiry,
+                        ...(roleId && { metadata: { roleId } }),
+                    },
+                });
+            }
 
             // Send invitation email
             await sendMail({

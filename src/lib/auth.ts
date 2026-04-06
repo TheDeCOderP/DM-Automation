@@ -141,8 +141,8 @@ export const authOptions: AuthOptions = {
     },
   },
   pages: {
-    signIn: '/login',
-    error: '/auth/error', // Redirects here if signIn returns false
+    signIn: '/',
+    error: '/auth/error',
   },
   session: {
     strategy: 'jwt',

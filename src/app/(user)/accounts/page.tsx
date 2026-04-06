@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { toast } from "sonner"
 import { useState } from "react"
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText, Calendar } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText, Calendar, Clock, Bell, CheckCircle, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,14 @@ import BrandDetailsModal from "./_components/BrandDetailsModal"
 import { MobileBrandCard, MobileBrandCardSkeleton } from "./_components/MobileBrandCard"
 
 import type { BrandWithSocialAccounts, SocialAccount } from "@/types/brand"
+
+interface PendingInvite {
+  id: string
+  token: string
+  expiresAt: string
+  brand: { id: string; name: string; logo: string | null; description: string | null }
+  invitedBy: { name: string | null; email: string; image: string | null }
+}
 
 const fetcher = async (url: string) => {
   const res = await fetch(url)
@@ -84,6 +92,9 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 export default function BrandsPage() {
   const router = useRouter()
   const { data: brands, isLoading, error, mutate } = useSWR("/api/brands", fetcher)
+  const { data: invitesData, mutate: mutateInvites } = useSWR("/api/invites?type=received", fetcher)
+  const pendingInvites: PendingInvite[] = invitesData?.invites || []
+  const [respondingInvite, setRespondingInvite] = useState<string | null>(null)
   const [selectedBrand, setSelectedBrand] = useState<BrandWithSocialAccounts | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [connectAccountsModal, setConnectAccountsModal] = useState<{
@@ -103,6 +114,25 @@ export default function BrandsPage() {
 
   const handleRetry = () => {
     mutate()
+  }
+
+  const handleInviteResponse = async (inviteToken: string, status: 'ACCEPTED' | 'REJECTED') => {
+    setRespondingInvite(inviteToken)
+    try {
+      const res = await fetch('/api/invites', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: inviteToken, status }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(status === 'ACCEPTED' ? 'Invitation accepted' : 'Invitation declined')
+      mutateInvites()
+      mutate()
+    } catch {
+      toast.error('Failed to respond to invitation')
+    } finally {
+      setRespondingInvite(null)
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -147,6 +177,58 @@ export default function BrandsPage() {
 
   return (
     <div className="space-y-4">
+
+      {/* Pending Invitations Banner */}
+      {pendingInvites.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Bell className="h-4 w-4" />
+            Pending Invitations ({pendingInvites.length})
+          </div>
+          {pendingInvites.map((invite) => (
+            <Card key={invite.id} className="border-primary/30 bg-primary/5">
+              <CardContent className="flex items-center justify-between gap-4 py-3 px-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar className="h-9 w-9 rounded-lg border shrink-0">
+                    <AvatarImage src={invite.brand.logo || undefined} />
+                    <AvatarFallback className="rounded-lg text-xs font-bold">
+                      {invite.brand.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{invite.brand.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      Invited by {invite.invitedBy.name || invite.invitedBy.email}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    disabled={respondingInvite === invite.token}
+                    onClick={() => handleInviteResponse(invite.token, 'ACCEPTED')}
+                    className="gap-1"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Accept
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={respondingInvite === invite.token}
+                    onClick={() => handleInviteResponse(invite.token, 'REJECTED')}
+                    className="gap-1"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    Decline
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          <Separator className="bg-border/50" />
+        </div>
+      )}
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="space-y-3">
@@ -188,7 +270,8 @@ export default function BrandsPage() {
                 <TableRow className="bg-primary/10 hover:bg-secondary/10 border-border/50">
                   <TableHead className="font-semibold text-foreground">Brand</TableHead>
                   <TableHead className="font-semibold text-foreground">Social Accounts</TableHead>
-                  <TableHead className="font-semibold text-foreground">Social Quick Actions</TableHead>
+                  <TableHead className="font-semibold text-foreground">Members</TableHead>
+                  <TableHead className="font-semibold text-foreground">Quick Actions</TableHead>
                   <TableHead className="text-right font-semibold text-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -241,16 +324,17 @@ export default function BrandsPage() {
               <TableHeader>
                 <TableRow className="bg-primary/10 hover:bg-secondary/10 border-border/50">
                   <TableHead className="font-semibold text-foreground w-[5%]">S. No</TableHead>
-                  <TableHead className="font-semibold text-foreground w-[25%]">Brand</TableHead>
-                  <TableHead className="font-semibold text-foreground w-[25%]">Social Accounts</TableHead>
-                  <TableHead className="font-semibold text-foreground w-[25%]">Quick Actions</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground w-[20%]">Actions</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[20%]">Brand</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[20%]">Social Accounts</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[20%]">Members</TableHead>
+                  <TableHead className="font-semibold text-foreground w-[20%]">Quick Actions</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground w-[15%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {brands?.data?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-64">
+                    <TableCell colSpan={6} className="h-64">
                       <div className="flex flex-col items-center justify-center text-center">
                         <div className="rounded-full bg-primary/10 p-4 mb-4">
                           <Sparkles className="h-8 w-8 text-primary" />
@@ -327,10 +411,44 @@ export default function BrandsPage() {
                         )}
                       </TableCell>
 
+                      {/* Members */}
+                      <TableCell>
+                        <div
+                          className="flex items-center gap-2 cursor-pointer group"
+                          onClick={() => openDetailsModal(brand)}
+                        >
+                          {/* Member avatars */}
+                          <div className="flex -space-x-2">
+                            {brand.members?.slice(0, 3).map((member) => (
+                              <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
+                                <AvatarImage src={member.image || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {member.name?.charAt(0).toUpperCase() || member.email.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))}
+                            {(brand.members?.length ?? 0) > 3 && (
+                              <div className="h-7 w-7 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-medium">
+                                +{(brand.members?.length ?? 0) - 3}
+                              </div>
+                            )}
+                          </div>
+                          {/* Pending invites badge */}
+                          {(brand.brandInvitations?.filter(i => i.status === "PENDING").length ?? 0) > 0 && (
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <Clock className="h-3 w-3" />
+                              {brand.brandInvitations?.filter(i => i.status === "PENDING").length} pending
+                            </Badge>
+                          )}
+                          {(!brand.members || brand.members.length === 0) && (
+                            <span className="text-xs text-muted-foreground">No members</span>
+                          )}
+                        </div>
+                      </TableCell>
+
                       {/* Quick Actions */}
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button
+                        <div className="flex gap-2">                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/posts?brand=${brand.id}`)}
