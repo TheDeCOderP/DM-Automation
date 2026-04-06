@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import React, { useCallback } from "react";
 import useSWR from "swr";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,6 +133,9 @@ export default function PostsListPage() {
 
   const { data, isLoading } = useSWR<ApiResponse>(buildApiUrl(), fetcher);
 
+  // Fetch brands independently so the dropdown is always populated
+  const { data: brandsData } = useSWR<{ data: { id: string; name: string; logo: string | null }[] }>("/api/brands", fetcher);
+
   const clearFilters = () => {
     router.push(pathname);
   };
@@ -177,7 +180,7 @@ export default function PostsListPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Brands</SelectItem>
-                {data?.brands?.map((b) => (
+                {brandsData?.data?.map((b) => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
