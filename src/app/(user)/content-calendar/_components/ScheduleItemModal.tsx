@@ -26,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { toDateTimeLocalString } from "@/utils/format";
+import { toDateTimeLocalString, fromDateTimeLocalString } from "@/utils/format";
 
 interface ScheduleItemModalProps {
   item: any;
@@ -211,7 +211,7 @@ export default function ScheduleItemModal({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          suggestedTime: new Date(suggestedTime).toISOString(),
+          suggestedTime: fromDateTimeLocalString(suggestedTime),
         }),
       });
 

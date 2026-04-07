@@ -97,13 +97,16 @@ export const formatDateTimeUKIndia = (date: Date | string | number): { uk: strin
 
 /**
  * Convert ISO date string to datetime-local input format (local timezone)
- * @param isoString - ISO date string from database
- * @returns Formatted string for datetime-local input (YYYY-MM-DDTHH:mm)
+ * @param isoString - ISO date string from database (UTC)
+ * @returns Formatted string for datetime-local input (YYYY-MM-DDTHH:mm) in local timezone
  */
 export const toDateTimeLocalString = (isoString: string | null | undefined): string => {
     if (!isoString) return '';
     
+    // Parse the UTC date from database
     const date = new Date(isoString);
+    
+    // Get local time components (browser automatically converts UTC to local)
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -111,4 +114,19 @@ export const toDateTimeLocalString = (isoString: string | null | undefined): str
     const minutes = String(date.getMinutes()).padStart(2, '0');
     
     return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+/**
+ * Convert datetime-local input value to ISO string (UTC)
+ * @param localDateTimeString - String from datetime-local input (YYYY-MM-DDTHH:mm) in local timezone
+ * @returns ISO string in UTC
+ */
+export const fromDateTimeLocalString = (localDateTimeString: string): string => {
+    if (!localDateTimeString) return '';
+    
+    // datetime-local input gives us a string like "2026-04-07T15:30"
+    // This represents the LOCAL time the user selected
+    // We need to convert it to UTC for storage
+    const date = new Date(localDateTimeString);
+    return date.toISOString();
 }

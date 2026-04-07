@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { toDateTimeLocalString } from "@/utils/format";
+import { toDateTimeLocalString, fromDateTimeLocalString } from "@/utils/format";
 
 const TONE_OPTIONS = [
   { value: "professional", label: "Professional" },
@@ -334,7 +334,7 @@ export default function EditCalendarItemModal({
           hashtags,
           imagePrompt,
           imageUrl: imagePreview || item.imageUrl,
-          suggestedTime: suggestedTime ? new Date(suggestedTime).toISOString() : null,
+          suggestedTime: suggestedTime ? fromDateTimeLocalString(suggestedTime) : null,
         }),
       });
 
