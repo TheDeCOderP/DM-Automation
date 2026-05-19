@@ -93,7 +93,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ success: true, externalId: result.id });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Publish failed';
+    console.error('[BLOG-PUBLISH] Error:', error);
+    const isPrismaError = error instanceof Error && error.constructor.name.includes('Prisma');
+    const msg = isPrismaError ? 'Database error occurred. Please try again.' : (error instanceof Error ? error.message : 'Publish failed');
 
     await prisma.blogAutomation.update({
       where: { id },

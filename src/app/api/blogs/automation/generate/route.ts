@@ -194,9 +194,8 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('[BLOG-GEN] Error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Generation failed' },
-      { status: 500 }
-    );
+    const isPrismaError = error instanceof Error && error.constructor.name.includes('Prisma');
+    const message = isPrismaError ? 'Failed to save blog post. Please try again.' : (error instanceof Error ? error.message : 'Generation failed');
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
