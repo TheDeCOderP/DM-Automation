@@ -2,6 +2,7 @@ import { generateImage as generateGeminiImage } from '@/lib/gemini';
 import { uploadBase64 } from '@/lib/upload';
 import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -147,19 +148,25 @@ function calculateAspectRatio(width: number, height: number): '1:1' | '16:9' | '
 async function generateImage(prompt: string, aspectRatio: string = '1:1') {
     try {
         console.log('Generating image with Gemini (latest API)...');
-        
-        // Enhanced prompt for better social media images
-        const enhancedPrompt = `Create a high-quality, professional, visually appealing image for social media posting. 
+
+        const isBlogBanner = aspectRatio === '16:9';
+        const enhancedPrompt = isBlogBanner
+          ? `Create a cinematic, ultra-high-resolution blog banner image at 1200x630 pixels (16:9 wide landscape).
+        Description: ${prompt}
+
+        Requirements:
+        - Wide landscape composition, 16:9 format optimised for blog OG/hero images
+        - Subject or focal point placed centre-left so right side can hold headline text
+        - Professional editorial photography style or premium digital illustration
+        - Rich, vivid colours with strong contrast against white/light text
+        - Dramatic lighting — cinematic, studio, or natural golden hour
+        - Crisp, sharp detail suitable for web display at 1200px wide
+        - No text, watermarks, or logos in the image
+        - Premium brand-quality aesthetic (think: McKinsey, HBR, Wired cover art)`
+          : `Create a high-quality, professional, visually appealing image.
         Style: Modern, clean, eye-catching, suitable for ${aspectRatio} aspect ratio.
         Description: ${prompt}
-        
-        The image should be:
-        - High resolution and sharp
-        - Well-composed with good lighting
-        - Suitable for social media platforms (Facebook, Instagram, LinkedIn, Twitter)
-        - Engaging and attention-grabbing
-        - Professional quality
-        - Vibrant colors and clear details`;
+        Requirements: high resolution, well-composed, good lighting, engaging, professional quality, no text or watermarks.`;
 
         // Generate image using Gemini's latest API
         const result = await generateGeminiImage(enhancedPrompt, {
@@ -175,16 +182,20 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
         console.log("Image generated successfully with Gemini (gemini-3-pro-image-preview)");
         console.log("Generated text:", result.text);
 
-        // Upload to Local CDN (with Cloudinary fallback)
-        const base64Data = `data:image/png;base64,${imageBase64}`;
-        const fileName = `ai-generated-${Date.now()}.png`;
-        
+        // Convert PNG → JPG at 85% quality to reduce file size significantly
+        const pngBuffer = Buffer.from(imageBase64, 'base64');
+        const jpgBuffer = await sharp(pngBuffer).jpeg({ quality: 85, progressive: true }).toBuffer();
+        const jpgBase64 = jpgBuffer.toString('base64');
+
+        const base64Data = `data:image/jpeg;base64,${jpgBase64}`;
+        const fileName = `ai-generated-${Date.now()}.jpg`;
+
         const imageUrl = await uploadBase64(base64Data, fileName, 'ai-generated-images');
         console.log("Image uploaded successfully:", imageUrl);
         
         return {
             imageUrl,
-            imageBase64,
+            imageBase64: jpgBase64,
             provider: 'gemini-3-pro-image',
             aspectRatio,
             description: result.text || 'Image generated successfully'

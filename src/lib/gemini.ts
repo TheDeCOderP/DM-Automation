@@ -168,43 +168,62 @@ export async function generateImage(
   return retryWithBackoff(
     async () => {
       try {
+        const aspectRatio = options?.aspectRatio || '16:9';
+        const numberOfImages = options?.numberOfImages || 1;
+
+        // Use Imagen 3 generateImages API for proper aspect ratio control
+        try {
+          const response = await (ai.models as any).generateImages({
+            model: 'imagen-3.0-generate-002',
+            prompt,
+            config: {
+              numberOfImages,
+              aspectRatio,
+              safetyFilterLevel: 'BLOCK_SOME',
+              personGeneration: 'allow_adult',
+            },
+          });
+
+          const images: string[] = [];
+          for (const img of response?.generatedImages || []) {
+            if (img?.image?.imageBytes) images.push(img.image.imageBytes);
+          }
+
+          if (images.length > 0) {
+            return { images, text: '' };
+          }
+        } catch {
+          // Imagen model not available on this key — fall through to generateContent
+        }
+
+        // Fallback: generateContent with flash image model
         const response = await ai.models.generateContent({
           model: options?.model || GEMINI_MODELS.GEMINI_2_5_FLASH_IMAGE,
           contents: prompt,
           config: {
-            responseModalities: ['IMAGE', 'TEXT']
-          }
+            responseModalities: ['IMAGE', 'TEXT'],
+          },
         });
-        
+
         const images: string[] = [];
         let textContent = '';
-
-        // Extract images and text from response
         if (response?.candidates?.[0]?.content?.parts) {
           for (const part of response.candidates[0].content.parts) {
-            if (part.text) {
-              textContent += part.text;
-            } else if (part.inlineData?.data) {
-              images.push(part.inlineData.data);
-            }
+            if (part.text) textContent += part.text;
+            else if (part.inlineData?.data) images.push(part.inlineData.data);
           }
         }
 
-        return {
-          images,
-          text: textContent
-        };
+        return { images, text: textContent };
       } catch (error: any) {
         console.error('Gemini image generation error:', error);
-        
-        // Create a user-friendly error object
+
         const errorResponse = {
           code: error?.status || error?.code || 500,
           message: error?.message || 'Failed to generate image',
-          status: error?.status || 'UNKNOWN'
+          status: error?.status || 'UNKNOWN',
         };
 
-        // Handle specific error cases
         if (error?.status === 503 || error?.code === 503) {
           errorResponse.message = 'The AI image generation service is currently experiencing high demand. Please try again in a few moments.';
         } else if (error?.status === 429 || error?.code === 429) {
