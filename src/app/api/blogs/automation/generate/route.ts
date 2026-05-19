@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
           content: blogData.content,
           excerpt: blogData.excerpt,
           tags: blogData.tags ? blogData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
-          faqs: blogData.faqs || null,
+          faqs: blogData.faqs ? (typeof blogData.faqs === 'string' ? blogData.faqs : JSON.stringify(blogData.faqs)) : null,
           articleSection: blogData.articleSection || null,
           seoTitle: blogData.seoTitle,
           seoDescription: blogData.seoDescription,
