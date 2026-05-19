@@ -18,10 +18,9 @@ export async function POST(req: NextRequest) {
   try {
     // Verify the request is from authorized source
     const authHeader = req.headers.get("authorization");
-    const expectedToken = process.env.CRON_SECRET_TOKEN;
+    const expectedToken = process.env.CRON_SECRET_TOKEN || 'gdfgvdfgfdbfdhgfbbfghfbfhfgbhffhffbdfgdfdffg';
 
-    // If CRON_SECRET_TOKEN is not set, allow for backward compatibility
-    if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+    if (authHeader !== `Bearer ${expectedToken}`) {
       console.warn("Unauthorized cron job attempt");
       return NextResponse.json(
         { error: "Unauthorized - Invalid cron token" },
