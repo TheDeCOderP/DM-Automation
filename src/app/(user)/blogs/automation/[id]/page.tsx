@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Save, Send, FileText, Globe, Image as ImageIcon, X, Plus, Hash, Calendar, Tag, Building, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Save, Send, FileText, Globe, Image as ImageIcon, X, Plus, Hash, Calendar, Tag, Building, HelpCircle, Upload, Loader2, CheckCircle2, RefreshCw, ExternalLink } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const TinyEditor = dynamic(() => import('../create/_components/TinyEditor'), { ssr: false });
@@ -74,6 +74,7 @@ export default function EditBlogAutomationPage() {
 
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (automation) {
@@ -110,10 +111,32 @@ export default function EditBlogAutomationPage() {
 
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('folder', 'blog-banners');
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      set('bannerUrl', data.url);
+      toast.success('Image uploaded!');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSave = async () => {
     if (!form.title || !form.content) { toast.error('Title and content are required'); return; }
     setSaving(true);
     try {
+      const status = isPublished ? 'PUBLISHED' : (form.scheduledAt ? 'SCHEDULED' : 'DRAFT');
       const res = await fetch(`/api/blogs/automation/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -121,11 +144,11 @@ export default function EditBlogAutomationPage() {
           ...form,
           faqs: form.faqs.length ? JSON.stringify(form.faqs) : null,
           scheduledAt: form.scheduledAt || null,
-          status: form.scheduledAt ? 'SCHEDULED' : 'DRAFT',
+          status,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast.success(form.scheduledAt ? 'Blog scheduled!' : 'Blog saved!');
+      toast.success(isPublished ? 'Changes saved!' : (form.scheduledAt ? 'Blog scheduled!' : 'Blog saved!'));
       router.push(`/blogs/automation?brandId=${brandId}`);
     } catch (e: any) {
       toast.error(e.message);
@@ -157,6 +180,8 @@ export default function EditBlogAutomationPage() {
 
   if (!automation) return <div className="text-muted-foreground p-8">Loading...</div>;
 
+  const isPublished = automation.status === 'PUBLISHED';
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
@@ -172,6 +197,20 @@ export default function EditBlogAutomationPage() {
           }>{automation.status}</Badge>
         </div>
       </div>
+
+      {isPublished && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 px-4 py-3">
+          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-green-800 dark:text-green-300">This post is live</p>
+            <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+              Published {automation.publishedAt ? new Date(automation.publishedAt).toLocaleString() : ''}
+              {automation.externalId && <> · External ID: <span className="font-mono">{automation.externalId}</span></>}
+            </p>
+          </div>
+          <p className="text-xs text-green-600 dark:text-green-400 shrink-0">Editing will not auto-update the live post — use Re-publish.</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar */}
@@ -189,12 +228,11 @@ export default function EditBlogAutomationPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Schedule</Label>
-                <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)} />
-              </div>
-              {automation.externalId && (
-                <p className="text-xs text-green-600">Published — External ID: {automation.externalId}</p>
+              {!isPublished && (
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Schedule</Label>
+                  <Input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)} />
+                </div>
               )}
               {automation.errorMessage && (
                 <p className="text-xs text-red-500">{automation.errorMessage}</p>
@@ -240,22 +278,84 @@ export default function EditBlogAutomationPage() {
             </TabsContent>
 
             <TabsContent value="media" className="space-y-4">
-              <Card><CardContent className="pt-5 space-y-4">
+              <Card><CardContent className="pt-5 space-y-5">
+
+                {/* 1200×630 preview / placeholder */}
                 <div className="space-y-2">
-                  <Label>Banner Image URL</Label>
-                  <Input value={form.bannerUrl} onChange={e => set('bannerUrl', e.target.value)} placeholder="https://..." />
+                  <div className="flex items-center justify-between">
+                    <Label>Banner Image</Label>
+                    <span className="text-xs text-muted-foreground">Recommended: 1200 × 630 px</span>
+                  </div>
+
+                  <div className="relative w-full rounded-lg border overflow-hidden" style={{ aspectRatio: '1200/630' }}>
+                    {form.bannerUrl ? (
+                      <img src={form.bannerUrl} alt="Banner" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-muted/30 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                        {uploading ? (
+                          <>
+                            <Loader2 className="w-8 h-8 animate-spin" />
+                            <span className="text-sm">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="w-10 h-10 opacity-40" />
+                            <div className="text-center">
+                              <p className="text-sm font-medium">No image set</p>
+                              <p className="text-xs opacity-60">1200 × 630 px recommended · PNG, JPG, WebP</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* overlay action bar */}
+                    <div className="absolute bottom-0 inset-x-0 flex items-center justify-between gap-2 bg-black/50 px-3 py-2">
+                      <label className="cursor-pointer">
+                        <input
+                          type="file" accept="image/*" className="sr-only"
+                          onChange={handleFileUpload} disabled={uploading}
+                        />
+                        <span className="inline-flex items-center gap-1.5 text-xs text-white font-medium hover:text-primary transition-colors">
+                          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          {form.bannerUrl ? 'Replace' : 'Upload'}
+                        </span>
+                      </label>
+
+                      {form.bannerUrl && (
+                        <button
+                          onClick={() => set('bannerUrl', '')}
+                          className="inline-flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" /> Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Image Prompt (for AI generation)</Label>
-                  <Input value={form.bannerPrompt} onChange={e => set('bannerPrompt', e.target.value)} />
+
+                {/* Manual URL override */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Or paste an image URL</Label>
+                  <Input
+                    value={form.bannerUrl}
+                    onChange={e => set('bannerUrl', e.target.value)}
+                    placeholder="https://..."
+                    className="text-sm"
+                  />
+                </div>
+
+                {/* AI generation */}
+                <div className="space-y-2 pt-1 border-t">
+                  <Label>AI Image Generation</Label>
+                  <Input
+                    value={form.bannerPrompt}
+                    onChange={e => set('bannerPrompt', e.target.value)}
+                    placeholder="Describe the image you want..."
+                  />
                   <AIImageGen prompt={form.bannerPrompt} onGenerated={url => set('bannerUrl', url)} />
                 </div>
-                {form.bannerUrl && (
-                  <div className="relative">
-                    <img src={form.bannerUrl} alt="Banner" className="w-full h-48 object-cover rounded-lg border" />
-                    <Button size="sm" variant="destructive" className="absolute top-2 right-2" onClick={() => set('bannerUrl', '')}><X className="w-4 h-4" /></Button>
-                  </div>
-                )}
+
               </CardContent></Card>
             </TabsContent>
 
@@ -350,13 +450,31 @@ export default function EditBlogAutomationPage() {
         <Button variant="outline" onClick={() => router.push(`/blogs/automation?brandId=${brandId}`)}>
           <X className="w-4 h-4 mr-1.5" /> Cancel
         </Button>
-        <Button variant="secondary" onClick={handleSave} disabled={saving}>
-          <Save className="w-4 h-4 mr-1.5" /> {form.scheduledAt ? 'Schedule' : 'Save Draft'}
-        </Button>
-        {form.dbConnectionId && !form.scheduledAt && (
-          <Button onClick={handlePublish} disabled={publishing}>
-            <Send className="w-4 h-4 mr-1.5" /> {publishing ? 'Publishing...' : 'Publish Now'}
-          </Button>
+
+        {isPublished ? (
+          <>
+            <Button variant="secondary" onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4 mr-1.5" />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+            <Button onClick={handlePublish} disabled={publishing}>
+              <RefreshCw className="w-4 h-4 mr-1.5" />
+              {publishing ? 'Re-publishing...' : 'Re-publish'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4 mr-1.5" />
+              {saving ? 'Saving...' : (form.scheduledAt ? 'Schedule' : 'Save Draft')}
+            </Button>
+            {form.dbConnectionId && !form.scheduledAt && (
+              <Button onClick={handlePublish} disabled={publishing}>
+                <Send className="w-4 h-4 mr-1.5" />
+                {publishing ? 'Publishing...' : 'Publish Now'}
+              </Button>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -4,13 +4,17 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Plus, Eye, Bot, Send, Trash2, Pencil, CheckCircle2, Clock, Image as ImageIcon, FileText, Database, XCircle } from 'lucide-react';
+import { Plus, Eye, Bot, Send, Trash2, Pencil, CheckCircle2, Clock, Image as ImageIcon, FileText, Database, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 import { formatDate } from '@/utils/format';
 import GenerateBlogModal from './_components/GenerateBlogModal';
 
@@ -21,7 +25,7 @@ interface DbConnection { id: string; name: string; dbType: string; }
 interface BlogAutomation {
   id: string; title: string; status: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'FAILED';
   scheduledAt?: string; publishedAt?: string; externalId?: string; errorMessage?: string;
-  bannerUrl?: string; createdAt: string; calendarId?: string;
+  bannerUrl?: string; bannerPrompt?: string; createdAt: string; calendarId?: string;
   dbConnection?: { id: string; name: string; dbType: string } | null;
   calendar?: { id: string; title: string } | null;
 }
@@ -48,6 +52,9 @@ export default function BlogAutomationPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [brandStats, setBrandStats] = useState<Record<string, BrandStats>>({});
   const [loadingStats, setLoadingStats] = useState(false);
+  const [imagePopup, setImagePopup] = useState<{ id: string; prompt: string; generatedUrl: string } | null>(null);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [savingImage, setSavingImage] = useState(false);
 
   const { data: brandsData, isLoading: isLoadingBrands } = useSWR('/api/brands', fetcher);
   const brands: Brand[] = brandsData?.data || [];
@@ -144,6 +151,47 @@ export default function BlogAutomationPage() {
       toast.success('Deleted');
       refreshAll();
     } finally { setDeleting(null); }
+  };
+
+  const handleGenerateImage = async () => {
+    if (!imagePopup) return;
+    if (!imagePopup.prompt.trim()) { toast.error('Enter an image prompt first'); return; }
+    setGeneratingImage(true);
+    try {
+      const res = await fetch('/api/ai-agent/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: imagePopup.prompt, aspectRatio: '16:9' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Image generation failed');
+      setImagePopup(p => p ? { ...p, generatedUrl: data.imageUrl } : p);
+      toast.success('Image generated!');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
+  const handleSaveImage = async () => {
+    if (!imagePopup?.generatedUrl) return;
+    setSavingImage(true);
+    try {
+      const res = await fetch(`/api/blogs/automation/${imagePopup.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bannerUrl: imagePopup.generatedUrl, bannerPrompt: imagePopup.prompt }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast.success('Image saved!');
+      setImagePopup(null);
+      refreshAll();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSavingImage(false);
+    }
   };
 
   // ── Brand table (no brand selected) ─────────────────────────────────────────
@@ -408,88 +456,102 @@ export default function BlogAutomationPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {automations.map(automation => {
-                const cfg = STATUS_CONFIG[automation.status];
-                const StatusIcon = cfg.icon;
-                return (
-                  <Card
-                    key={automation.id}
-                    className="hover:shadow-lg transition-all cursor-pointer hover:border-primary relative group"
-                    onClick={() => router.push(`/blogs/automation/${automation.id}?brandId=${selectedBrandId}`)}
-                  >
-                    {automation.bannerUrl && (
-                      <div className="w-full h-32 overflow-hidden rounded-t-lg">
-                        <img src={automation.bannerUrl} alt={automation.title} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.className}`}>
-                              <StatusIcon className="w-3 h-3" /> {cfg.label}
-                            </span>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">#</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead className="w-28">Status</TableHead>
+                  <TableHead className="w-36">Date</TableHead>
+                  <TableHead className="w-36 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {automations.map((automation, index) => {
+                  const cfg = STATUS_CONFIG[automation.status];
+                  const StatusIcon = cfg.icon;
+                  return (
+                    <TableRow
+                      key={automation.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => router.push(`/blogs/automation/${automation.id}?brandId=${selectedBrandId}`)}
+                    >
+                      <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-3 min-w-0">
+                          {automation.bannerUrl ? (
+                            <img src={automation.bannerUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                          ) : (
+                            <div
+                              className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0 cursor-pointer hover:bg-muted/70 hover:ring-2 hover:ring-primary/40 transition-all group/img"
+                              title="Generate image"
+                              onClick={e => { e.stopPropagation(); setImagePopup({ id: automation.id, prompt: automation.bannerPrompt || '', generatedUrl: '' }); }}
+                            >
+                              <Sparkles className="w-4 h-4 text-muted-foreground group-hover/img:text-primary transition-colors" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate max-w-xs">{automation.title}</p>
                             {automation.calendar && (
-                              <Badge variant="outline" className="text-xs">{automation.calendar.title}</Badge>
+                              <p className="text-xs text-muted-foreground truncate">{automation.calendar.title}</p>
+                            )}
+                            {automation.errorMessage && (
+                              <p className="text-xs text-red-500 truncate">Error: {automation.errorMessage}</p>
+                            )}
+                            {automation.externalId && (
+                              <p className="text-xs text-green-600 truncate">ID: {automation.externalId}</p>
                             )}
                           </div>
-                          <CardTitle className="text-base line-clamp-2">{automation.title}</CardTitle>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      </TableCell>
+
+                      <TableCell>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.className}`}>
+                          <StatusIcon className="w-3 h-3" /> {cfg.label}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="text-xs text-muted-foreground">
+                        {automation.publishedAt ? (
+                          <span className="flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
+                            {formatDate(automation.publishedAt)}
+                          </span>
+                        ) : automation.scheduledAt ? (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 shrink-0" />
+                            {formatDate(automation.scheduledAt)}
+                          </span>
+                        ) : (
+                          formatDate(automation.createdAt)
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1.5">
+                          {(automation.status === 'DRAFT' || automation.status === 'FAILED') && automation.dbConnection && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs px-2"
+                              onClick={() => handlePublish(automation)} disabled={publishing === automation.id}>
+                              <Send className="w-3 h-3 mr-1" />
+                              {publishing === automation.id ? 'Publishing...' : 'Publish'}
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" className="h-7 text-xs px-2"
+                            onClick={() => router.push(`/blogs/automation/${automation.id}?brandId=${selectedBrandId}`)}>
+                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => handleDelete(automation.id)} disabled={deleting === automation.id}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3 pt-0">
-                      {automation.dbConnection && (
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Database className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">{automation.dbConnection.name}</span>
-                          <Badge variant="secondary" className="text-[10px] shrink-0">{automation.dbConnection.dbType}</Badge>
-                        </div>
-                      )}
-
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        {automation.scheduledAt && (
-                          <p className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> Scheduled: {formatDate(automation.scheduledAt)}
-                          </p>
-                        )}
-                        {automation.publishedAt && (
-                          <p className="flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-green-500" />
-                            Published: {formatDate(automation.publishedAt)}
-                            {automation.externalId && <span className="text-green-600 font-medium"> · ID: {automation.externalId}</span>}
-                          </p>
-                        )}
-                        {automation.errorMessage && (
-                          <p className="text-red-500 truncate">Error: {automation.errorMessage}</p>
-                        )}
-                        <p>Created: {formatDate(automation.createdAt)}</p>
-                      </div>
-
-                      <div className="flex gap-1.5 pt-1" onClick={e => e.stopPropagation()}>
-                        {(automation.status === 'DRAFT' || automation.status === 'FAILED') && automation.dbConnection && (
-                          <Button size="sm" variant="outline" className="flex-1 text-xs h-8"
-                            onClick={() => handlePublish(automation)} disabled={publishing === automation.id}>
-                            <Send className="w-3 h-3 mr-1" />
-                            {publishing === automation.id ? 'Publishing...' : 'Publish Now'}
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" className="flex-1 text-xs h-8"
-                          onClick={() => router.push(`/blogs/automation/${automation.id}?brandId=${selectedBrandId}`)}>
-                          <Pencil className="w-3 h-3 mr-1" /> Edit
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -506,6 +568,55 @@ export default function BlogAutomationPage() {
           }}
         />
       )}
+
+      <Dialog open={!!imagePopup} onOpenChange={open => { if (!open) setImagePopup(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4" /> Generate Banner Image
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Image Prompt</label>
+              <Input
+                value={imagePopup?.prompt ?? ''}
+                onChange={e => setImagePopup(p => p ? { ...p, prompt: e.target.value } : p)}
+                placeholder="Describe the image..."
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={handleGenerateImage}
+              disabled={generatingImage || !imagePopup?.prompt?.trim()}
+            >
+              {generatingImage ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+              ) : (
+                <><Sparkles className="w-4 h-4 text-purple-500" /> Generate Image</>
+              )}
+            </Button>
+
+            {imagePopup?.generatedUrl && (
+              <img
+                src={imagePopup.generatedUrl}
+                alt="Generated banner"
+                className="w-full h-48 object-cover rounded-lg border"
+              />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setImagePopup(null)}>Cancel</Button>
+            <Button onClick={handleSaveImage} disabled={!imagePopup?.generatedUrl || savingImage}>
+              {savingImage ? <><Loader2 className="w-4 h-4 animate-spin mr-1" /> Saving...</> : 'Save Image'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
