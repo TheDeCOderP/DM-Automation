@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       scheduledAt: { lte: now },
       dbConnectionId: { not: null },
     },
-    include: { dbConnection: true, brand: { select: { name: true } } },
+    include: { dbConnection: true, brand: { select: { name: true, website: true } } },
     orderBy: { scheduledAt: 'asc' },
     take: 30,
   });
@@ -47,13 +47,19 @@ export async function POST(req: NextRequest) {
         wordCount, keywords: automation.seoKeywords || '',
       });
 
+      const effectiveSlug = automation.slug || automation.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const brandWebsite = (automation as any).brand?.website as string | undefined;
+      const generatedCanonicalUrl = !automation.canonicalUrl && brandWebsite
+        ? `${brandWebsite.replace(/\/$/, '')}/blogs/${effectiveSlug}`
+        : automation.canonicalUrl || undefined;
+
       const result = await insertBlogRow(
         { dbType: conn.dbType, host: conn.host, port: conn.port, database: conn.database, username: conn.username, password: conn.password, ssl: conn.ssl },
         conn.blogTable,
         fieldMapping,
         {
           title: automation.title,
-          slug: automation.slug || automation.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          slug: effectiveSlug,
           content: automation.content,
           excerpt: automation.excerpt || undefined,
           featuredImage: automation.bannerUrl || undefined,
@@ -67,7 +73,7 @@ export async function POST(req: NextRequest) {
           seoTitle: automation.seoTitle || undefined,
           seoDescription: automation.seoDescription || undefined,
           seoKeywords: automation.seoKeywords || undefined,
-          canonicalUrl: automation.canonicalUrl || undefined,
+          canonicalUrl: generatedCanonicalUrl,
           isPublished: true,
           publishedAt: now.toISOString().slice(0, 19).replace('T', ' '),
         },
@@ -79,7 +85,13 @@ export async function POST(req: NextRequest) {
 
       await prisma.blogAutomation.update({
         where: { id: automation.id },
-        data: { status: 'PUBLISHED', publishedAt: now, externalId: String(result.id), errorMessage: null },
+        data: {
+          status: 'PUBLISHED',
+          publishedAt: now,
+          externalId: String(result.id),
+          errorMessage: null,
+          ...(generatedCanonicalUrl && !automation.canonicalUrl ? { canonicalUrl: generatedCanonicalUrl } : {}),
+        },
       });
 
       results.success.push(automation.id);

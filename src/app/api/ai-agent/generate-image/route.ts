@@ -151,16 +151,16 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
 
         const isBlogBanner = aspectRatio === '16:9';
         const enhancedPrompt = isBlogBanner
-          ? `Create a cinematic, ultra-high-resolution blog banner image at 1200x630 pixels (16:9 wide landscape).
+          ? `Create a cinematic, ultra-high-resolution blog banner image at 1000x667 pixels (3:2 wide landscape).
         Description: ${prompt}
 
         Requirements:
-        - Wide landscape composition, 16:9 format optimised for blog OG/hero images
+        - Wide landscape composition, 3:2 format optimised for blog hero images
         - Subject or focal point placed centre-left so right side can hold headline text
         - Professional editorial photography style or premium digital illustration
         - Rich, vivid colours with strong contrast against white/light text
         - Dramatic lighting — cinematic, studio, or natural golden hour
-        - Crisp, sharp detail suitable for web display at 1200px wide
+        - Crisp, sharp detail suitable for web display at 1000px wide
         - No text, watermarks, or logos in the image
         - Premium brand-quality aesthetic (think: McKinsey, HBR, Wired cover art)`
           : `Create a high-quality, professional, visually appealing image.
@@ -179,12 +179,15 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
         }
 
         const imageBase64 = result.images[0];
-        console.log("Image generated successfully with Gemini (gemini-3-pro-image-preview)");
+        console.log("Image generated successfully with Gemini (gemini-3.1-flash-image-preview)");
         console.log("Generated text:", result.text);
 
-        // Convert PNG → JPG at 85% quality to reduce file size significantly
+        // Resize to 1000×667 (3:2) then convert to JPG
         const pngBuffer = Buffer.from(imageBase64, 'base64');
-        const jpgBuffer = await sharp(pngBuffer).jpeg({ quality: 85, progressive: true }).toBuffer();
+        const jpgBuffer = await sharp(pngBuffer)
+          .resize(1000, 667, { fit: 'cover', position: 'center' })
+          .jpeg({ quality: 85, progressive: true })
+          .toBuffer();
         const jpgBase64 = jpgBuffer.toString('base64');
 
         const base64Data = `data:image/jpeg;base64,${jpgBase64}`;
@@ -196,7 +199,7 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
         return {
             imageUrl,
             imageBase64: jpgBase64,
-            provider: 'gemini-3-pro-image',
+            provider: 'gemini-3.1-flash-image',
             aspectRatio,
             description: result.text || 'Image generated successfully'
         };

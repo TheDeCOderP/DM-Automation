@@ -195,6 +195,7 @@ export default function NotificationDropdown() {
   const { data: notificationData, mutate: mutateNotifications, error, isLoading } = useSWR<{
     success: boolean;
     data: Notification[];
+    total: number;
   }>(`/api/notifications?status=unread`, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: true,
@@ -209,7 +210,7 @@ export default function NotificationDropdown() {
   });
 
   const notifications = notificationData?.data || [];
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notificationData?.total ?? 0;
 
   useEffect(() => {
     if (error) {
@@ -224,11 +225,8 @@ export default function NotificationDropdown() {
   const handleMarkAllAsRead = async () => {
     setIsSubmitting(true);
     try {
-      await Promise.all(
-        notifications.map(({ id }) =>
-          fetch(`/api/notifications/${id}`, { method: 'PUT' })
-        )
-      );
+      const res = await fetch('/api/notifications?action=mark-all-read', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
       mutateNotifications();
       toast.success('Notifications marked as read');
     } catch (error) {

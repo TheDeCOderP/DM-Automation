@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Plus, Eye, Bot, Send, Trash2, Pencil, CheckCircle2, Clock, Image as ImageIcon, FileText, Database, XCircle, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Eye, Bot, Send, Trash2, Pencil, CheckCircle2, Clock, Image as ImageIcon, FileText, Database, XCircle, Sparkles, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,12 +20,13 @@ import GenerateBlogModal from './_components/GenerateBlogModal';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-interface Brand { id: string; name: string; logo?: string; description?: string; }
+interface Brand { id: string; name: string; logo?: string; description?: string; website?: string; }
 interface DbConnection { id: string; name: string; dbType: string; }
 interface BlogAutomation {
   id: string; title: string; status: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'FAILED';
   scheduledAt?: string; publishedAt?: string; externalId?: string; errorMessage?: string;
   bannerUrl?: string; bannerPrompt?: string; createdAt: string; calendarId?: string;
+  slug?: string; canonicalUrl?: string;
   dbConnection?: { id: string; name: string; dbType: string } | null;
   calendar?: { id: string; title: string } | null;
 }
@@ -541,6 +542,20 @@ export default function BlogAutomationPage() {
                             onClick={() => router.push(`/blogs/automation/${automation.id}?brandId=${selectedBrandId}`)}>
                             <Pencil className="w-3 h-3 mr-1" /> Edit
                           </Button>
+                          {(() => {
+                            const url = automation.canonicalUrl || (
+                              selectedBrand?.website && automation.slug
+                                ? `${selectedBrand.website.replace(/\/$/, '')}/blogs/${automation.slug}`
+                                : null
+                            );
+                            return url ? (
+                              <a href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title={url} asChild>
+                                  <span><ExternalLink className="w-3.5 h-3.5" /></span>
+                                </Button>
+                              </a>
+                            ) : null;
+                          })()}
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => handleDelete(automation.id)} disabled={deleting === automation.id}>
                             <Trash2 className="h-3.5 w-3.5" />

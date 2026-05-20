@@ -41,4 +41,8 @@ export interface BrandWithSocialAccounts {
   socialAccounts: SocialAccount[];
   members?: BrandMember[];
   brandInvitations?: BrandInvitationWithUser[];
+  _count?: {
+    databaseConnections: number;
+    blogAutomations: number;
+  };
 }

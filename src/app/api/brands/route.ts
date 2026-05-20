@@ -77,6 +77,12 @@ export async function GET(req: NextRequest) {
                                     }
                                 }
                             }
+                        },
+                        _count: {
+                            select: {
+                                databaseConnections: true,
+                                blogAutomations: true,
+                            }
                         }
                     }
                 },

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const automation = await prisma.blogAutomation.findUnique({
     where: { id },
     include: {
-      brand: { select: { name: true, members: { select: { userId: true } } } },
+      brand: { select: { name: true, website: true, members: { select: { userId: true } } } },
       dbConnection: true,
     },
   });
@@ -49,13 +49,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       keywords: automation.seoKeywords || '',
     });
 
+    const effectiveSlug = automation.slug || automation.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const generatedCanonicalUrl = !automation.canonicalUrl && automation.brand.website
+      ? `${automation.brand.website.replace(/\/$/, '')}/blogs/${effectiveSlug}`
+      : automation.canonicalUrl || undefined;
+
     const result = await insertBlogRow(
       { dbType: conn.dbType, host: conn.host, port: conn.port, database: conn.database, username: conn.username, password: conn.password, ssl: conn.ssl },
       conn.blogTable,
       fieldMapping,
       {
         title: automation.title,
-        slug: automation.slug || automation.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        slug: effectiveSlug,
         content: automation.content,
         excerpt: automation.excerpt || undefined,
         featuredImage: automation.bannerUrl || undefined,
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         seoTitle: automation.seoTitle || undefined,
         seoDescription: automation.seoDescription || undefined,
         seoKeywords: automation.seoKeywords || undefined,
-        canonicalUrl: automation.canonicalUrl || undefined,
+        canonicalUrl: generatedCanonicalUrl,
         isPublished: true,
         publishedAt,
       },
@@ -88,6 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         publishedAt: new Date(),
         externalId: String(result.id),
         errorMessage: null,
+        ...(generatedCanonicalUrl && !automation.canonicalUrl ? { canonicalUrl: generatedCanonicalUrl } : {}),
       },
     });
 

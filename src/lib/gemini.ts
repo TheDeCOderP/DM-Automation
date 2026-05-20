@@ -84,25 +84,22 @@ async function retryWithBackoff<T>(
  * See: https://ai.google.dev/gemini-api/docs/models/gemini
  */
 export const GEMINI_MODELS = {
-  // Gemini 3 models (latest, most intelligent)
-  GEMINI_3_PRO: 'gemini-3-pro-preview',
-  GEMINI_3_FLASH: 'gemini-3-flash-preview',
-  GEMINI_3_PRO_IMAGE: 'gemini-3-pro-image-preview',
-  
+  // Gemini 3.1 models (latest, most intelligent)
+  GEMINI_3_1_PRO: 'gemini-3.1-pro-preview',
+  GEMINI_3_1_FLASH: 'gemini-3.1-flash-preview',
+  GEMINI_3_1_FLASH_IMAGE: 'gemini-3.1-flash-image-preview',
+  GEMINI_3_1_FLASH_LITE: 'gemini-3.1-flash-lite-preview',
+
   // Gemini 2.5 models (stable, production-ready)
   GEMINI_2_5_PRO: 'gemini-2.5-pro',
   GEMINI_2_5_FLASH: 'gemini-2.5-flash',
   GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
-  GEMINI_2_5_FLASH_IMAGE: 'gemini-2.5-flash-image',
-  
-  // Gemini 2.0 models (deprecated, will be shut down March 31, 2026)
-  GEMINI_2_0_FLASH: 'gemini-2.0-flash-exp',
-  
+
   // Aliases for backward compatibility
   FLASH: 'gemini-2.5-flash',
   PRO: 'gemini-2.5-pro',
-  PRO_PREVIEW: 'gemini-3-flash-preview',  // Use Gemini 3 Flash for best balance
-  PRO_IMAGE: 'gemini-2.5-flash-image',
+  PRO_PREVIEW: 'gemini-3.1-flash-preview',
+  PRO_IMAGE: 'gemini-3.1-flash-image-preview',
   PRO_THINKING: 'gemini-2.5-pro',
 } as const;
 
@@ -160,7 +157,7 @@ export async function generateImage(
   prompt: string,
   options?: {
     model?: string;
-    aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+    aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '3:2' | '2:3' | '4:5' | '5:4' | '21:9';
     numberOfImages?: number;
     maxRetries?: number;
   }
@@ -168,7 +165,7 @@ export async function generateImage(
   return retryWithBackoff(
     async () => {
       try {
-        const aspectRatio = options?.aspectRatio || '16:9';
+        const aspectRatio = options?.aspectRatio || '3:2';
         const numberOfImages = options?.numberOfImages || 1;
 
         // Use Imagen 3 generateImages API for proper aspect ratio control
@@ -196,13 +193,19 @@ export async function generateImage(
           // Imagen model not available on this key — fall through to generateContent
         }
 
-        // Fallback: generateContent with flash image model
+        // Fallback: gemini-3.1-flash-image-preview with responseFormat for aspect ratio control
         const response = await ai.models.generateContent({
-          model: options?.model || GEMINI_MODELS.GEMINI_2_5_FLASH_IMAGE,
+          model: options?.model || GEMINI_MODELS.GEMINI_3_1_FLASH_IMAGE,
           contents: prompt,
           config: {
             responseModalities: ['IMAGE', 'TEXT'],
-          },
+            responseFormat: {
+              image: {
+                aspectRatio,
+                imageSize: '1K',
+              },
+            },
+          } as any,
         });
 
         const images: string[] = [];

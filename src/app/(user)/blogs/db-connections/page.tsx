@@ -12,10 +12,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Database, Plus, Trash2, TestTube, CheckCircle, XCircle, Clock, Pencil, ArrowLeft, Building2 } from 'lucide-react';
+import { Database, Plus, Trash2, TestTube, CheckCircle, XCircle, Clock, Pencil, ArrowLeft, Building2, FileText } from 'lucide-react';
 import { formatDate } from '@/utils/format';
 
-interface Brand { id: string; name: string; logo?: string; }
+interface Brand {
+  id: string;
+  name: string;
+  logo?: string;
+  _count?: { databaseConnections: number; blogAutomations: number };
+}
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -256,25 +261,53 @@ export default function DbConnectionsPage() {
           <Card><CardContent className="py-12 text-center text-muted-foreground">No brands found. Create a brand first.</CardContent></Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {brands.map(brand => (
-              <Card key={brand.id} className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => handleSelectBrand(brand.id)}>
-                <CardContent className="p-5 flex items-center gap-4">
-                  {brand.logo ? (
-                    <img src={brand.logo} alt={brand.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl font-bold text-primary">{brand.name.charAt(0)}</span>
+            {brands.map(brand => {
+              const dbCount = brand._count?.databaseConnections ?? 0;
+              const postCount = brand._count?.blogAutomations ?? 0;
+              const isConnected = dbCount > 0;
+              return (
+                <Card key={brand.id} className="cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={() => handleSelectBrand(brand.id)}>
+                  <CardContent className="p-5 flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      {brand.logo ? (
+                        <img src={brand.logo} alt={brand.name} className="w-12 h-12 rounded-full border-2 border-border object-contain flex-shrink-0 p-1" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xl font-bold text-primary">{brand.name.charAt(0)}</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold truncate">{brand.name}</p>
+                          {isConnected && (
+                            <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Database className="w-3 h-3" />
+                          {isConnected ? `${dbCount} connection${dbCount > 1 ? 's' : ''}` : 'No connections'}
+                        </p>
+                      </div>
                     </div>
-                  )}
-                  <div>
-                    <p className="font-semibold">{brand.name}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Database className="w-3 h-3" /> Manage DB connections
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                    <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        {postCount} post{postCount !== 1 ? 's' : ''}
+                      </span>
+                      {postCount > 0 && (
+                        <button
+                          className="text-xs text-primary hover:underline font-medium"
+                          onClick={e => { e.stopPropagation(); router.push(`/blogs/automation?brandId=${brand.id}`); }}
+                        >
+                          View Posts →
+                        </button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </>
@@ -290,7 +323,7 @@ export default function DbConnectionsPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             {selectedBrand?.logo ? (
-              <img src={selectedBrand.logo} alt={selectedBrand.name} className="w-9 h-9 rounded-full object-cover" />
+              <img src={selectedBrand.logo} alt={selectedBrand.name} className="w-9 h-9 rounded-full border-2 border-border object-contain p-1" />
             ) : (
               <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="font-bold text-primary">{selectedBrand?.name?.charAt(0)}</span>

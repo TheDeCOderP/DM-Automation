@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { toast } from "sonner"
 import { useState } from "react"
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText, Calendar, Clock, Bell, CheckCircle, XCircle } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText, Calendar, Clock, Bell, CheckCircle, XCircle, Newspaper, Database } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -457,7 +457,8 @@ export default function BrandsPage() {
 
                       {/* Quick Actions */}
                       <TableCell>
-                        <div className="flex gap-2">                          <Button
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/posts?brand=${brand.id}`)}
@@ -473,8 +474,29 @@ export default function BrandsPage() {
                             className="gap-2 flex-1"
                           >
                             <Calendar className="h-4 w-4" />
-                            Content Calendar
+                            Calendar
                           </Button>
+                          {(brand._count?.databaseConnections ?? 0) > 0 ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/blogs/automation?brandId=${brand.id}`)}
+                              className="gap-2 flex-1"
+                            >
+                              <Newspaper className="h-4 w-4" />
+                              Blog Post
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/blogs/db-connections?brand=${brand.id}`)}
+                              className="gap-2 flex-1 text-muted-foreground"
+                            >
+                              <Database className="h-4 w-4" />
+                              Connect DB
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
 
