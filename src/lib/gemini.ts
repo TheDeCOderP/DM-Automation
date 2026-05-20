@@ -391,7 +391,7 @@ export async function generateWithThinking(
         }
 
         const response = await ai.models.generateContent({
-          model: options?.model || GEMINI_MODELS.GEMINI_3_FLASH,
+          model: options?.model || GEMINI_MODELS.GEMINI_3_1_FLASH,
           contents: prompt,
           config
         });
