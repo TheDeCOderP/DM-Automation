@@ -2,6 +2,57 @@ import { prisma } from "@/lib/prisma";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string; memberId: string }> }
+) {
+  const { id: brandId, memberId } = await context.params;
+
+  if (!brandId || !memberId) {
+    return NextResponse.json({ error: "Brand ID and Member ID are required" }, { status: 400 });
+  }
+
+  const token = await getToken({ req });
+  if (!token?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { roleId } = await req.json();
+    if (!roleId) {
+      return NextResponse.json({ error: "Role ID is required" }, { status: 400 });
+    }
+
+    const currentUserBrand = await prisma.userBrand.findUnique({
+      where: { userId_brandId: { userId: token.id, brandId } },
+      include: { role: true },
+    });
+
+    if (!currentUserBrand || currentUserBrand.role.name !== "BrandAdmin") {
+      return NextResponse.json({ error: "Only brand admins can change member roles" }, { status: 403 });
+    }
+
+    if (memberId === token.id) {
+      return NextResponse.json({ error: "You cannot change your own role" }, { status: 400 });
+    }
+
+    const role = await prisma.role.findUnique({ where: { id: roleId } });
+    if (!role) {
+      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
+
+    await prisma.userBrand.update({
+      where: { userId_brandId: { userId: memberId, brandId } },
+      data: { roleId },
+    });
+
+    return NextResponse.json({ message: "Role updated successfully" }, { status: 200 });
+  } catch (error) {
+    console.error("Error updating member role:", error);
+    return NextResponse.json({ error: "Failed to update member role" }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   req: NextRequest, 
   context: { params: Promise<{ id: string; memberId: string }> }

@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { 
-  Info, 
-  Users, 
-  Globe, 
+import {
+  Info,
+  Users,
+  Globe,
   Calendar,
   ExternalLink,
   UserMinus,
@@ -22,9 +22,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { getPlatformIcon } from "@/utils/ui/icons";
 import type { BrandWithSocialAccounts, BrandMember } from "@/types/brand";
+
+interface Role {
+  id: string;
+  name: string;
+  description: string;
+}
 
 interface BrandDetailsModalProps {
   open: boolean;
@@ -41,6 +48,22 @@ export default function BrandDetailsModal({
 }: BrandDetailsModalProps) {
   const [removingUser, setRemovingUser] = useState<string | null>(null);
   const [userToRemove, setUserToRemove] = useState<BrandMember | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && brand?.isAdmin) {
+      fetch("/api/roles")
+        .then((res) => res.json())
+        .then((data) => {
+          const brandRoles = (data.roles || []).filter(
+            (r: Role) => r.name === "BrandAdmin" || r.name === "BrandUser"
+          );
+          setRoles(brandRoles);
+        })
+        .catch(() => {});
+    }
+  }, [open, brand?.isAdmin]);
 
   if (!brand) return null;
 
@@ -49,7 +72,6 @@ export default function BrandDetailsModal({
       toast.error("You cannot remove yourself from the brand");
       return;
     }
-
     setUserToRemove(member);
   };
 
@@ -74,6 +96,52 @@ export default function BrandDetailsModal({
     } finally {
       setRemovingUser(null);
       setUserToRemove(null);
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberId: string, roleId: string) => {
+    setUpdatingRole(memberId);
+    try {
+      const response = await fetch(`/api/brands/${brand.id}/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roleId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update role");
+      }
+
+      toast.success("Role updated successfully");
+      onSuccess?.();
+    } catch (error) {
+      console.error("Error updating member role:", error);
+      toast.error("Failed to update role");
+    } finally {
+      setUpdatingRole(null);
+    }
+  };
+
+  const handleUpdateInviteRole = async (inviteId: string, roleId: string) => {
+    setUpdatingRole(inviteId);
+    try {
+      const response = await fetch(`/api/brands/${brand.id}/invites/${inviteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roleId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update invite role");
+      }
+
+      toast.success("Invite role updated successfully");
+      onSuccess?.();
+    } catch (error) {
+      console.error("Error updating invite role:", error);
+      toast.error("Failed to update invite role");
+    } finally {
+      setUpdatingRole(null);
     }
   };
 
@@ -138,7 +206,7 @@ export default function BrandDetailsModal({
                       <p className="text-sm">{brand.description}</p>
                     </div>
                   )}
-                  
+
                   {brand.website && (
                     <div>
                       <h4 className="font-medium text-sm text-muted-foreground mb-1">Website</h4>
@@ -252,10 +320,29 @@ export default function BrandDetailsModal({
                                 {member.email}
                               </p>
                             </div>
-                            <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
-                              {getRoleIcon(member.role)}
-                              {member.role}
-                            </Badge>
+                            {brand.isAdmin && !member.isCurrentUser ? (
+                              <Select
+                                value={roles.find((r) => r.name === member.role)?.id || ""}
+                                onValueChange={(value) => handleUpdateMemberRole(member.id, value)}
+                                disabled={updatingRole === member.id}
+                              >
+                                <SelectTrigger className="w-[130px] h-8 text-xs">
+                                  <SelectValue placeholder={member.role} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {roles.map((role) => (
+                                    <SelectItem key={role.id} value={role.id} className="text-xs">
+                                      {role.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
+                                {getRoleIcon(member.role)}
+                                {member.role}
+                              </Badge>
+                            )}
                           </div>
                           {brand.isAdmin && !member.isCurrentUser && (
                             <Button
@@ -293,49 +380,76 @@ export default function BrandDetailsModal({
                 <CardContent>
                   {brand.brandInvitations && brand.brandInvitations.length > 0 ? (
                     <div className="space-y-3">
-                      {brand.brandInvitations.map((invite) => (
-                        <div
-                          key={invite.id}
-                          className="flex items-center justify-between p-3 rounded-lg border bg-muted/20"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8 border">
-                              <AvatarImage src={invite.invitedTo?.image || undefined} />
-                              <AvatarFallback className="text-xs">
-                                {invite.invitedTo?.name?.charAt(0).toUpperCase() ||
-                                  invite.invitedTo?.email?.charAt(0).toUpperCase() ||
-                                  "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">
-                                {invite.invitedTo?.name || "Unknown User"}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {invite.invitedTo?.email}
-                              </p>
+                      {brand.brandInvitations.map((invite) => {
+                        const inviteRoleId = (invite.metadata as any)?.roleId as string | undefined;
+                        return (
+                          <div
+                            key={invite.id}
+                            className="flex items-center justify-between p-3 rounded-lg border bg-muted/20"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8 border">
+                                <AvatarImage src={invite.invitedTo?.image || undefined} />
+                                <AvatarFallback className="text-xs">
+                                  {invite.invitedTo?.name?.charAt(0).toUpperCase() ||
+                                    invite.invitedTo?.email?.charAt(0).toUpperCase() ||
+                                    "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate">
+                                  {invite.invitedTo?.name || "Unknown User"}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {invite.invitedTo?.email}
+                                </p>
+                              </div>
+                              {brand.isAdmin && invite.status === "PENDING" ? (
+                                <Select
+                                  value={inviteRoleId || roles.find((r) => r.name === "BrandUser")?.id || ""}
+                                  onValueChange={(value) => handleUpdateInviteRole(invite.id, value)}
+                                  disabled={updatingRole === invite.id}
+                                >
+                                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {roles.map((role) => (
+                                      <SelectItem key={role.id} value={role.id} className="text-xs">
+                                        {role.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                inviteRoleId && (
+                                  <Badge variant={getRoleBadgeVariant(roles.find((r) => r.id === inviteRoleId)?.name || "")} className="gap-1 text-xs">
+                                    {roles.find((r) => r.id === inviteRoleId)?.name || ""}
+                                  </Badge>
+                                )
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1 text-right">
+                              <Badge
+                                variant={
+                                  invite.status === "PENDING"
+                                    ? "secondary"
+                                    : invite.status === "ACCEPTED"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className="capitalize text-xs px-2 py-0.5"
+                              >
+                                {invite.status.toLowerCase()}
+                              </Badge>
+                              <span className="text-[11px] text-muted-foreground">
+                                Expires {format(new Date(invite.expiresAt), "MMM d, yyyy")}
+                              </span>
                             </div>
                           </div>
-
-                          <div className="flex flex-col items-end gap-1 text-right">
-                            <Badge
-                              variant={
-                                invite.status === "PENDING"
-                                  ? "secondary"
-                                  : invite.status === "ACCEPTED"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className="capitalize text-xs px-2 py-0.5"
-                            >
-                              {invite.status.toLowerCase()}
-                            </Badge>
-                            <span className="text-[11px] text-muted-foreground">
-                              Expires {format(new Date(invite.expiresAt), "MMM d, yyyy")}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-6 text-muted-foreground">
@@ -356,7 +470,7 @@ export default function BrandDetailsModal({
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove <strong>{userToRemove?.name || userToRemove?.email}</strong> from &quot;{brand.name}&quot;? 
+              Are you sure you want to remove <strong>{userToRemove?.name || userToRemove?.email}</strong> from &quot;{brand.name}&quot;?
               They will lose access to this brand and all its content.
             </AlertDialogDescription>
           </AlertDialogHeader>
