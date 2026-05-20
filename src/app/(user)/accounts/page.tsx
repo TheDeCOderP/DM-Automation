@@ -95,6 +95,7 @@ export default function BrandsPage() {
   const { data: invitesData, mutate: mutateInvites } = useSWR("/api/invites?type=received", fetcher)
   const pendingInvites: PendingInvite[] = invitesData?.invites || []
   const [respondingInvite, setRespondingInvite] = useState<string | null>(null)
+  const [isDeletingBrand, setIsDeletingBrand] = useState<string | null>(null)
   const [selectedBrand, setSelectedBrand] = useState<BrandWithSocialAccounts | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [connectAccountsModal, setConnectAccountsModal] = useState<{
@@ -124,31 +125,39 @@ export default function BrandsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: inviteToken, status }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || 'Failed to respond to invitation')
+      }
       toast.success(status === 'ACCEPTED' ? 'Invitation accepted' : 'Invitation declined')
       mutateInvites()
       mutate()
-    } catch {
-      toast.error('Failed to respond to invitation')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to respond to invitation')
     } finally {
       setRespondingInvite(null)
     }
   }
 
   const handleDelete = async (id: string) => {
+    if (isDeletingBrand) return
+    setIsDeletingBrand(id)
     try {
       const response = await fetch(`/api/brands/${id}`, {
         method: "DELETE",
       })
 
       if (!response.ok) {
-        throw new Error(response.statusText)
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || response.statusText)
       }
       mutate()
       toast.success("Successfully deleted the brand")
     } catch (err) {
       console.error(err)
-      toast.error("Something went wrong while deleting the brand")
+      toast.error(err instanceof Error ? err.message : "Something went wrong while deleting the brand")
+    } finally {
+      setIsDeletingBrand(null)
     }
   }
 

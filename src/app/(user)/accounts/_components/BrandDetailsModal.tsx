@@ -49,19 +49,27 @@ export default function BrandDetailsModal({
   const [removingUser, setRemovingUser] = useState<string | null>(null);
   const [userToRemove, setUserToRemove] = useState<BrandMember | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [rolesError, setRolesError] = useState(false);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && brand?.isAdmin) {
+      setRolesError(false);
       fetch("/api/roles")
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load roles");
+          return res.json();
+        })
         .then((data) => {
           const brandRoles = (data.roles || []).filter(
             (r: Role) => r.name === "BrandAdmin" || r.name === "BrandUser"
           );
           setRoles(brandRoles);
         })
-        .catch(() => {});
+        .catch(() => {
+          setRolesError(true);
+          toast.error("Failed to load roles. Role dropdowns may be unavailable.");
+        });
     }
   }, [open, brand?.isAdmin]);
 
@@ -320,7 +328,7 @@ export default function BrandDetailsModal({
                                 {member.email}
                               </p>
                             </div>
-                            {brand.isAdmin && !member.isCurrentUser ? (
+                            {brand.isAdmin && !member.isCurrentUser && !rolesError ? (
                               <Select
                                 value={roles.find((r) => r.name === member.role)?.id || ""}
                                 onValueChange={(value) => handleUpdateMemberRole(member.id, value)}
@@ -404,7 +412,7 @@ export default function BrandDetailsModal({
                                   {invite.invitedTo?.email}
                                 </p>
                               </div>
-                              {brand.isAdmin && invite.status === "PENDING" ? (
+                              {brand.isAdmin && invite.status === "PENDING" && !rolesError ? (
                                 <Select
                                   value={inviteRoleId || roles.find((r) => r.name === "BrandUser")?.id || ""}
                                   onValueChange={(value) => handleUpdateInviteRole(invite.id, value)}

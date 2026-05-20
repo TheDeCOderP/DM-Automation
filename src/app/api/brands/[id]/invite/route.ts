@@ -24,7 +24,6 @@ export async function GET(req: NextRequest) {
         console.error('Error fetching invitations:', error);
         return NextResponse.json({ message: 'Failed to fetch invitations' }, { status: 500 });
     }
-
 }
 
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -37,54 +36,37 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         const { id: brandId } = await context.params;
         const { userIds, roleId } = await req.json();
 
-        if (!userIds || !brandId) {
-            return NextResponse.json({ message: 'Email and Brand ID are required' }, { status: 400 });
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !brandId) {
+            return NextResponse.json({ message: 'User IDs and Brand ID are required' }, { status: 400 });
         }
 
-        // Validate roleId if provided
         if (roleId) {
-            const role = await prisma.role.findUnique({
-                where: { id: roleId }
-            });
+            const role = await prisma.role.findUnique({ where: { id: roleId } });
             if (!role) {
                 return NextResponse.json({ message: 'Invalid role ID' }, { status: 400 });
             }
         }
 
-        // Verify that the brand exists
-        const brand = await prisma.brand.findUnique({
-            where: { id: brandId },
-        });
+        const brand = await prisma.brand.findUnique({ where: { id: brandId } });
         if (!brand) {
             return NextResponse.json({ message: 'Brand not found' }, { status: 404 });
         }
 
-        for(const userId of userIds) {
-            
-            // Verify that the user exists
-            const user = await prisma.user.findUnique({
-                where: { id: userId },
-            });
-            if (!user) continue; // Skip if user not found
+        let invited = 0;
+        let skipped = 0;
+        const emailFailures: string[] = [];
 
-            // Check if the user is already a member of the brand
+        for (const userId of userIds) {
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (!user) { skipped++; continue; }
+
             const existingMember = await prisma.userBrand.findUnique({
-                where: {
-                    userId_brandId: {
-                        brandId,
-                        userId: user.id,
-                    },
-                },
+                where: { userId_brandId: { brandId, userId: user.id } },
             });
-            if (existingMember) continue; // Skip if already a member
+            if (existingMember) { skipped++; continue; }
 
-            // Check for any existing pending invitation (including expired ones)
             const existingInvitation = await prisma.brandInvitation.findFirst({
-                where: {
-                    brandId,
-                    invitedToId: user.id,
-                    status: 'PENDING',
-                }
+                where: { brandId, invitedToId: user.id, status: 'PENDING' },
             });
 
             const uniqueToken = crypto.randomBytes(32).toString('hex');
@@ -93,8 +75,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
             let invitation;
 
             if (existingInvitation) {
-                // If still valid, skip; if expired, refresh it
-                if (existingInvitation.expiresAt > new Date()) continue;
+                if (existingInvitation.expiresAt > new Date()) { skipped++; continue; }
 
                 invitation = await prisma.brandInvitation.update({
                     where: { id: existingInvitation.id },
@@ -118,23 +99,37 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
                 });
             }
 
-            // Send invitation email
-            await sendMail({
+            const mailSent = await sendMail({
                 recipient: user.email,
-                subject: `Invitation to join brand ${brand?.name || 'Unknown Brand'}`,
+                subject: `Invitation to join brand ${brand.name}`,
                 message: `
                     <p>Hi ${user.name || 'there'},</p>
-                    <p>You have been invited to join the brand "${brand?.name || 'Unknown Brand'}". Please click on the link below to accept the invitation:</p>
+                    <p>You have been invited to join the brand "${brand.name}". Please click on the link below to accept the invitation:</p>
                     <a href="${process.env.NEXTAUTH_URL}/invites/${invitation.id}?token=${uniqueToken}">Accept Invitation</a>
                     <p>This invitation will expire in 7 days.</p>
                 `,
-            }).catch((error) => {
-                console.error('Error sending invitation email:', error);
+            }).then(() => true).catch((error) => {
+                console.error(`Error sending invitation email to ${user.email}:`, error);
+                return false;
             });
 
+            if (!mailSent) emailFailures.push(user.email);
+            invited++;
         }
 
-        return NextResponse.json({ message: 'Invitation sent successfully' }, { status: 200 });
+        if (invited === 0) {
+            return NextResponse.json({
+                message: 'No new invitations sent. Users may already be members or have active pending invites.',
+                invited: 0,
+                skipped,
+            }, { status: 200 });
+        }
+
+        const message = emailFailures.length > 0
+            ? `${invited} invitation(s) created, but emails failed to send to: ${emailFailures.join(', ')}`
+            : `${invited} invitation(s) sent successfully`;
+
+        return NextResponse.json({ message, invited, skipped }, { status: 200 });
     } catch (error) {
         console.error('Error sending invitation:', error);
         return NextResponse.json({ message: 'Failed to send invitation' }, { status: 500 });
