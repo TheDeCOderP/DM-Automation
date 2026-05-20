@@ -99,7 +99,11 @@ export default function EditBlogAutomationPage() {
         bannerPrompt: automation.bannerPrompt || '',
         dbConnectionId: automation.dbConnectionId || '',
         scheduledAt: automation.scheduledAt
-          ? new Date(automation.scheduledAt).toISOString().slice(0, 16)
+          ? (() => {
+              const d = new Date(automation.scheduledAt);
+              const pad = (n: number) => String(n).padStart(2, '0');
+              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            })()
           : '',
         articleSection: automation.articleSection || '',
         faqs: parsedFaqs,
@@ -143,7 +147,7 @@ export default function EditBlogAutomationPage() {
         body: JSON.stringify({
           ...form,
           faqs: form.faqs.length ? JSON.stringify(form.faqs) : null,
-          scheduledAt: form.scheduledAt || null,
+          scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
           status,
         }),
       });

@@ -174,7 +174,7 @@ export default function CreateBlogAutomationPage() {
           body: JSON.stringify({
             ...form,
             tags: form.tags,
-            scheduledAt: form.scheduledAt || null,
+            scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
             status: form.scheduledAt ? 'SCHEDULED' : 'DRAFT',
           }),
         });
