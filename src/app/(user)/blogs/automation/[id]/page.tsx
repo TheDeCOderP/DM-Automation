@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 import { toast } from 'sonner';
@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Save, Send, FileText, Globe, Image as ImageIcon, X, Plus, Hash, Calendar, Tag, Building, HelpCircle, Upload, Loader2, CheckCircle2, RefreshCw, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Save, Send, FileText, Globe, Image as ImageIcon, X, Plus, Hash, Calendar, Tag, Building, HelpCircle, Upload, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { PortalTagSelect } from './_components/PortalTagSelect';
 
 const TinyEditor = dynamic(() => import('../create/_components/TinyEditor'), { ssr: false });
 const AIImageGen = dynamic(() => import('../create/_components/AIImageGen'), { ssr: false });
@@ -54,7 +55,7 @@ export default function EditBlogAutomationPage() {
   const searchParams = useSearchParams();
   const brandId = searchParams.get('brandId') || '';
 
-  const { data } = useSWR(id ? `/api/blogs/automation/${id}` : null, fetcher);
+  const { data } = useSWR(id ? `/api/blogs/automation/${id}` : null, fetcher, { revalidateOnFocus: false });
   const { data: connData } = useSWR(brandId ? `/api/blogs/db-connections?brandId=${brandId}` : null, fetcher);
 
   const automation = data?.automation;
@@ -76,8 +77,15 @@ export default function EditBlogAutomationPage() {
   const [publishing, setPublishing] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const [portalCategories, setPortalCategories] = useState<string[]>([]);
+  const [portalIndustries, setPortalIndustries] = useState<string[]>([]);
+  const [loadingPortalTags, setLoadingPortalTags] = useState(false);
+
+  const formInitialized = useRef(false);
+
   useEffect(() => {
-    if (automation) {
+    if (automation && !formInitialized.current) {
+      formInitialized.current = true;
       let parsedFaqs: { question: string; answer: string }[] = [];
       try {
         const raw = automation.faqs;
@@ -112,6 +120,21 @@ export default function EditBlogAutomationPage() {
       });
     }
   }, [automation]);
+
+  useEffect(() => {
+    if (!form.dbConnectionId) { setPortalCategories([]); setPortalIndustries([]); return; }
+    const controller = new AbortController();
+    setLoadingPortalTags(true);
+    fetch(`/api/blogs/db-connections/${form.dbConnectionId}/lookup`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(data => {
+        setPortalCategories(data.categories || []);
+        setPortalIndustries(data.industries || []);
+      })
+      .catch(e => { if (e.name !== 'AbortError') { setPortalCategories([]); setPortalIndustries([]); } })
+      .finally(() => setLoadingPortalTags(false));
+    return () => controller.abort();
+  }, [form.dbConnectionId]);
 
   const set = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
@@ -165,11 +188,12 @@ export default function EditBlogAutomationPage() {
     if (!form.dbConnectionId) { toast.error('Select a DB connection first'); return; }
     setPublishing(true);
     try {
-      await fetch(`/api/blogs/automation/${id}`, {
+      const putRes = await fetch(`/api/blogs/automation/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, faqs: form.faqs.length ? JSON.stringify(form.faqs) : null, scheduledAt: null }),
       });
+      if (!putRes.ok) throw new Error((await putRes.json()).error || 'Failed to save before publishing');
       const res = await fetch(`/api/blogs/automation/${id}/publish`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -259,7 +283,10 @@ export default function EditBlogAutomationPage() {
               <Card><CardContent className="pt-5 space-y-4">
                 <div className="space-y-1.5">
                   <Label>Title *</Label>
-                  <Input value={form.title} onChange={e => { set('title', e.target.value); set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-')); }} className="text-base h-11" />
+                  <Input value={form.title} onChange={e => {
+                    set('title', e.target.value);
+                    if (!form.slug) set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+                  }} className="text-base h-11" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Slug</Label>
@@ -396,13 +423,33 @@ export default function EditBlogAutomationPage() {
 
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-1.5"><Building className="w-3.5 h-3.5" /> Categories</Label>
-                  <TagInput tags={form.selectedCategories} onChange={v => set('selectedCategories', v)} />
+                  {!form.dbConnectionId ? (
+                    <p className="text-xs text-amber-600">Select a DB connection in the sidebar to load available categories.</p>
+                  ) : (
+                    <PortalTagSelect
+                      label="Categories"
+                      selected={form.selectedCategories}
+                      onChange={v => set('selectedCategories', v)}
+                      options={portalCategories}
+                      loading={loadingPortalTags}
+                    />
+                  )}
                   <p className="text-xs text-muted-foreground">Will be linked via BlogCategory join table on publish</p>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-1.5"><Building className="w-3.5 h-3.5" /> Industries</Label>
-                  <TagInput tags={form.selectedIndustries} onChange={v => set('selectedIndustries', v)} />
+                  {!form.dbConnectionId ? (
+                    <p className="text-xs text-amber-600">Select a DB connection in the sidebar to load available industries.</p>
+                  ) : (
+                    <PortalTagSelect
+                      label="Industries"
+                      selected={form.selectedIndustries}
+                      onChange={v => set('selectedIndustries', v)}
+                      options={portalIndustries}
+                      loading={loadingPortalTags}
+                    />
+                  )}
                   <p className="text-xs text-muted-foreground">Will be linked via BlogIndustry join table on publish</p>
                 </div>
 

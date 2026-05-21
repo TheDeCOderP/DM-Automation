@@ -56,11 +56,21 @@ SEO REQUIREMENTS:
 - Meta description: 150-160 chars, include a benefit + CTA ("Learn how...", "Discover...")
 - Keywords: 6-10 comma-separated terms ordered by relevance
 
-IMAGE PROMPT:
-- Describe a cinematic, ultra-realistic image optimised for a 1200×630 px blog banner (standard OG image size, wide landscape)
-- Reference specific visual styles: "editorial photography", "flat lay", "isometric illustration", "data visualization dashboard"
-- Specify mood, lighting, colour palette, and composition
-- Ensure the subject sits centre-left so text can overlay on the right side without clashing
+IMAGE PROMPT — Fortune 500 / MNC Grade (critical):
+- This banner will appear on a premium corporate blog read by C-suite executives, investors, and senior professionals at top MNCs and Fortune 500 companies. The visual must match the editorial standard of Bloomberg Businessweek, McKinsey Quarterly, Harvard Business Review, or Deloitte Insights.
+- Be SPECIFIC and CINEMATIC — describe an actual scene, not a vague concept
+- Choose ONE visual style that fits the topic:
+  · "Premium corporate editorial photography — diverse C-suite executives collaborating in a sleek glass-walled boardroom, soft directional lighting, shallow depth of field"
+  · "High-end financial district photography — modern skyscrapers at dusk, trading floor with live data screens, cinematic lens flare"
+  · "Fortune 500 annual report illustration — clean isometric 3D render of interconnected business processes, deep navy and gold palette"
+  · "Bloomberg Businessweek cover-style digital art — bold geometric abstraction of the topic concept, high contrast, sophisticated color blocking"
+  · "McKinsey Quarterly illustration — precise data visualisation dashboard on a large curved monitor in a minimalist executive office, cool blue tones"
+  · "Corporate technology photography — server infrastructure or AI chip close-up, dramatic macro lighting, dark background with teal/blue accent glow"
+- Color palette (pick what fits): deep navy + gold, charcoal + white + electric blue, slate + emerald, or black + silver — always premium, never garish
+- Lighting: cinematic — Rembrandt side-lighting, cool corporate blue ambience, or golden-hour warmth through floor-to-ceiling windows
+- Composition: focal point/subject placed centre-left; right half intentionally clean/blurred for headline text overlay; 16:9 wide landscape
+- Mood: authoritative, aspirational, trustworthy — the kind of image Goldman Sachs, Apple, Microsoft, or Accenture would use on their insights page
+- NEVER: generic stock photo handshakes, cheesy clipart, rainbow/pastel colors, cartoon illustrations, busy cluttered scenes, amateur lighting
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT — return ONLY this exact JSON (no extra text):

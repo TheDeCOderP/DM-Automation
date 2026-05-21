@@ -23,7 +23,7 @@ export default function AIImageGen({ prompt, onGenerated }: AIImageGenProps) {
       const res = await fetch('/api/ai-agent/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, aspectRatio: '3:2' }),
+        body: JSON.stringify({ prompt, aspectRatio: '16:9' }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Image generation failed');

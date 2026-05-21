@@ -149,24 +149,28 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
     try {
         console.log('Generating image with Gemini (latest API)...');
 
-        const isBlogBanner = aspectRatio === '16:9';
+        const isBlogBanner = aspectRatio === '16:9' || aspectRatio === '3:2';
         const enhancedPrompt = isBlogBanner
-          ? `Create a cinematic, ultra-high-resolution blog banner image at 1000x667 pixels (3:2 wide landscape).
-        Description: ${prompt}
+          ? `Create a cinematic, ultra-high-resolution blog banner image at 1000×667 pixels (wide landscape, 3:2).
 
-        Requirements:
-        - Wide landscape composition, 3:2 format optimised for blog hero images
-        - Subject or focal point placed centre-left so right side can hold headline text
-        - Professional editorial photography style or premium digital illustration
-        - Rich, vivid colours with strong contrast against white/light text
-        - Dramatic lighting — cinematic, studio, or natural golden hour
-        - Crisp, sharp detail suitable for web display at 1000px wide
-        - No text, watermarks, or logos in the image
-        - Premium brand-quality aesthetic (think: McKinsey, HBR, Wired cover art)`
-          : `Create a high-quality, professional, visually appealing image.
-        Style: Modern, clean, eye-catching, suitable for ${aspectRatio} aspect ratio.
-        Description: ${prompt}
-        Requirements: high resolution, well-composed, good lighting, engaging, professional quality, no text or watermarks.`;
+SUBJECT / CONCEPT:
+${prompt}
+
+MANDATORY QUALITY STANDARDS — Fortune 500 / MNC Editorial Grade:
+- Visual standard: Bloomberg Businessweek, McKinsey Quarterly, Harvard Business Review, or Deloitte Insights cover art
+- Wide landscape 3:2 composition — focal point placed centre-left, right half intentionally open/blurred for headline text overlay
+- Style: premium corporate editorial photography OR sophisticated digital illustration / isometric 3D render — pick whichever suits the subject
+- If photography style: diverse, well-dressed business professionals in modern glass boardrooms, financial districts, data centres, or executive suites — cinematic depth of field, sharp subject, soft bokeh background
+- If illustration style: clean geometric abstraction, data-flow diagrams, or architectural renders — precise, purposeful, zero clutter
+- Color palette: deep navy + gold, charcoal + white + electric blue, or slate + emerald — always premium, never garish or pastel
+- Lighting: Rembrandt side-lighting, cool corporate blue ambience, or golden-hour warmth through floor-to-ceiling windows — cinematic, dramatic, intentional
+- Mood: authoritative, aspirational, forward-thinking — the kind of visual Apple, Goldman Sachs, Microsoft, or Accenture would publish
+- Resolution: crisp, sharp, web-optimised at 1000px wide — no noise, no blur on key elements
+- Absolutely NO: generic stock-photo handshakes, cheesy clipart, rainbow/pastel colors, cartoon art, watermarks, logos, or text`
+          : `Create a high-quality, professional image.
+Style: Modern, clean, suitable for ${aspectRatio} aspect ratio.
+Description: ${prompt}
+Requirements: high resolution, well-composed, good lighting, professional quality, no text or watermarks.`;
 
         // Generate image using Gemini's latest API
         const result = await generateGeminiImage(enhancedPrompt, {
