@@ -179,7 +179,7 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
         }
 
         const imageBase64 = result.images[0];
-        console.log("Image generated successfully with Gemini (gemini-3.1-flash-image-preview)");
+        console.log(`Image generated successfully with Gemini (${result.model || 'unknown'})`);
         console.log("Generated text:", result.text);
 
         // Resize to 1000×667 (3:2) then convert to JPG
@@ -199,7 +199,7 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
         return {
             imageUrl,
             imageBase64: jpgBase64,
-            provider: 'gemini-3.1-flash-image',
+            provider: result.model || 'gemini-3.1-flash-image',
             aspectRatio,
             description: result.text || 'Image generated successfully'
         };

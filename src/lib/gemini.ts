@@ -84,11 +84,11 @@ async function retryWithBackoff<T>(
  * See: https://ai.google.dev/gemini-api/docs/models/gemini
  */
 export const GEMINI_MODELS = {
-  // Gemini 3.1 models (latest, most intelligent)
+  // Gemini 3.5 & 3.1 models (latest available)
   GEMINI_3_1_PRO: 'gemini-3.1-pro-preview',
-  GEMINI_3_1_FLASH: 'gemini-3.1-flash-preview',
+  GEMINI_3_1_FLASH: 'gemini-3.5-flash',
   GEMINI_3_1_FLASH_IMAGE: 'gemini-3.1-flash-image-preview',
-  GEMINI_3_1_FLASH_LITE: 'gemini-3.1-flash-lite-preview',
+  GEMINI_3_1_FLASH_LITE: 'gemini-3.1-flash-lite',
 
   // Gemini 2.5 models (stable, production-ready)
   GEMINI_2_5_PRO: 'gemini-2.5-pro',
@@ -96,11 +96,11 @@ export const GEMINI_MODELS = {
   GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
 
   // Aliases for backward compatibility
-  FLASH: 'gemini-2.5-flash',
-  PRO: 'gemini-2.5-pro',
-  PRO_PREVIEW: 'gemini-3.1-flash-preview',
+  FLASH: 'gemini-3.5-flash',
+  PRO: 'gemini-3.1-pro-preview',
+  PRO_PREVIEW: 'gemini-3.1-pro-preview',
   PRO_IMAGE: 'gemini-3.1-flash-image-preview',
-  PRO_THINKING: 'gemini-2.5-pro',
+  PRO_THINKING: 'gemini-3.1-pro-preview',
 } as const;
 
 /**
@@ -168,10 +168,10 @@ export async function generateImage(
         const aspectRatio = options?.aspectRatio || '3:2';
         const numberOfImages = options?.numberOfImages || 1;
 
-        // Use Imagen 3 generateImages API for proper aspect ratio control
+        // Use Imagen 4 generateImages API for proper aspect ratio control
         try {
           const response = await (ai.models as any).generateImages({
-            model: 'imagen-3.0-generate-002',
+            model: 'imagen-4.0-generate-001',
             prompt,
             config: {
               numberOfImages,
@@ -187,7 +187,7 @@ export async function generateImage(
           }
 
           if (images.length > 0) {
-            return { images, text: '' };
+            return { images, text: '', model: 'imagen-4.0-generate-001' };
           }
         } catch {
           // Imagen model not available on this key — fall through to generateContent
@@ -217,7 +217,7 @@ export async function generateImage(
           }
         }
 
-        return { images, text: textContent };
+        return { images, text: textContent, model: options?.model || GEMINI_MODELS.GEMINI_3_1_FLASH_IMAGE };
       } catch (error: any) {
         console.error('Gemini image generation error:', error);
 
