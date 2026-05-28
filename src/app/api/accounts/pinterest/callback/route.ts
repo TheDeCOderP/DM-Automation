@@ -117,6 +117,54 @@ console.log('Pinterest token data:', tokenData);
             socialAccountId: account.id
           }
         });
+
+        // Sync Pinterest boards into SocialAccountPage so they appear in the
+        // schedule modal's board selector. Connect-time sync only — users who
+        // add/remove boards later can re-sync via /api/accounts/pinterest/pages.
+        try {
+          const boardsRes = await fetch('https://api.pinterest.com/v5/boards?page_size=100', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+          });
+          if (boardsRes.ok) {
+            const boardsData = await boardsRes.json();
+            for (const board of (boardsData.items || []) as Array<{
+              id: string;
+              name: string;
+              media?: { image_cover_url?: string | null };
+            }>) {
+              await prisma.socialAccountPage.upsert({
+                where: {
+                  pageId_socialAccountId: {
+                    pageId: board.id,
+                    socialAccountId: account.id,
+                  },
+                },
+                update: {
+                  name: board.name,
+                  pageName: board.name,
+                  pageImage: board.media?.image_cover_url || null,
+                  accessToken: encryptedAccessToken,
+                  tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+                  isActive: true,
+                },
+                create: {
+                  name: board.name,
+                  pageId: board.id,
+                  pageName: board.name,
+                  pageImage: board.media?.image_cover_url || null,
+                  platform: 'PINTEREST',
+                  accessToken: encryptedAccessToken,
+                  tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+                  isActive: true,
+                  socialAccountId: account.id,
+                },
+              });
+            }
+            console.log(`Pinterest: synced ${(boardsData.items || []).length} boards for ${profile.username}`);
+          }
+        } catch (boardSyncError) {
+          console.error('Pinterest board sync failed (non-fatal):', boardSyncError);
+        }
       } catch (error) {
         console.error('Database error:', error);
         // Continue to redirect even if DB save fails

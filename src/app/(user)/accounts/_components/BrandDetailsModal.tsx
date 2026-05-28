@@ -13,6 +13,7 @@ import {
   Shield,
   User,
   BadgeIcon,
+  RefreshCw,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -263,9 +264,9 @@ export default function BrandDetailsModal({
                       {brand.socialAccounts.map((account) => (
                         <div
                           key={account.id}
-                          className="flex items-center gap-3 p-3 rounded-lg border bg-muted/20"
+                          className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             {getPlatformIcon(account.platform)}
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate">
@@ -276,6 +277,9 @@ export default function BrandDetailsModal({
                               </p>
                             </div>
                           </div>
+                          {account.platform === "PINTEREST" && (
+                            <RefreshBoardsButton platformUserId={account.platformUserId} />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -495,5 +499,38 @@ export default function BrandDetailsModal({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function RefreshBoardsButton({ platformUserId }: { platformUserId: string }) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch(
+        `/api/accounts/pinterest/pages?platformUserId=${encodeURIComponent(platformUserId)}`
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to refresh boards");
+      toast.success(`Synced ${data.pages?.length ?? 0} Pinterest boards`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to refresh boards");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleRefresh}
+      disabled={refreshing}
+      title="Re-sync Pinterest boards"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+      <span className="ml-1 text-xs">{refreshing ? "Syncing…" : "Sync boards"}</span>
+    </Button>
   );
 }

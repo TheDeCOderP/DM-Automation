@@ -144,26 +144,47 @@ export async function publishToPinterest(
       throw new Error('Pinterest token is expired');
     }
 
-    if (!post.socialAccountPageId) {
-      throw new Error('Board ID is required');
+    // 2. Resolve target board: prefer linked SocialAccountPage; fall back to first
+    // existing Pinterest board; if account has zero boards, create a default one.
+    let targetBoardId: string | undefined;
+    let targetBoardName: string | undefined;
+
+    if (post.socialAccountPageId) {
+      const board = await prisma.socialAccountPage.findFirst({
+        where: { id: post.socialAccountPageId, socialAccountId: socialAccount.id },
+      });
+      targetBoardId = board?.pageId;
+      targetBoardName = board?.pageName;
     }
 
-    const board = await prisma.socialAccountPage.findFirst({
-      where: {
-        id: post.socialAccountPageId,
-        socialAccountId: socialAccount.id,
-      },
-    });
-
-    // 2. Get user's boards to select one if not provided
-    let targetBoardId = board?.pageId;
     if (!targetBoardId) {
       const boards = await getUserBoards(accessToken);
-      if (boards.length === 0) {
-        throw new Error('No Pinterest boards found. Please create a board first.');
+      if (boards.length > 0) {
+        targetBoardId = boards[0].id;
+        targetBoardName = boards[0].name;
+      } else {
+        const brand = await prisma.brand.findUnique({ where: { id: post.brandId } });
+        const boardName = brand?.name || 'Main';
+        const created = await createPinterestBoard(accessToken, boardName);
+        targetBoardId = created.id;
+        targetBoardName = created.name;
       }
-      // Use the first board or implement board selection logic
-      targetBoardId = boards[0].id;
+
+      const page = await prisma.socialAccountPage.create({
+        data: {
+          socialAccountId: socialAccount.id,
+          name: targetBoardName!,
+          pageId: targetBoardId,
+          pageName: targetBoardName!,
+          accessToken: socialAccount.accessToken,
+          tokenExpiresAt: socialAccount.tokenExpiresAt,
+          platform: 'PINTEREST',
+        },
+      });
+      await prisma.post.update({
+        where: { id: post.id },
+        data: { socialAccountPageId: page.id },
+      });
     }
 
     // 3. Get media for the post if not already included
@@ -192,6 +213,27 @@ export async function publishToPinterest(
     await handlePinterestPostFailure(post, error);
     throw error;
   }
+}
+
+export async function createPinterestBoard(
+  accessToken: string,
+  name: string,
+  description?: string,
+): Promise<PinterestBoard> {
+  const response = await fetch('https://api.pinterest.com/v5/boards', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      description: description || `Posts from ${name}`,
+      privacy: 'PUBLIC',
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`Failed to create Pinterest board: ${data.message || JSON.stringify(data)}`);
+  }
+  return data as PinterestBoard;
 }
 
 export async function getUserBoards(accessToken: string): Promise<PinterestBoard[]> {
@@ -246,9 +288,16 @@ async function createPinterestPin(
     const mediaType = getMediaType(media.url);
     const contentType = getContentType(media.url);
 
+    // Pinterest limits: title 100 chars, description 800 chars.
+    const rawTitle = post.title || post.content;
+    const title = rawTitle.length > 100 ? rawTitle.substring(0, 97) + '...' : rawTitle;
+    const description = post.content.length > 800
+      ? post.content.substring(0, 797) + '...'
+      : post.content;
+
     const pinData: PinterestPinData = {
-      title: post.title || post.content.substring(0, 100), // Pinterest titles are typically short
-      description: post.content,
+      title,
+      description,
       link: post.url || undefined, // Optional link for the pin
       board_id: boardId,
       media_source: {
