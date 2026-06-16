@@ -14,6 +14,8 @@ import {
   User,
   BadgeIcon,
   RefreshCw,
+  Ban,
+  UserPlus,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -39,19 +41,23 @@ interface BrandDetailsModalProps {
   onOpenChange: (open: boolean) => void;
   brand: BrandWithSocialAccounts | null;
   onSuccess?: () => void;
+  onShare?: () => void;
 }
 
 export default function BrandDetailsModal({
   open,
   onOpenChange,
   brand,
-  onSuccess
+  onSuccess,
+  onShare,
 }: BrandDetailsModalProps) {
   const [removingUser, setRemovingUser] = useState<string | null>(null);
   const [userToRemove, setUserToRemove] = useState<BrandMember | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [rolesError, setRolesError] = useState(false);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [revokingInvite, setRevokingInvite] = useState<string | null>(null);
+  const [inviteToRevoke, setInviteToRevoke] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (open && brand?.isAdmin) {
@@ -154,6 +160,31 @@ export default function BrandDetailsModal({
     }
   };
 
+  const confirmRevokeInvite = async () => {
+    if (!inviteToRevoke) return;
+
+    setRevokingInvite(inviteToRevoke.id);
+    try {
+      const response = await fetch(`/api/brands/${brand.id}/invites/${inviteToRevoke.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to revoke invitation");
+      }
+
+      toast.success(`Invitation to ${inviteToRevoke.name} has been revoked`);
+      onSuccess?.();
+    } catch (error) {
+      console.error("Error revoking invite:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to revoke invitation");
+    } finally {
+      setRevokingInvite(null);
+      setInviteToRevoke(null);
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "BrandAdmin":
@@ -171,6 +202,21 @@ export default function BrandDetailsModal({
         return "default" as const;
       case "BrandEditor":
         return "secondary" as const;
+      default:
+        return "outline" as const;
+    }
+  };
+
+  const getInviteStatusVariant = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "secondary" as const;
+      case "ACCEPTED":
+        return "default" as const;
+      case "EXPIRED":
+        return "destructive" as const;
+      case "REVOKED":
+        return "outline" as const;
       default:
         return "outline" as const;
     }
@@ -387,6 +433,20 @@ export default function BrandDetailsModal({
                       <Users className="h-4 w-4" />
                       Brand Invites ({brand.brandInvitations?.length || 0})
                     </div>
+                    {brand.isAdmin && onShare && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          onOpenChange(false);
+                          onShare();
+                        }}
+                        className="gap-1.5 h-8 text-xs"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Invite Members
+                      </Button>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -394,13 +454,15 @@ export default function BrandDetailsModal({
                     <div className="space-y-3">
                       {brand.brandInvitations.map((invite) => {
                         const inviteRoleId = (invite.metadata as any)?.roleId as string | undefined;
+                        const roleName = roles.find((r) => r.id === inviteRoleId)?.name || "BrandUser";
+                        const canRevoke = brand.isAdmin && (invite.status === "PENDING" || invite.status === "EXPIRED");
                         return (
                           <div
                             key={invite.id}
                             className="flex items-center justify-between p-3 rounded-lg border bg-muted/20"
                           >
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8 border">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <Avatar className="h-8 w-8 border shrink-0">
                                 <AvatarImage src={invite.invitedTo?.image || undefined} />
                                 <AvatarFallback className="text-xs">
                                   {invite.invitedTo?.name?.charAt(0).toUpperCase() ||
@@ -422,7 +484,7 @@ export default function BrandDetailsModal({
                                   onValueChange={(value) => handleUpdateInviteRole(invite.id, value)}
                                   disabled={updatingRole === invite.id}
                                 >
-                                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                                  <SelectTrigger className="w-[130px] h-8 text-xs shrink-0">
                                     <SelectValue placeholder="Select role" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -434,30 +496,43 @@ export default function BrandDetailsModal({
                                   </SelectContent>
                                 </Select>
                               ) : (
-                                inviteRoleId && (
-                                  <Badge variant={getRoleBadgeVariant(roles.find((r) => r.id === inviteRoleId)?.name || "")} className="gap-1 text-xs">
-                                    {roles.find((r) => r.id === inviteRoleId)?.name || ""}
-                                  </Badge>
-                                )
+                                <Badge variant={getRoleBadgeVariant(roleName)} className="gap-1 text-xs shrink-0">
+                                  {roleName}
+                                </Badge>
                               )}
                             </div>
 
-                            <div className="flex flex-col items-end gap-1 text-right">
-                              <Badge
-                                variant={
-                                  invite.status === "PENDING"
-                                    ? "secondary"
-                                    : invite.status === "ACCEPTED"
-                                    ? "default"
-                                    : "outline"
-                                }
-                                className="capitalize text-xs px-2 py-0.5"
-                              >
-                                {invite.status.toLowerCase()}
-                              </Badge>
-                              <span className="text-[11px] text-muted-foreground">
-                                Expires {format(new Date(invite.expiresAt), "MMM d, yyyy")}
-                              </span>
+                            <div className="flex items-center gap-2 ml-3 shrink-0">
+                              <div className="flex flex-col items-end gap-1">
+                                <Badge
+                                  variant={getInviteStatusVariant(invite.status)}
+                                  className="capitalize text-xs px-2 py-0.5"
+                                >
+                                  {invite.status.toLowerCase()}
+                                </Badge>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {invite.status === "EXPIRED"
+                                    ? `Expired ${format(new Date(invite.expiresAt), "MMM d, yyyy")}`
+                                    : `Expires ${format(new Date(invite.expiresAt), "MMM d, yyyy")}`}
+                                </span>
+                              </div>
+                              {canRevoke && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setInviteToRevoke({
+                                      id: invite.id,
+                                      name: invite.invitedTo?.name || invite.invitedTo?.email || "this user",
+                                    })
+                                  }
+                                  disabled={revokingInvite === invite.id}
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
+                                  title="Revoke invitation"
+                                >
+                                  <Ban className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
@@ -467,6 +542,20 @@ export default function BrandDetailsModal({
                     <div className="text-center py-6 text-muted-foreground">
                       <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p className="text-sm">No pending or active invites</p>
+                      {brand.isAdmin && onShare && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            onOpenChange(false);
+                            onShare();
+                          }}
+                          className="mt-3 gap-1.5"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          Invite Members
+                        </Button>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -494,6 +583,29 @@ export default function BrandDetailsModal({
               className="bg-destructive hover:bg-destructive/90"
             >
               {removingUser === userToRemove?.id ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Revoke Invitation Confirmation Dialog */}
+      <AlertDialog open={!!inviteToRevoke} onOpenChange={(open) => !open && setInviteToRevoke(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke Invitation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to revoke the invitation sent to <strong>{inviteToRevoke?.name}</strong>?
+              They will no longer be able to accept this invitation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRevokeInvite}
+              disabled={revokingInvite === inviteToRevoke?.id}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {revokingInvite === inviteToRevoke?.id ? "Revoking..." : "Revoke"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

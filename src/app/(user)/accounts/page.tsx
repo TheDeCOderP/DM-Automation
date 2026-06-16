@@ -589,6 +589,10 @@ export default function BrandsPage() {
         onOpenChange={(open) => setBrandDetailsModal({ ...brandDetailsModal, open })}
         brand={brandDetailsModal?.brand || null}
         onSuccess={() => mutate()}
+        onShare={() => {
+          const b = brandDetailsModal.brand;
+          if (b) setShareBrandModal({ open: true, brandId: b.id, brandName: b.name });
+        }}
       />
     </div>
   )

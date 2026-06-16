@@ -6,7 +6,7 @@ import { useState } from "react";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   Mail, CheckCircle2, XCircle, Clock, Building2,
-  User, Send, Inbox,
+  User, Send, Inbox, Ban,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,13 +50,14 @@ function InviteCardSkeleton() {
 
 export default function InvitesPage() {
   const [responding, setResponding] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState<string | null>(null);
 
   // Received (pending invites for me)
   const { data: receivedData, isLoading: loadingReceived, mutate: mutateReceived } =
     useSWR("/api/invites?type=received", fetcher);
 
-  // All received (including history) — reuse the brands API invitations data
-  const { data: sentData, isLoading: loadingSent } =
+  // All sent invitations
+  const { data: sentData, isLoading: loadingSent, mutate: mutateSent } =
     useSWR("/api/invites", fetcher);
 
   const pendingInvites = receivedData?.invites ?? [];
@@ -77,6 +78,23 @@ export default function InvitesPage() {
       toast.error("Failed to respond to invitation");
     } finally {
       setResponding(null);
+    }
+  };
+
+  const handleRevoke = async (brandId: string, inviteId: string) => {
+    setRevoking(inviteId);
+    try {
+      const res = await fetch(`/api/brands/${brandId}/invites/${inviteId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to revoke invitation");
+      toast.success("Invitation revoked");
+      mutateSent();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revoke invitation");
+    } finally {
+      setRevoking(null);
     }
   };
 
@@ -191,6 +209,7 @@ export default function InvitesPage() {
                 sentInvites.map((invite: any) => {
                   const cfg = statusConfig[invite.status] ?? statusConfig.PENDING;
                   const StatusIcon = cfg.icon;
+                  const canRevoke = invite.status === "PENDING";
                   return (
                     <div key={invite.id} className="flex items-center gap-4 p-4 border rounded-lg bg-muted/20">
                       <Avatar className="h-10 w-10 rounded-lg border shrink-0">
@@ -211,13 +230,32 @@ export default function InvitesPage() {
                           <Separator orientation="vertical" className="h-3" />
                           <span>Sent {formatDistanceToNow(new Date(invite.createdAt), { addSuffix: true })}</span>
                           <Separator orientation="vertical" className="h-3" />
-                          <span>Expires {format(new Date(invite.expiresAt), "MMM d, yyyy")}</span>
+                          <span>
+                            {invite.status === "EXPIRED"
+                              ? `Expired ${format(new Date(invite.expiresAt), "MMM d, yyyy")}`
+                              : `Expires ${format(new Date(invite.expiresAt), "MMM d, yyyy")}`}
+                          </span>
                         </div>
                       </div>
-                      <Badge variant="outline" className={`gap-1 text-xs shrink-0 ${cfg.className}`}>
-                        <StatusIcon className="h-3 w-3" />
-                        {cfg.label}
-                      </Badge>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline" className={`gap-1 text-xs ${cfg.className}`}>
+                          <StatusIcon className="h-3 w-3" />
+                          {cfg.label}
+                        </Badge>
+                        {canRevoke && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRevoke(invite.brand.id, invite.id)}
+                            disabled={revoking === invite.id}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1 h-7 px-2"
+                            title="Revoke invitation"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                            {revoking === invite.id ? "Revoking..." : "Revoke"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })
