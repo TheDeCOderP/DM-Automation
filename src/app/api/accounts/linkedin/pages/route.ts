@@ -52,7 +52,8 @@ export async function GET(req: NextRequest) {
       pageName: page.pageName,
       pageImage: page.pageImage,
       platform: page.platform,
-      isActive: page.isActive
+      isActive: page.isActive,
+      tokenExpiresAt: page.tokenExpiresAt?.toISOString() ?? null,
     }));
 
     return NextResponse.json({ 
