@@ -36,12 +36,29 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all calendars for this brand
+    // Note: items only returns id + imageUrl for the list view (no captions/LongText)
+    // Full item data is loaded per-calendar in the [id] route
     const calendars = await prisma.contentCalendar.findMany({
       where: {
         brandId,
       },
-      include: {
+      select: {
+        id: true,
+        brandId: true,
+        topic: true,
+        duration: true,
+        platforms: true,
+        postsPerWeek: true,
+        status: true,
+        startDate: true,
+        endDate: true,
+        createdAt: true,
+        updatedAt: true,
         items: {
+          select: {
+            id: true,
+            imageUrl: true,
+          },
           orderBy: { day: "asc" },
         },
         brand: {
