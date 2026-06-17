@@ -11,6 +11,102 @@ import { publishToTikTok } from "@/services/tiktok.service";
 import { updateCalendarItemStatus } from "@/utils/calendar-status-updater";
 
 /**
+ * Check for LinkedIn tokens that are expiring soon (within 7 days) or already expired
+ * and send notifications to affected users — called once per cron run
+ */
+async function checkAndNotifyLinkedInTokenExpiry() {
+  try {
+    const now = new Date();
+    const warningThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Find LinkedIn pages whose token expires within 7 days or is already expired
+    const expiringPages = await prisma.socialAccountPage.findMany({
+      where: {
+        platform: "LINKEDIN",
+        isActive: true,
+        tokenExpiresAt: {
+          lte: warningThreshold,
+        },
+      },
+      select: {
+        id: true,
+        pageName: true,
+        tokenExpiresAt: true,
+        socialAccountId: true,
+      },
+    });
+
+    for (const page of expiringPages) {
+      const isExpired = page.tokenExpiresAt ? page.tokenExpiresAt <= now : true;
+      const daysLeft = page.tokenExpiresAt
+        ? Math.ceil((page.tokenExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+
+      // Get all brands connected to this social account
+      const accountBrands = await prisma.socialAccountBrand.findMany({
+        where: { socialAccountId: page.socialAccountId },
+        select: {
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              members: { select: { userId: true } },
+            },
+          },
+        },
+      });
+
+      for (const { brand } of accountBrands) {
+        for (const member of brand.members) {
+          const notifTitle = isExpired
+            ? "LinkedIn Token Expired"
+            : "LinkedIn Token Expiring Soon";
+          const notifMessage = isExpired
+            ? `Your LinkedIn token for "${page.pageName}" (${brand.name}) has expired. Scheduled posts are failing. Please reconnect now.`
+            : `Your LinkedIn token for "${page.pageName}" (${brand.name}) will expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}. Reconnect to avoid posting failures.`;
+
+          // Only send if we haven't sent this exact notification in the last 24 hours
+          const recentNotif = await prisma.notification.findFirst({
+            where: {
+              userId: member.userId,
+              type: "ACCOUNT_DISCONNECTED",
+              createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+            },
+          });
+
+          if (!recentNotif) {
+            await prisma.notification.create({
+              data: {
+                userId: member.userId,
+                type: "ACCOUNT_DISCONNECTED",
+                title: notifTitle,
+                message: notifMessage,
+                metadata: {
+                  platform: "LINKEDIN",
+                  pageId: page.id,
+                  pageName: page.pageName,
+                  brandId: brand.id,
+                  brandName: brand.name,
+                  isExpired,
+                  daysLeft,
+                  tokenExpiry: page.tokenExpiresAt?.toISOString(),
+                },
+              },
+            });
+            console.log(
+              `[CRON] 🔔 Sent ${isExpired ? "TOKEN_EXPIRED" : "TOKEN_EXPIRING"} notification to user ${member.userId} for page "${page.pageName}"`
+            );
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // Non-fatal — don't block the main cron job
+    console.error("[CRON] Failed to check LinkedIn token expiry:", err);
+  }
+}
+
+/**
  * Cron Job Endpoint - Called by external cron service to publish scheduled posts
  * This endpoint processes all posts that are scheduled to be published
  */
@@ -31,6 +127,9 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     
     console.log(`[CRON] Starting scheduled post publishing at ${now.toISOString()}`);
+    
+    // Check LinkedIn token expiry and notify users proactively
+    await checkAndNotifyLinkedInTokenExpiry();
     
     // Find all scheduled posts that should be published now (including overdue posts)
     const scheduledPosts = await prisma.post.findMany({
