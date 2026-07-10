@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
     const tags = JSON.parse(formData.get('tags') as string || '[]') as string[];
     const externalSiteIds = JSON.parse(formData.get('externalSiteIds') as string || '[]') as string[];
     const publishImmediately = formData.get('publishImmediately') === 'true';
+    const customSlug = (formData.get('slug') as string || '').trim();
 
     // Get banner image and featured image
     const bannerFile = formData.get('bannerImage') as File;
@@ -149,12 +150,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Generate slug from title
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') + 
-      '-' + Date.now();
+    // Generate slug: use client-provided slug if available, otherwise auto-generate from title
+    const baseSlug = customSlug
+      ? customSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      : title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    // Ensure slug uniqueness by appending a counter only if a conflict exists
+    let slug = baseSlug;
+    let slugExists = await prisma.blog.findFirst({ where: { slug } });
+    let counter = 1;
+    while (slugExists) {
+      slug = `${baseSlug}-${counter}`;
+      slugExists = await prisma.blog.findFirst({ where: { slug } });
+      counter++;
+    }
 
     // Create the blog post
     const blog = await prisma.blog.create({

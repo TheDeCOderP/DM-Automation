@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, Share2, Info, FileText, Calendar } from "lucide-react";
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, Share2, Info, FileText, Calendar, Newspaper, Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +134,7 @@ export function MobileBrandCard({
         {/* Quick Actions */}
         <div>
           <p className="text-xs font-semibold text-muted-foreground mb-2">Quick Actions</p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -153,6 +153,27 @@ export function MobileBrandCard({
               <Calendar className="h-4 w-4" />
               Calendar
             </Button>
+            {(brand._count?.databaseConnections ?? 0) > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/blogs/automation?brandId=${brand.id}`)}
+                className="gap-2 flex-1"
+              >
+                <Newspaper className="h-4 w-4" />
+                Blog Post
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/blogs/db-connections?brand=${brand.id}`)}
+                className="gap-2 flex-1 text-muted-foreground"
+              >
+                <Database className="h-4 w-4" />
+                Connect DB
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

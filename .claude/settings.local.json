@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"c:\\\\xampp\\\\htdocs\\\\dma\\\\src\" -Recurse | Where-Object { $_.Name -match \"blog|schedul|cron|publish|automat\" } | Select-Object FullName)"
+    ]
+  }
+}

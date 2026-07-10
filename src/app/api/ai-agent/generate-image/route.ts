@@ -2,6 +2,7 @@ import { generateImage as generateGeminiImage } from '@/lib/gemini';
 import { uploadBase64 } from '@/lib/upload';
 import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -147,19 +148,29 @@ function calculateAspectRatio(width: number, height: number): '1:1' | '16:9' | '
 async function generateImage(prompt: string, aspectRatio: string = '1:1') {
     try {
         console.log('Generating image with Gemini (latest API)...');
-        
-        // Enhanced prompt for better social media images
-        const enhancedPrompt = `Create a high-quality, professional, visually appealing image for social media posting. 
-        Style: Modern, clean, eye-catching, suitable for ${aspectRatio} aspect ratio.
-        Description: ${prompt}
-        
-        The image should be:
-        - High resolution and sharp
-        - Well-composed with good lighting
-        - Suitable for social media platforms (Facebook, Instagram, LinkedIn, Twitter)
-        - Engaging and attention-grabbing
-        - Professional quality
-        - Vibrant colors and clear details`;
+
+        const isBlogBanner = aspectRatio === '16:9' || aspectRatio === '3:2';
+        const enhancedPrompt = isBlogBanner
+          ? `Create a cinematic, ultra-high-resolution blog banner image at 1000×667 pixels (wide landscape, 3:2).
+
+SUBJECT / CONCEPT:
+${prompt}
+
+MANDATORY QUALITY STANDARDS — Fortune 500 / MNC Editorial Grade:
+- Visual standard: Bloomberg Businessweek, McKinsey Quarterly, Harvard Business Review, or Deloitte Insights cover art
+- Wide landscape 3:2 composition — focal point placed centre-left, right half intentionally open/blurred for headline text overlay
+- Style: premium corporate editorial photography OR sophisticated digital illustration / isometric 3D render — pick whichever suits the subject
+- If photography style: diverse, well-dressed business professionals in modern glass boardrooms, financial districts, data centres, or executive suites — cinematic depth of field, sharp subject, soft bokeh background
+- If illustration style: clean geometric abstraction, data-flow diagrams, or architectural renders — precise, purposeful, zero clutter
+- Color palette: deep navy + gold, charcoal + white + electric blue, or slate + emerald — always premium, never garish or pastel
+- Lighting: Rembrandt side-lighting, cool corporate blue ambience, or golden-hour warmth through floor-to-ceiling windows — cinematic, dramatic, intentional
+- Mood: authoritative, aspirational, forward-thinking — the kind of visual Apple, Goldman Sachs, Microsoft, or Accenture would publish
+- Resolution: crisp, sharp, web-optimised at 1000px wide — no noise, no blur on key elements
+- Absolutely NO: generic stock-photo handshakes, cheesy clipart, rainbow/pastel colors, cartoon art, watermarks, logos, or text`
+          : `Create a high-quality, professional image.
+Style: Modern, clean, suitable for ${aspectRatio} aspect ratio.
+Description: ${prompt}
+Requirements: high resolution, well-composed, good lighting, professional quality, no text or watermarks.`;
 
         // Generate image using Gemini's latest API
         const result = await generateGeminiImage(enhancedPrompt, {
@@ -172,20 +183,27 @@ async function generateImage(prompt: string, aspectRatio: string = '1:1') {
         }
 
         const imageBase64 = result.images[0];
-        console.log("Image generated successfully with Gemini (gemini-3-pro-image-preview)");
+        console.log(`Image generated successfully with Gemini (${result.model || 'unknown'})`);
         console.log("Generated text:", result.text);
 
-        // Upload to Local CDN (with Cloudinary fallback)
-        const base64Data = `data:image/png;base64,${imageBase64}`;
-        const fileName = `ai-generated-${Date.now()}.png`;
-        
+        // Resize to 1000×667 (3:2) then convert to JPG
+        const pngBuffer = Buffer.from(imageBase64, 'base64');
+        const jpgBuffer = await sharp(pngBuffer)
+          .resize(1000, 667, { fit: 'cover', position: 'center' })
+          .jpeg({ quality: 85, progressive: true })
+          .toBuffer();
+        const jpgBase64 = jpgBuffer.toString('base64');
+
+        const base64Data = `data:image/jpeg;base64,${jpgBase64}`;
+        const fileName = `ai-generated-${Date.now()}.jpg`;
+
         const imageUrl = await uploadBase64(base64Data, fileName, 'ai-generated-images');
         console.log("Image uploaded successfully:", imageUrl);
         
         return {
             imageUrl,
-            imageBase64,
-            provider: 'gemini-3-pro-image',
+            imageBase64: jpgBase64,
+            provider: result.model || 'gemini-3.1-flash-image',
             aspectRatio,
             description: result.text || 'Image generated successfully'
         };

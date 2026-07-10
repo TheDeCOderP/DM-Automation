@@ -294,6 +294,7 @@ export async function POST(req: NextRequest) {
       },
     };
 
+    let cronJobId: string | undefined;
     try {
       const response = await fetch("https://api.cron-job.org/jobs", {
         method: "PUT",
@@ -310,7 +311,7 @@ export async function POST(req: NextRequest) {
       }
 
       const cronData = await response.json();
-      const cronJobId = cronData?.jobId?.toString();
+      cronJobId = cronData?.jobId?.toString();
 
       if (cronJobId) {
         await prisma.postGroup.update({
@@ -322,7 +323,38 @@ export async function POST(req: NextRequest) {
       console.log(`[SCHEDULE-ITEM] Created cron job ${cronJobId} for day ${item.day}`);
     } catch (cronError) {
       console.error(`[SCHEDULE-ITEM] Cron job error:`, cronError);
-      // Don't fail the whole operation if cron job fails
+      // Roll back the scheduling so the user knows it isn't actually queued.
+      // The publish-overdue safety net still picks up the post if the failure
+      // is silent in production logs, but the user should know upfront.
+      await prisma.post.deleteMany({ where: { postGroupId: postGroup.id } });
+      await prisma.contentCalendarItem.update({
+        where: { id: item.id },
+        data: { postGroupId: null, status: "DRAFT" },
+      });
+      await prisma.postGroup.delete({ where: { id: postGroup.id } });
+
+      return NextResponse.json(
+        {
+          error: "Failed to register the scheduled job with the scheduler. Please try again.",
+          details: cronError instanceof Error ? cronError.message : String(cronError),
+        },
+        { status: 502 }
+      );
+    }
+
+    if (!cronJobId) {
+      // Same rollback if scheduler returned 200 but no job id
+      await prisma.post.deleteMany({ where: { postGroupId: postGroup.id } });
+      await prisma.contentCalendarItem.update({
+        where: { id: item.id },
+        data: { postGroupId: null, status: "DRAFT" },
+      });
+      await prisma.postGroup.delete({ where: { id: postGroup.id } });
+
+      return NextResponse.json(
+        { error: "Scheduler did not return a job id; scheduling aborted." },
+        { status: 502 }
+      );
     }
 
     console.log(`[SCHEDULE-ITEM] ✓ Scheduled ${createdPosts.length} posts`);

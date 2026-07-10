@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import AppHeader from '@/components/layout/AppHeader';
 import AppSidebar from '@/components/layout/AppSidebar';
+import LinkedInTokenExpiryBanner from '@/components/layout/LinkedInTokenExpiryBanner';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import Loader from '@/components/layout/Loader';
 
@@ -33,6 +34,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       <AppSidebar/>
       <SidebarInset>
         <AppHeader/>
+        <LinkedInTokenExpiryBanner />
         <main className='p-2'>
           {children}
         </main>

@@ -84,26 +84,23 @@ async function retryWithBackoff<T>(
  * See: https://ai.google.dev/gemini-api/docs/models/gemini
  */
 export const GEMINI_MODELS = {
-  // Gemini 3 models (latest, most intelligent)
-  GEMINI_3_PRO: 'gemini-3-pro-preview',
-  GEMINI_3_FLASH: 'gemini-3-flash-preview',
-  GEMINI_3_PRO_IMAGE: 'gemini-3-pro-image-preview',
-  
+  // Gemini 3.5 & 3.1 models (latest available)
+  GEMINI_3_1_PRO: 'gemini-3.1-pro-preview',
+  GEMINI_3_1_FLASH: 'gemini-3.5-flash',
+  GEMINI_3_1_FLASH_IMAGE: 'gemini-3.1-flash-image-preview',
+  GEMINI_3_1_FLASH_LITE: 'gemini-3.1-flash-lite',
+
   // Gemini 2.5 models (stable, production-ready)
   GEMINI_2_5_PRO: 'gemini-2.5-pro',
   GEMINI_2_5_FLASH: 'gemini-2.5-flash',
   GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
-  GEMINI_2_5_FLASH_IMAGE: 'gemini-2.5-flash-image',
-  
-  // Gemini 2.0 models (deprecated, will be shut down March 31, 2026)
-  GEMINI_2_0_FLASH: 'gemini-2.0-flash-exp',
-  
+
   // Aliases for backward compatibility
-  FLASH: 'gemini-2.5-flash',
-  PRO: 'gemini-2.5-pro',
-  PRO_PREVIEW: 'gemini-3-flash-preview',  // Use Gemini 3 Flash for best balance
-  PRO_IMAGE: 'gemini-2.5-flash-image',
-  PRO_THINKING: 'gemini-2.5-pro',
+  FLASH: 'gemini-3.5-flash',
+  PRO: 'gemini-3.1-pro-preview',
+  PRO_PREVIEW: 'gemini-3.1-pro-preview',
+  PRO_IMAGE: 'gemini-3.1-flash-image-preview',
+  PRO_THINKING: 'gemini-3.1-pro-preview',
 } as const;
 
 /**
@@ -160,7 +157,7 @@ export async function generateImage(
   prompt: string,
   options?: {
     model?: string;
-    aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+    aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4' | '3:2' | '2:3' | '4:5' | '5:4' | '21:9';
     numberOfImages?: number;
     maxRetries?: number;
   }
@@ -168,43 +165,68 @@ export async function generateImage(
   return retryWithBackoff(
     async () => {
       try {
+        const aspectRatio = options?.aspectRatio || '3:2';
+        const numberOfImages = options?.numberOfImages || 1;
+
+        // Use Imagen 4 generateImages API for proper aspect ratio control
+        try {
+          const response = await (ai.models as any).generateImages({
+            model: 'imagen-4.0-generate-001',
+            prompt,
+            config: {
+              numberOfImages,
+              aspectRatio,
+              safetyFilterLevel: 'BLOCK_SOME',
+              personGeneration: 'allow_adult',
+            },
+          });
+
+          const images: string[] = [];
+          for (const img of response?.generatedImages || []) {
+            if (img?.image?.imageBytes) images.push(img.image.imageBytes);
+          }
+
+          if (images.length > 0) {
+            return { images, text: '', model: 'imagen-4.0-generate-001' };
+          }
+        } catch {
+          // Imagen model not available on this key — fall through to generateContent
+        }
+
+        // Fallback: gemini-3.1-flash-image-preview with responseFormat for aspect ratio control
         const response = await ai.models.generateContent({
-          model: options?.model || GEMINI_MODELS.GEMINI_2_5_FLASH_IMAGE,
+          model: options?.model || GEMINI_MODELS.GEMINI_3_1_FLASH_IMAGE,
           contents: prompt,
           config: {
-            responseModalities: ['IMAGE', 'TEXT']
-          }
+            responseModalities: ['IMAGE', 'TEXT'],
+            responseFormat: {
+              image: {
+                aspectRatio,
+                imageSize: '1K',
+              },
+            },
+          } as any,
         });
-        
+
         const images: string[] = [];
         let textContent = '';
-
-        // Extract images and text from response
         if (response?.candidates?.[0]?.content?.parts) {
           for (const part of response.candidates[0].content.parts) {
-            if (part.text) {
-              textContent += part.text;
-            } else if (part.inlineData?.data) {
-              images.push(part.inlineData.data);
-            }
+            if (part.text) textContent += part.text;
+            else if (part.inlineData?.data) images.push(part.inlineData.data);
           }
         }
 
-        return {
-          images,
-          text: textContent
-        };
+        return { images, text: textContent, model: options?.model || GEMINI_MODELS.GEMINI_3_1_FLASH_IMAGE };
       } catch (error: any) {
         console.error('Gemini image generation error:', error);
-        
-        // Create a user-friendly error object
+
         const errorResponse = {
           code: error?.status || error?.code || 500,
           message: error?.message || 'Failed to generate image',
-          status: error?.status || 'UNKNOWN'
+          status: error?.status || 'UNKNOWN',
         };
 
-        // Handle specific error cases
         if (error?.status === 503 || error?.code === 503) {
           errorResponse.message = 'The AI image generation service is currently experiencing high demand. Please try again in a few moments.';
         } else if (error?.status === 429 || error?.code === 429) {
@@ -369,7 +391,7 @@ export async function generateWithThinking(
         }
 
         const response = await ai.models.generateContent({
-          model: options?.model || GEMINI_MODELS.GEMINI_3_FLASH,
+          model: options?.model || GEMINI_MODELS.GEMINI_3_1_FLASH,
           contents: prompt,
           config
         });

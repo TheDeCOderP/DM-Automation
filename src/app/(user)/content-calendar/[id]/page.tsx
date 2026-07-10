@@ -546,7 +546,10 @@ function useTimeRemaining(targetDate: string | undefined) {
   const [label, setLabel] = useState("");
 
   useEffect(() => {
-    if (!targetDate) return;
+    if (!targetDate) {
+      setLabel("");
+      return;
+    }
 
     const calc = () => {
       const diff = new Date(targetDate).getTime() - Date.now();
@@ -686,9 +689,15 @@ function CalendarItemRow({
   onSchedule: (item: CalendarItem) => void;
   getStatusColor: (status: string) => string;
 }) {
-  const timeRemaining = useTimeRemaining(
-    item.status === "SCHEDULED" ? item.suggestedTime : undefined
-  );
+  // Prefer the actual scheduled time on the linked post(s) over the calendar
+  // item's suggestedTime — suggestedTime can drift if the item is edited after
+  // scheduling, which would falsely show "overdue" while the post is still
+  // queued for its real scheduledAt.
+  const effectiveScheduledTime =
+    item.status === "SCHEDULED"
+      ? (item.postGroup?.posts?.[0]?.scheduledAt as string | undefined) || item.suggestedTime
+      : undefined;
+  const timeRemaining = useTimeRemaining(effectiveScheduledTime);
 
   return (
     <React.Fragment>
@@ -733,6 +742,24 @@ function CalendarItemRow({
                   ⏱ {timeRemaining}
                 </div>
               )}
+              {item.status === "COMPLETED" && item.postGroup?.posts?.length ? (
+                <div className="flex flex-col gap-0.5 mt-1">
+                  {item.postGroup.posts
+                    .filter((p: any) => p.url)
+                    .map((p: any) => (
+                      <a
+                        key={p.id}
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-primary hover:underline truncate max-w-[200px]"
+                        title={p.url}
+                      >
+                        🔗 {p.platform}
+                      </a>
+                    ))}
+                </div>
+              ) : null}
             </div>
           ) : (
             <span className="text-muted-foreground text-sm">Not set</span>

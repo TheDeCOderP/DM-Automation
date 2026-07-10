@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
 
   try {
     // Parse state to get userId and brandId
-    const { brandId, returnUrl } = JSON.parse(decodeURIComponent(state));
+    const { brandId, returnUrl, userId } = JSON.parse(decodeURIComponent(state));
 
     if (!brandId) {
-      throw new Error("Invalid state: missing userId or brandId");
+      throw new Error("Invalid state: missing brandId");
     }
 
     // 1️⃣ Exchange code for token (Page App credentials)
@@ -70,46 +70,82 @@ export async function GET(request: NextRequest) {
     const platformUserId = profile.id;
     const platformUsername = `${profile.localizedFirstName} ${profile.localizedLastName}`.trim();
 
-    // 3️⃣ Find existing LinkedIn social account for this brand
-    const linkedinAccount = await prisma.socialAccount.findFirst({
+    // 3️⃣ Find or create a LinkedIn social account for THIS user (by platformUserId)
+    //    Then make sure it's linked to the brand.
+    //    This ensures any brand member can renew — not just the original connector.
+    let linkedinAccount = await prisma.socialAccount.findUnique({
       where: {
-        platform: "LINKEDIN",
-        brands: {
-          some: {
-            brandId: brandId
-          }
-        }
+        platform_platformUserId: {
+          platform: "LINKEDIN",
+          platformUserId: platformUserId,
+        },
       },
-      include: {
-        brands: {
-          where: {
-            brandId: brandId
-          }
-        }
-      }
     });
 
-    if (!linkedinAccount) {
-      throw new Error("No LinkedIn account found for this brand. Please connect a LinkedIn account first.");
+    // 4️⃣ Encrypt tokens
+    const encryptedAccessToken = await encryptToken(accessToken);
+    const encryptedRefreshToken = tokenData.refresh_token
+      ? await encryptToken(tokenData.refresh_token)
+      : null;
+    const tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+
+    if (linkedinAccount) {
+      // Update existing account with fresh tokens
+      linkedinAccount = await prisma.socialAccount.update({
+        where: { id: linkedinAccount.id },
+        data: {
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          tokenExpiresAt,
+          platformUsername,
+          lastSyncedAt: new Date(),
+        },
+      });
+    } else {
+      // Create new social account for this user
+      linkedinAccount = await prisma.socialAccount.create({
+        data: {
+          platform: "LINKEDIN",
+          platformUserId,
+          platformUsername,
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          tokenExpiresAt,
+        },
+      });
     }
 
-    // 4️⃣ Encrypt tokens for storage
-    const encryptedAccessToken = await encryptToken(accessToken);
-    const encryptedRefreshToken = await encryptToken(tokenData.refresh_token || "");
-
-    // 5️⃣ Update the existing social account with page access tokens
-    // Only update tokens, not platformUserId/platformUsername to avoid unique constraint violation
-    await prisma.socialAccount.update({
+    // 5️⃣ Ensure this social account is linked to the brand
+    await prisma.socialAccountBrand.upsert({
       where: {
-        id: linkedinAccount.id
+        brandId_socialAccountId: {
+          brandId,
+          socialAccountId: linkedinAccount.id,
+        },
       },
-      data: {
-        accessToken: encryptedAccessToken,
-        refreshToken: encryptedRefreshToken || null,
-        tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-        lastSyncedAt: new Date(),
-      }
+      update: {},
+      create: {
+        brandId,
+        socialAccountId: linkedinAccount.id,
+      },
     });
+
+    // Also ensure UserSocialAccount link exists so the user can see it
+    if (userId) {
+      await prisma.userSocialAccount.upsert({
+        where: {
+          userId_socialAccountId: {
+            userId,
+            socialAccountId: linkedinAccount.id,
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          socialAccountId: linkedinAccount.id,
+        },
+      });
+    }
 
     // 6️⃣ Fetch LinkedIn Pages (Organizations) where user has posting permissions
     // Fetch all approved roles, then filter for posting-capable roles
@@ -143,7 +179,7 @@ export async function GET(request: NextRequest) {
           ?.map((el: { organization: string; role: string; state: string }) => el.organization?.split(":").pop())
           ?.filter(Boolean) || [];
 
-      // 7️⃣ Fetch org details & save them as Page Tokens using the existing socialAccountId
+      // 7️⃣ Fetch org details & save/update Page Tokens linked to THIS user's social account
       if (orgIds.length > 0) {
         for (const orgId of orgIds) {
           try {
@@ -181,8 +217,9 @@ export async function GET(request: NextRequest) {
 
             // Encrypt page access token
             const encryptedPageAccessToken = await encryptToken(accessToken);
+            const pageTokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 days
 
-            // Store page token linked to the existing social account
+            // Upsert page linked to THIS user's social account
             await prisma.socialAccountPage.upsert({
               where: {
                 pageId_socialAccountId: {
@@ -194,7 +231,7 @@ export async function GET(request: NextRequest) {
                 accessToken: encryptedPageAccessToken,
                 pageName,
                 pageImage,
-                tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+                tokenExpiresAt: pageTokenExpiresAt,
                 isActive: true,
                 name: pageName,
               },
@@ -205,9 +242,27 @@ export async function GET(request: NextRequest) {
                 pageImage,
                 platform: "LINKEDIN",
                 accessToken: encryptedPageAccessToken,
-                tokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+                tokenExpiresAt: pageTokenExpiresAt,
                 isActive: true,
                 socialAccountId: linkedinAccount.id,
+              },
+            });
+
+            // Also update any OTHER social accounts linked to this brand that have
+            // the same pageId — so posts scheduled against the old account still work.
+            await prisma.socialAccountPage.updateMany({
+              where: {
+                pageId: orgId,
+                isActive: true,
+                socialAccount: {
+                  brands: { some: { brandId } },
+                },
+                // Don't re-update the one we just upserted
+                NOT: { socialAccountId: linkedinAccount.id },
+              },
+              data: {
+                accessToken: encryptedPageAccessToken,
+                tokenExpiresAt: pageTokenExpiresAt,
               },
             });
 

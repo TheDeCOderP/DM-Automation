@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Search, X, Share2, UserIcon } from 'lucide-react';
 
 import { Input } from "@/components/ui/input";
@@ -32,11 +32,19 @@ export default function ShareBrandModal({
 }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
-  const [selectedRole, setSelectedRole] = useState<string>("PCR-0004") // Default to BrandUser
+  const [selectedRole, setSelectedRole] = useState<string>("")
   const [isSharing, setIsSharing] = useState(false)
 
   const { data, isLoading } = useSWR(open ? `/api/brands/${brandId}/invite/users` : null, fetcher);
   const { data: rolesData, isLoading: rolesLoading } = useSWR(open ? '/api/roles' : null, fetcher);
+
+  // Set default role to BrandUser once roles are loaded
+  useEffect(() => {
+    if (rolesData?.roles && !selectedRole) {
+      const brandUser = rolesData.roles.find((r: any) => r.name === "BrandUser");
+      if (brandUser) setSelectedRole(brandUser.id);
+    }
+  }, [rolesData]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // Fix: Access the data directly, not through usersData.data
   const usersData = data?.users || [];
@@ -72,22 +80,28 @@ export default function ShareBrandModal({
       const response = await fetch(`/api/brands/${brandId}/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           userIds: Array.from(selectedUsers),
-          roleId: selectedRole 
+          roleId: selectedRole
         })
       })
 
-      if (!response.ok) throw new Error("Failed to share brand")
+      const data = await response.json().catch(() => ({}))
 
-      toast.success(`Brand shared with ${selectedUsers.size} user(s)`)
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to share brand")
+      }
+
+      toast.success(data.message || `Invitations sent successfully`)
       setSelectedUsers(new Set())
       setSearchQuery("")
-      setSelectedRole("PCR-0004") // Reset to default
+      // Reset to BrandUser dynamically instead of hardcoded ID
+      const brandUser = rolesData?.roles?.find((r: any) => r.name === "BrandUser")
+      setSelectedRole(brandUser?.id || "")
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error("Failed to share brand")
+      toast.error(error instanceof Error ? error.message : "Failed to share brand")
       console.error(error)
     } finally {
       setIsSharing(false)

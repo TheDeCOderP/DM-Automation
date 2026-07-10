@@ -46,6 +46,17 @@ type AccountDisconnectedMetadata = {
   platform: string;
 };
 
+type LinkedInTokenExpiryMetadata = {
+  platform: "LINKEDIN";
+  pageId: string;
+  pageName: string;
+  brandId: string;
+  brandName: string;
+  isExpired: boolean;
+  daysLeft: number;
+  tokenExpiry?: string;
+};
+
 type SubscriptionRenewalMetadata = {
   plan: string;
   renewalDate: string;
@@ -56,6 +67,7 @@ type NotificationMetadata =
   | PostFailedMetadata
   | PostScheduledMetadata
   | AccountDisconnectedMetadata
+  | LinkedInTokenExpiryMetadata
   | SubscriptionRenewalMetadata
   | null;
 
@@ -121,6 +133,18 @@ function NotificationsList({ notifications = [] }: NotificationsListProps) {
     );
   };
 
+  // Type guard for LinkedIn token expiry notifications
+  const isLinkedInTokenExpiry = (
+    notification: Notification
+  ): notification is Notification & { metadata: LinkedInTokenExpiryMetadata } => {
+    return (
+      notification.type === NotificationType.ACCOUNT_DISCONNECTED &&
+      notification.metadata !== null &&
+      "pageId" in notification.metadata &&
+      (notification.metadata as LinkedInTokenExpiryMetadata).platform === "LINKEDIN"
+    );
+  };
+
   return (
     <div className="divide-y">
       {notifications.map((notification) => (
@@ -160,6 +184,20 @@ function NotificationsList({ notifications = [] }: NotificationsListProps) {
                     View post
                   </Button>
                 )}
+
+                {isLinkedInTokenExpiry(notification) && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-6 px-2 ml-2 text-xs text-orange-600 hover:text-orange-700"
+                    onClick={() => {
+                      const meta = notification.metadata as LinkedInTokenExpiryMetadata;
+                      window.location.href = `/api/accounts/linkedin/pages/auth?brandId=${meta.brandId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
+                    }}
+                  >
+                    Renew Now →
+                  </Button>
+                )}
               </div>
             )}
             {isPostFailed(notification) && (
@@ -195,6 +233,7 @@ export default function NotificationDropdown() {
   const { data: notificationData, mutate: mutateNotifications, error, isLoading } = useSWR<{
     success: boolean;
     data: Notification[];
+    total: number;
   }>(`/api/notifications?status=unread`, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: true,
@@ -209,7 +248,7 @@ export default function NotificationDropdown() {
   });
 
   const notifications = notificationData?.data || [];
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notificationData?.total ?? 0;
 
   useEffect(() => {
     if (error) {
@@ -224,11 +263,8 @@ export default function NotificationDropdown() {
   const handleMarkAllAsRead = async () => {
     setIsSubmitting(true);
     try {
-      await Promise.all(
-        notifications.map(({ id }) =>
-          fetch(`/api/notifications/${id}`, { method: 'PUT' })
-        )
-      );
+      const res = await fetch('/api/notifications?action=mark-all-read', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
       mutateNotifications();
       toast.success('Notifications marked as read');
     } catch (error) {

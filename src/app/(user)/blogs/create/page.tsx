@@ -72,6 +72,7 @@ function CreateBlogForm({
 
   const [formData, setFormData] = useState({
     title: '',
+    slug: '',
     content: '',
     excerpt: '',
     tags: [] as string[],
@@ -298,11 +299,36 @@ function CreateBlogForm({
                           id="title"
                           name="title"
                           value={formData.title}
-                          onChange={handleInputChange}
+                          onChange={(e) => {
+                            const newTitle = e.target.value;
+                            setFormData(prev => ({
+                              ...prev,
+                              title: newTitle,
+                              // Auto-generate slug from title only if slug hasn't been manually edited
+                              slug: prev.slug === prev.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || prev.slug === ''
+                                ? newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                                : prev.slug,
+                            }));
+                          }}
                           placeholder="Enter a compelling blog title..."
                           required
                           className="text-lg h-12"
                         />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="slug" className="text-base">URL Slug</Label>
+                        <Input
+                          id="slug"
+                          name="slug"
+                          value={formData.slug}
+                          onChange={handleInputChange}
+                          placeholder="url-friendly-slug"
+                          className="font-mono text-sm h-11"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Auto-generated from title. Edit to customize the URL.
+                        </p>
                       </div>
 
                       <div className="space-y-2">

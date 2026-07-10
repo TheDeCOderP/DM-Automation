@@ -3,7 +3,7 @@
 import useSWR from "swr"
 import { toast } from "sonner"
 import { useState } from "react"
-import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText, Calendar, Clock, Bell, CheckCircle, XCircle } from "lucide-react"
+import { Plus, MoreHorizontal, Edit, Trash2, Globe, RefreshCw, AlertCircle, Sparkles, Share2, FileText, Calendar, Clock, Bell, CheckCircle, XCircle, Newspaper, Database } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
@@ -95,6 +95,7 @@ export default function BrandsPage() {
   const { data: invitesData, mutate: mutateInvites } = useSWR("/api/invites?type=received", fetcher)
   const pendingInvites: PendingInvite[] = invitesData?.invites || []
   const [respondingInvite, setRespondingInvite] = useState<string | null>(null)
+  const [isDeletingBrand, setIsDeletingBrand] = useState<string | null>(null)
   const [selectedBrand, setSelectedBrand] = useState<BrandWithSocialAccounts | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [connectAccountsModal, setConnectAccountsModal] = useState<{
@@ -124,31 +125,39 @@ export default function BrandsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: inviteToken, status }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || 'Failed to respond to invitation')
+      }
       toast.success(status === 'ACCEPTED' ? 'Invitation accepted' : 'Invitation declined')
       mutateInvites()
       mutate()
-    } catch {
-      toast.error('Failed to respond to invitation')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to respond to invitation')
     } finally {
       setRespondingInvite(null)
     }
   }
 
   const handleDelete = async (id: string) => {
+    if (isDeletingBrand) return
+    setIsDeletingBrand(id)
     try {
       const response = await fetch(`/api/brands/${id}`, {
         method: "DELETE",
       })
 
       if (!response.ok) {
-        throw new Error(response.statusText)
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || response.statusText)
       }
       mutate()
       toast.success("Successfully deleted the brand")
     } catch (err) {
       console.error(err)
-      toast.error("Something went wrong while deleting the brand")
+      toast.error(err instanceof Error ? err.message : "Something went wrong while deleting the brand")
+    } finally {
+      setIsDeletingBrand(null)
     }
   }
 
@@ -448,7 +457,8 @@ export default function BrandsPage() {
 
                       {/* Quick Actions */}
                       <TableCell>
-                        <div className="flex gap-2">                          <Button
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/posts?brand=${brand.id}`)}
@@ -464,8 +474,29 @@ export default function BrandsPage() {
                             className="gap-2 flex-1"
                           >
                             <Calendar className="h-4 w-4" />
-                            Content Calendar
+                            Calendar
                           </Button>
+                          {(brand._count?.databaseConnections ?? 0) > 0 ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/blogs/automation?brandId=${brand.id}`)}
+                              className="gap-2 flex-1"
+                            >
+                              <Newspaper className="h-4 w-4" />
+                              Blog Post
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/blogs/db-connections?brand=${brand.id}`)}
+                              className="gap-2 flex-1 text-muted-foreground"
+                            >
+                              <Database className="h-4 w-4" />
+                              Connect DB
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
 
@@ -558,6 +589,10 @@ export default function BrandsPage() {
         onOpenChange={(open) => setBrandDetailsModal({ ...brandDetailsModal, open })}
         brand={brandDetailsModal?.brand || null}
         onSuccess={() => mutate()}
+        onShare={() => {
+          const b = brandDetailsModal.brand;
+          if (b) setShareBrandModal({ open: true, brandId: b.id, brandName: b.name });
+        }}
       />
     </div>
   )

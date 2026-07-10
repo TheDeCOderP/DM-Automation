@@ -185,11 +185,11 @@ export default function ScheduleItemModal({
       return;
     }
 
-    // Validate that time is in the future
+    // Validate that time is in the future (allow 2 minutes grace for clock skew)
     const scheduledDate = new Date(suggestedTime);
     const now = new Date();
-    if (scheduledDate <= now) {
-      toast.error("Schedule time must be in the future");
+    if (scheduledDate < new Date(now.getTime() - 2 * 60 * 1000)) {
+      toast.error("Schedule time is in the past. Please choose a future time.");
       return;
     }
 

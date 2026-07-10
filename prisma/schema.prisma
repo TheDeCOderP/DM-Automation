@@ -140,8 +140,11 @@ model Brand {
   brandInvitations BrandInvitation[]
   contentCalendars ContentCalendar[]
 
-  externalBlogSites ExternalBlogSite[]
-  knowledgeBase     KnowledgeBase[]
+  externalBlogSites        ExternalBlogSite[]
+  knowledgeBase            KnowledgeBase[]
+  databaseConnections      DatabaseConnection[]
+  blogAutomationCalendars  BlogAutomationCalendar[]
+  blogAutomations          BlogAutomation[]
 }
 
 model UserBrand {
@@ -909,4 +912,128 @@ model Banner {
 
   @@index([type])
   @@index([isActive])
+}
+
+// ─── Blog Automation ──────────────────────────────────────────────────────────
+
+enum DbType {
+  POSTGRES
+  MYSQL
+}
+
+enum BlogAutomationStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+model DatabaseConnection {
+  id       String @id @default(cuid())
+  name     String
+  dbType   DbType
+  host     String
+  port     Int
+  database String
+  username String
+  password String  @db.LongText
+  ssl      Boolean @default(false)
+
+  // Which table in the portal DB to insert blogs into + how fields map
+  blogTable    String  @default("Blog")
+  fieldMapping Json?   // { "title": "title", "content": "content", ... }
+
+  // Status
+  isActive     Boolean   @default(true)
+  lastTestedAt DateTime?
+  testStatus   String?   // SUCCESS | FAILED
+  testError    String?   @db.Text
+
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  blogAutomations BlogAutomation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId])
+  @@index([isActive])
+}
+
+model BlogAutomationCalendar {
+  id      String @id @default(cuid())
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  title  String
+  topic  String  @db.Text
+  count  Int     // Number of blogs to generate
+
+  status String @default("DRAFT") // DRAFT | GENERATING | DONE
+
+  items BlogAutomation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId])
+  @@index([status])
+}
+
+model BlogAutomation {
+  id      String @id @default(cuid())
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  // Optional: belongs to a calendar
+  calendarId String?
+  calendar   BlogAutomationCalendar? @relation(fields: [calendarId], references: [id], onDelete: SetNull)
+
+  // Target DB connection (optional — can publish manually without one)
+  dbConnectionId String?
+  dbConnection   DatabaseConnection? @relation(fields: [dbConnectionId], references: [id], onDelete: SetNull)
+
+  // Blog content (HTML)
+  title   String
+  slug    String?
+  content String  @db.LongText
+  excerpt String? @db.Text
+  tags    Json?   // string[]
+
+  // Images
+  bannerUrl    String? @db.Text
+  bannerPrompt String? @db.Text
+
+  // Extra content (portal fields)
+  articleSection     String?           // e.g. "Digital Marketing"
+  faqs               String? @db.Text  // JSON: [{question,answer}]
+  selectedCategories Json?             // string[] of category names to link
+  selectedIndustries Json?             // string[] of industry names to link
+
+  // SEO
+  seoTitle       String? @db.VarChar(255)
+  seoDescription String? @db.Text
+  seoKeywords    String? @db.Text
+  canonicalUrl   String? @db.Text
+
+  // Scheduling
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  status      BlogAutomationStatus @default(DRAFT)
+  cronJobId   String?
+
+  // Result tracking
+  externalId   String?  // ID of the row inserted in portal DB
+  errorMessage String?  @db.Text
+  retryCount   Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId])
+  @@index([calendarId])
+  @@index([dbConnectionId])
+  @@index([status])
+  @@index([scheduledAt])
 }

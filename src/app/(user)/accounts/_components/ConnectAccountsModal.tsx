@@ -1,8 +1,8 @@
 "use client"
 
 import { toast } from "sonner";
-import { useState } from "react";
-import { Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, RefreshCw, Trash2, Building2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,14 @@ import { SocialAccount, Platform } from "@prisma/client";
 type SocialAccountWithUser = SocialAccount & {
   user: { image: string | null };
 };
+
+interface LinkedInPage {
+  id: string;
+  pageName: string;
+  pageId: string;
+  tokenExpiresAt: string | null;
+  isActive: boolean;
+}
 
 interface ConnectAccountsModalProps {
   open: boolean;
@@ -42,6 +50,43 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  const [linkedInPages, setLinkedInPages] = useState<LinkedInPage[]>([]);
+  const [loadingPages, setLoadingPages] = useState(false);
+  const [renewingPageId, setRenewingPageId] = useState<string | null>(null);
+
+  const linkedInAccount = accounts.find((acc) => acc.platform === "LINKEDIN");
+
+  // Fetch LinkedIn pages when modal opens and LinkedIn is connected
+  useEffect(() => {
+    if (!open || !linkedInAccount || !brandId) return;
+
+    const fetchPages = async () => {
+      setLoadingPages(true);
+      try {
+        const res = await fetch(`/api/accounts/linkedin/pages?platformUserId=${linkedInAccount.platformUserId}`);
+        if (!res.ok) throw new Error("Failed to fetch pages");
+        const data = await res.json();
+        setLinkedInPages(data.pages || []);
+      } catch {
+        setLinkedInPages([]);
+      } finally {
+        setLoadingPages(false);
+      }
+    };
+
+    fetchPages();
+  }, [open, linkedInAccount?.id, brandId]);
+
+  const isPageTokenExpired = (expiresAt: string | null) => {
+    if (!expiresAt) return true;
+    return new Date(expiresAt) <= new Date();
+  };
+
+  const getPageDaysLeft = (expiresAt: string | null) => {
+    if (!expiresAt) return 0;
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
 
   const handleRefreshToken = async (accountId: string) => {
     setRefreshingId(accountId);
@@ -94,9 +139,20 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
     }
   };
 
+  const handleRenewAllLinkedInPages = () => {
+    setConnectingPlatform("LINKEDIN_PAGES");
+    window.location.href = `/api/accounts/linkedin/pages/auth?brandId=${brandId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
+  };
+
+  const handleRenewPage = (pageId: string) => {
+    setRenewingPageId(pageId);
+    // All pages renew through same OAuth flow — LinkedIn issues one token for all pages
+    window.location.href = `/api/accounts/linkedin/pages/auth?brandId=${brandId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-center">
             Connect Social Accounts
@@ -111,6 +167,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
         <div className="flex-1 overflow-y-auto space-y-3 py-4 no-scrollbar">
           {platforms.map((platform) => {
             const connectedAccount = accounts.find((acc) => acc.platform === platform.id);
+            const isLinkedIn = platform.id === "LINKEDIN";
 
             return (
               <Card key={platform.id} className="transition-all hover:shadow-md">
@@ -120,53 +177,85 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                       <div className={`p-2 rounded-lg ${platform.isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'}`}>
                         {getPlatformIcon(platform.id, "h-6 w-6")}
                       </div>
-                      <h3 className="font-medium">{platform.name}</h3>
-                    </div>
 
-                    {connectedAccount ? (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            // For LinkedIn, reconnect instead of refresh
-                            if (platform.id === "LINKEDIN") {
-                              handleConnect(platform.id as Platform);
-                            } else {
-                              handleRefreshToken(connectedAccount.id);
-                            }
-                          }}
-                          disabled={refreshingId === connectedAccount.id || connectingPlatform === platform.id}
-                        >
-                          {(refreshingId === connectedAccount.id || connectingPlatform === platform.id) ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" /> 
-                              {platform.id === "LINKEDIN" ? "Reconnecting" : "Refreshing"}
-                            </>
+                      {connectedAccount ? (
+                        <div className="flex gap-2">
+                          {isLinkedIn ? (
+                            // LinkedIn: show "Renew Pages" to refresh all pages
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={handleRenewAllLinkedInPages}
+                              disabled={connectingPlatform === "LINKEDIN_PAGES"}
+                              className="gap-1"
+                            >
+                              {connectingPlatform === "LINKEDIN_PAGES" ? (
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Redirecting</>
+                              ) : (
+                                <><RefreshCw className="h-3.5 w-3.5" /> Renew Pages</>
+                              )}
+                            </Button>
                           ) : (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-1" /> 
-                              {platform.id === "LINKEDIN" ? "Reconnect" : "Refresh"}
-                            </>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRefreshToken(connectedAccount.id)}
+                              disabled={refreshingId === connectedAccount.id}
+                            >
+                              {refreshingId === connectedAccount.id ? (
+                                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Refreshing</>
+                              ) : (
+                                <><RefreshCw className="h-4 w-4 mr-1" /> Refresh</>
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDisconnect(connectedAccount.id, connectedAccount.platform)}
+                            disabled={disconnectingId === connectedAccount.id}
+                          >
+                            {disconnectingId === connectedAccount.id ? (
+                              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Deleting</>
+                            ) : (
+                              <><Trash2 className="h-4 w-4 mr-1" /> Delete</>
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={() => handleConnect(platform.id as Platform)}
+                          disabled={connectingPlatform !== null}
+                          size="sm"
+                          className="min-w-[80px]"
+                        >
+                          {connectingPlatform === platform.id ? (
+                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Connecting</>
+                          ) : (
+                            "Connect"
                           )}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDisconnect(connectedAccount.id, connectedAccount.platform)}
-                          disabled={disconnectingId === connectedAccount.id}
-                        >
-                          {disconnectingId === connectedAccount.id ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Deleting
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4 mr-1" /> Delete
-                            </>
-                          )}
-                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* LinkedIn pages list — only shown when LinkedIn is connected */}
+                {isLinkedIn && connectedAccount && (
+                  <div className="ml-4 space-y-1.5">
+                    {loadingPages ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Loading pages...
                       </div>
+                    ) : linkedInPages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground px-2">
+                        No LinkedIn pages found. Click &quot;Renew Pages&quot; to connect your pages.
+                      </p>
                     ) : (
                       <Button
                         onClick={() => handleConnect(platform.id as Platform)}
@@ -187,8 +276,8 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                       </Button>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+              </div>
             );
           })}
         </div>

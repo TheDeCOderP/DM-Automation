@@ -25,7 +25,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useSidebarSettings } from "@/hooks/useSidebarSettings";
 import type { SidebarGroup as Group, SidebarItem } from "@prisma/client";
-import { ScrollArea } from "../ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 interface SidebarGroupWithItems extends Group {
@@ -99,7 +98,6 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
   const isGroupOpen = React.useCallback(
     (id: string) => {
       if (!settings) return true;
-      if (settings.accordionMode === "NONE") return true;
       return openGroups.includes(id);
     },
     [settings, openGroups]
@@ -107,12 +105,12 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
 
   const toggleGroup = React.useCallback(
     (id: string) => {
-      if (!settings || settings.accordionMode === "NONE") return;
+      if (!settings) return;
       if (settings.accordionMode === "SINGLE") {
-        setOpenGroups((cur) => (cur.includes(id) ? cur : [id]));
+        setOpenGroups((cur) => (cur.includes(id) ? [] : [id]));
         return;
       }
-      // MULTI
+      // MULTI or NONE — toggle freely
       setOpenGroups((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
     },
     [settings]
@@ -228,8 +226,7 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
         </div>
 
         {/* Navigation Groups */}
-        <SidebarContent className="flex-1 overflow-y-auto px-3 group-data-[collapsible=icon]:px-0" style={groupGapStyle}>
-          <ScrollArea className="h-full w-full pr-2">
+        <SidebarContent className="flex-1 overflow-y-auto px-3 group-data-[collapsible=icon]:px-0 pr-2" style={groupGapStyle}>
             {isLoadingSidebar ? (
               <div className="space-y-6 px-1">
                 {[...Array(3)].map((_, i) => (
@@ -323,7 +320,6 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
                 <p className="text-muted-foreground/70 text-xs mt-1">Configure your sidebar in settings</p>
               </div>
             )}
-          </ScrollArea>
         </SidebarContent>
 
         <SidebarRail />
