@@ -35,14 +35,14 @@ interface ConnectAccountsModalProps {
 }
 
 const platforms = [
-  { id: "TWITTER", name: "Twitter", color: "bg-sky-500" },
-  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600" },
-  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary" },
-  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500" },
-  { id: "FACEBOOK", name: "Facebook", color: "bg-primary" },
-  { id: "REDDIT", name: "Reddit", color: "bg-green-600" },
-  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500" },
-  { id: "TIKTOK", name: "TikTok", color: "bg-black" },
+  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary", isDisabled: false },
+  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500", isDisabled: false },
+  { id: "FACEBOOK", name: "Facebook", color: "bg-primary", isDisabled: false },
+  { id: "REDDIT", name: "Reddit", color: "bg-green-600", isDisabled: false },
+  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600", isDisabled: false },
+  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", isDisabled: true }, // Disabled for now due to API limitations
+  { id: "TIKTOK", name: "TikTok", color: "bg-black", isDisabled: true }, // Disabled for now due to API limitations
+  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", isDisabled: true }, // Disabled for now due to API limitations
 ];
 
 export default function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {
@@ -170,23 +170,12 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
             const isLinkedIn = platform.id === "LINKEDIN";
 
             return (
-              <div key={platform.id} className="space-y-2">
-                {/* Main platform row */}
-                <Card className="transition-all hover:shadow-md">
-                  <CardContent className="p-0">
-                    <div className="flex items-center justify-between p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg">
-                          {getPlatformIcon(platform.id, "h-6 w-6")}
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{platform.name}</h3>
-                          {connectedAccount && (
-                            <p className="text-xs text-muted-foreground">
-                              @{connectedAccount.platformUsername}
-                            </p>
-                          )}
-                        </div>
+              <Card key={platform.id} className="transition-all hover:shadow-md">
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${platform.isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'}`}>
+                        {getPlatformIcon(platform.id, "h-6 w-6")}
                       </div>
 
                       {connectedAccount ? (
@@ -268,67 +257,23 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                         No LinkedIn pages found. Click &quot;Renew Pages&quot; to connect your pages.
                       </p>
                     ) : (
-                      linkedInPages.map((page) => {
-                        const expired = isPageTokenExpired(page.tokenExpiresAt);
-                        const daysLeft = getPageDaysLeft(page.tokenExpiresAt);
-                        const expiringSoon = !expired && daysLeft <= 10;
-
-                        return (
-                          <div
-                            key={page.id}
-                            className={`flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${
-                              expired
-                                ? "border-destructive/30 bg-destructive/5"
-                                : expiringSoon
-                                ? "border-yellow-500/30 bg-yellow-500/5"
-                                : "border-border/50 bg-muted/20"
-                            }`}
-                          >
-                            {/* Page info */}
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Building2 className={`h-3.5 w-3.5 shrink-0 ${expired ? "text-destructive" : expiringSoon ? "text-yellow-600" : "text-muted-foreground"}`} />
-                              <div className="min-w-0">
-                                <p className="font-medium text-xs truncate">{page.pageName}</p>
-                                <p className="text-[10px] text-muted-foreground">ID: {page.pageId}</p>
-                              </div>
-                            </div>
-
-                            {/* Status + Renew */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              {expired ? (
-                                <Badge variant="destructive" className="text-[10px] h-4 px-1 gap-0.5">
-                                  <AlertTriangle className="h-2.5 w-2.5" />
-                                  Expired
-                                </Badge>
-                              ) : expiringSoon ? (
-                                <Badge className="text-[10px] h-4 px-1 bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30 gap-0.5">
-                                  <AlertTriangle className="h-2.5 w-2.5" />
-                                  {daysLeft}d left
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px] h-4 px-1 gap-0.5 text-green-600 border-green-500/30">
-                                  <CheckCircle2 className="h-2.5 w-2.5" />
-                                  Active
-                                </Badge>
-                              )}
-
-                              {(expired || expiringSoon) && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant={expired ? "destructive" : "outline"}
-                                  className={`h-6 text-[10px] px-2 gap-1 ${!expired ? "border-yellow-500/40 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-500/20" : ""}`}
-                                  disabled={renewingPageId === page.id}
-                                  onClick={() => handleRenewPage(page.id)}
-                                >
-                                  <RefreshCw className={`h-2.5 w-2.5 ${renewingPageId === page.id ? "animate-spin" : ""}`} />
-                                  {renewingPageId === page.id ? "..." : "Renew"}
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
+                      <Button
+                        onClick={() => handleConnect(platform.id as Platform)}
+                        disabled={connectingPlatform !== null || platform.isDisabled}
+                        size="sm"
+                        className="min-w-[80px]"
+                      >
+                        {connectingPlatform === platform.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Connecting
+                          </>
+                        ) : platform.isDisabled ? (
+                          "Not Available"
+                        ) : (
+                          "Connect"
+                        )}
+                      </Button>
                     )}
                   </div>
                 )}

@@ -86,7 +86,7 @@ export const sendMail = async ({
     await Promise.race([verifyPromise, timeoutPromise]);
 
     const mailOptions: nodemailer.SendMailOptions = {
-      from: process.env.EMAIL_FROM || `"Digital Marketing Automation" <${process.env.SMTP_USER}>`,
+      from: process.env.EMAIL_FROM || `"Digital Marketing Automation" <${process.env.SMTP_FROM}>`,
       to: recipient,
       subject: subject,
       html: message,
