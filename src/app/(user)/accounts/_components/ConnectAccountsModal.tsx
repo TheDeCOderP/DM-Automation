@@ -40,9 +40,9 @@ const platforms = [
   { id: "FACEBOOK", name: "Facebook", color: "bg-primary", isDisabled: false },
   { id: "REDDIT", name: "Reddit", color: "bg-green-600", isDisabled: false },
   { id: "YOUTUBE", name: "YouTube", color: "bg-red-600", isDisabled: false },
-  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", isDisabled: true }, // Disabled for now due to API limitations
-  { id: "TIKTOK", name: "TikTok", color: "bg-black", isDisabled: true }, // Disabled for now due to API limitations
-  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", isDisabled: true }, // Disabled for now due to API limitations
+  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", isDisabled: true },
+  { id: "TIKTOK", name: "TikTok", color: "bg-black", isDisabled: true },
+  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", isDisabled: true },
 ];
 
 export default function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {
@@ -146,7 +146,6 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
 
   const handleRenewPage = (pageId: string) => {
     setRenewingPageId(pageId);
-    // All pages renew through same OAuth flow — LinkedIn issues one token for all pages
     window.location.href = `/api/accounts/linkedin/pages/auth?brandId=${brandId}&returnUrl=${encodeURIComponent(window.location.pathname)}`;
   };
 
@@ -172,102 +171,70 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
             return (
               <Card key={platform.id} className="transition-all hover:shadow-md">
                 <CardContent className="p-0">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${platform.isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'}`}>
                         {getPlatformIcon(platform.id, "h-6 w-6")}
                       </div>
+                      <span className="font-medium">{platform.name}</span>
+                    </div>
 
-                      {connectedAccount ? (
-                        <div className="flex gap-2">
-                          {isLinkedIn ? (
-                            // LinkedIn: show "Renew Pages" to refresh all pages
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={handleRenewAllLinkedInPages}
-                              disabled={connectingPlatform === "LINKEDIN_PAGES"}
-                              className="gap-1"
-                            >
-                              {connectingPlatform === "LINKEDIN_PAGES" ? (
-                                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Redirecting</>
-                              ) : (
-                                <><RefreshCw className="h-3.5 w-3.5" /> Renew Pages</>
-                              )}
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleRefreshToken(connectedAccount.id)}
-                              disabled={refreshingId === connectedAccount.id}
-                            >
-                              {refreshingId === connectedAccount.id ? (
-                                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Refreshing</>
-                              ) : (
-                                <><RefreshCw className="h-4 w-4 mr-1" /> Refresh</>
-                              )}
-                            </Button>
-                          )}
+                    {connectedAccount ? (
+                      <div className="flex gap-2">
+                        {isLinkedIn ? (
                           <Button
                             type="button"
                             size="sm"
-                            variant="destructive"
-                            onClick={() => handleDisconnect(connectedAccount.id, connectedAccount.platform)}
-                            disabled={disconnectingId === connectedAccount.id}
+                            variant="outline"
+                            onClick={handleRenewAllLinkedInPages}
+                            disabled={connectingPlatform === "LINKEDIN_PAGES"}
+                            className="gap-1"
                           >
-                            {disconnectingId === connectedAccount.id ? (
-                              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Deleting</>
+                            {connectingPlatform === "LINKEDIN_PAGES" ? (
+                              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Redirecting</>
                             ) : (
-                              <><Trash2 className="h-4 w-4 mr-1" /> Delete</>
+                              <><RefreshCw className="h-3.5 w-3.5" /> Renew Pages</>
                             )}
                           </Button>
-                        </div>
-                      ) : (
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRefreshToken(connectedAccount.id)}
+                            disabled={refreshingId === connectedAccount.id}
+                          >
+                            {refreshingId === connectedAccount.id ? (
+                              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Refreshing</>
+                            ) : (
+                              <><RefreshCw className="h-4 w-4 mr-1" /> Refresh</>
+                            )}
+                          </Button>
+                        )}
                         <Button
                           type="button"
-                          onClick={() => handleConnect(platform.id as Platform)}
-                          disabled={connectingPlatform !== null}
                           size="sm"
-                          className="min-w-[80px]"
+                          variant="destructive"
+                          onClick={() => handleDisconnect(connectedAccount.id, connectedAccount.platform)}
+                          disabled={disconnectingId === connectedAccount.id}
                         >
-                          {connectingPlatform === platform.id ? (
-                            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Connecting</>
+                          {disconnectingId === connectedAccount.id ? (
+                            <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Deleting</>
                           ) : (
-                            "Connect"
+                            <><Trash2 className="h-4 w-4 mr-1" /> Delete</>
                           )}
                         </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* LinkedIn pages list — only shown when LinkedIn is connected */}
-                {isLinkedIn && connectedAccount && (
-                  <div className="ml-4 space-y-1.5">
-                    {loadingPages ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Loading pages...
                       </div>
-                    ) : linkedInPages.length === 0 ? (
-                      <p className="text-xs text-muted-foreground px-2">
-                        No LinkedIn pages found. Click &quot;Renew Pages&quot; to connect your pages.
-                      </p>
                     ) : (
                       <Button
+                        type="button"
                         onClick={() => handleConnect(platform.id as Platform)}
                         disabled={connectingPlatform !== null || platform.isDisabled}
                         size="sm"
                         className="min-w-[80px]"
                       >
                         {connectingPlatform === platform.id ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Connecting
-                          </>
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Connecting</>
                         ) : platform.isDisabled ? (
                           "Not Available"
                         ) : (
@@ -276,8 +243,63 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                       </Button>
                     )}
                   </div>
-                )}
-              </div>
+
+                  {/* LinkedIn pages list — only shown when LinkedIn is connected */}
+                  {isLinkedIn && connectedAccount && (
+                    <div className="px-4 pb-4 space-y-1.5">
+                      {loadingPages ? (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading pages...
+                        </div>
+                      ) : linkedInPages.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-2">
+                          No LinkedIn pages found. Click &quot;Renew Pages&quot; to connect your pages.
+                        </p>
+                      ) : (
+                        linkedInPages.map((page) => (
+                          <div key={page.id} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-sm">{page.pageName}</span>
+                              {!page.isActive && (
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                  Expired
+                                </Badge>
+                              )}
+                              {page.isActive && isPageTokenExpired(page.tokenExpiresAt) && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-yellow-500 text-yellow-600">
+                                  {getPageDaysLeft(page.tokenExpiresAt)} days left
+                                </Badge>
+                              )}
+                            </div>
+                            {!page.isActive || isPageTokenExpired(page.tokenExpiresAt) ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRenewPage(page.pageId)}
+                                disabled={renewingPageId === page.pageId}
+                                className="h-7 text-xs"
+                              >
+                                {renewingPageId === page.pageId ? (
+                                  <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Renewing</>
+                                ) : (
+                                  <><RefreshCw className="h-3 w-3 mr-1" /> Renew</>
+                                )}
+                              </Button>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px] px-2 py-0 h-6 flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             );
           })}
         </div>
