@@ -35,6 +35,14 @@ const DEFAULT_FIELD_MAPPINGS = {
     banner: 'main_image',
     tags: 'tags'
   },
+  JOOMLA: {
+    title: 'title',
+    content: 'articletext',
+    slug: 'alias',
+    catid: 'catid',
+    status: 'state',
+    metadesc: 'metadesc'
+  },
   CUSTOM_API: {
     title: 'title',
     content: 'content',
@@ -276,6 +284,21 @@ export default function SiteForm({
           defaultAuthType: 'API_KEY',
           showAuthType: false,
         };
+      case 'JOOMLA':
+        return {
+          baseUrlPlaceholder: 'https://your-joomla-site.com',
+          baseUrlHelp: 'Your Joomla site URL (no trailing slash)',
+          apiEndpointPlaceholder: '/api/index.php/v1/content/articles',
+          apiEndpointHelp: 'Standard Joomla 4/5 API endpoint',
+          authLabel: 'Not Required',
+          authPlaceholder: 'N/A',
+          authHelp: 'Joomla uses Bearer Token only',
+          tokenLabel: 'API Token',
+          tokenPlaceholder: 'Your Joomla API Token',
+          tokenHelp: 'Get this from: Users -> Manage -> [Your User] -> Joomla API Token tab',
+          defaultAuthType: 'API_KEY',
+          showAuthType: false,
+        };
       default:
         return {
           baseUrlPlaceholder: 'https://api.example.com',
@@ -331,6 +354,7 @@ export default function SiteForm({
                   <SelectItem value="WORDPRESS">WordPress</SelectItem>
                   <SelectItem value="HASHNODE">Hashnode</SelectItem>
                   <SelectItem value="DEV_TO">Dev.to</SelectItem>
+                  <SelectItem value="JOOMLA">Joomla</SelectItem>
                   <SelectItem value="CUSTOM_API">Custom API</SelectItem>
                 </SelectContent>
               </Select>

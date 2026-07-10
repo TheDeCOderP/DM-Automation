@@ -27,14 +27,14 @@ interface ConnectAccountsModalProps {
 }
 
 const platforms = [
-  { id: "TWITTER", name: "Twitter", color: "bg-sky-500" },
-  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600" },
-  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary" },
-  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500" },
-  { id: "FACEBOOK", name: "Facebook", color: "bg-primary" },
-  { id: "REDDIT", name: "Reddit", color: "bg-green-600" },
-  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500" },
-  { id: "TIKTOK", name: "TikTok", color: "bg-black" },
+  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary", isDisabled: false },
+  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500", isDisabled: false },
+  { id: "FACEBOOK", name: "Facebook", color: "bg-primary", isDisabled: false },
+  { id: "REDDIT", name: "Reddit", color: "bg-green-600", isDisabled: false },
+  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600", isDisabled: false },
+  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", isDisabled: true }, // Disabled for now due to API limitations
+  { id: "TIKTOK", name: "TikTok", color: "bg-black", isDisabled: true }, // Disabled for now due to API limitations
+  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", isDisabled: true }, // Disabled for now due to API limitations
 ];
 
 export default function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {
@@ -117,7 +117,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg`}>
+                      <div className={`p-2 rounded-lg ${platform.isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'}`}>
                         {getPlatformIcon(platform.id, "h-6 w-6")}
                       </div>
                       <h3 className="font-medium">{platform.name}</h3>
@@ -170,7 +170,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                     ) : (
                       <Button
                         onClick={() => handleConnect(platform.id as Platform)}
-                        disabled={connectingPlatform !== null}
+                        disabled={connectingPlatform !== null || platform.isDisabled}
                         size="sm"
                         className="min-w-[80px]"
                       >
@@ -179,6 +179,8 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Connecting
                           </>
+                        ) : platform.isDisabled ? (
+                          "Not Available"
                         ) : (
                           "Connect"
                         )}

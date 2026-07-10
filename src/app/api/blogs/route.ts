@@ -493,6 +493,9 @@ async function makeExternalApiRequest(externalSite: ExternalSite, payload: unkno
     case 'OAUTH2':
       headers['Authorization'] = `Bearer ${externalSite.apiKey}`;
       break;
+    case 'API_KEY':
+      headers['Authorization'] = `Bearer ${externalSite.apiKey}`;
+      break;
   }
 
   // Ensure Content-Type is set for all requests

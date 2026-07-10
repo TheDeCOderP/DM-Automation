@@ -3,6 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation"
+import { useSession, signIn, signOut } from "next-auth/react"
 import { Menu, X, ChevronDown, ChevronsRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,6 +122,43 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
 
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogin = async (callbackUrl = "/dashboard") => {
+    try {
+      await signIn("central-auth", { callbackUrl });
+    } catch (error) {
+      console.error("Central login error:", error);
+    }
+  };
+
+  const handleDashboardClick = () => {
+    setIsLoading(true);
+    const user = session?.user as any;
+
+    if (user?.userType === "PLATFORM_ADMIN") {
+      router.push("/admin");
+    } else if (user?.role === "SUPERADMIN" || user?.role === "ADMIN") {
+      router.push("/admin");
+    } else {
+      router.push("/dashboard");
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut({ callbackUrl: "/?logout=success" });
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
+  };
+  
+
   const menuItems: MenuItem[] = [
     {
       title: "Services",
@@ -230,11 +269,11 @@ export default function Header() {
           <ThemeToggle />
 
           <div className="hidden lg:flex gap-2">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Login</Link>
+            <Button onClick={() => handleLogin()} variant="ghost" asChild>
+              Login
             </Button>
-            <Button asChild className="rounded-full">
-              <Link href="/register">Get Started</Link>
+            <Button onClick={() => handleLogin()} className="rounded-full">
+              Get Started
             </Button>
           </div>
 
