@@ -25,6 +25,7 @@ import {
   Layers,
   Zap,
   MessageSquare,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Platform } from "@prisma/client";
+import { getPlatformIcon } from "@/utils/ui/icons";
 
 interface CreateCalendarModalProps {
   brandId: string;
@@ -82,6 +84,7 @@ const PLATFORMS = [
   { value: "PINTEREST", label: "Pinterest", icon: Pin, color: "text-red-500" },
   { value: "REDDIT", label: "Reddit", icon: MessageCircle, color: "text-orange-600" },
   { value: "TIKTOK", label: "TikTok", icon: Music, color: "text-foreground" },
+  { value: "GOOGLE_BUSINESS_PROFILE", label: "Google Business", icon: Store, color: "text-blue-600" },
 ];
 
 const TONE_OPTIONS = [
@@ -295,7 +298,7 @@ export default function CreateCalendarModal({
             setHolidays([]);
             return;
           }
-          throw new Error(`Failed (${res.status})`);
+            throw new Error(`Failed (${res.status})`);
         }
         allHolidays.push(...(await res.json() as PublicHoliday[]));
       }
@@ -593,7 +596,7 @@ export default function CreateCalendarModal({
                                 </svg>
                               )}
                             </div>
-                            <IconComponent className={`w-4 h-4 shrink-0 ${platform.color}`} />
+                            {getPlatformIcon(platform.value as Platform)}
                             <span>{platform.label}</span>
                           </button>
                         );
@@ -613,7 +616,6 @@ export default function CreateCalendarModal({
                     className="resize-none text-sm"
                   />
                 </SectionCard>
-
 
               </div>
 

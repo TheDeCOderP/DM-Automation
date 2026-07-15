@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw, Trash2, Building2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, Building2, CheckCircle2, Store } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,14 @@ interface LinkedInPage {
   isActive: boolean;
 }
 
+interface GbpLocation {
+  id: string;
+  locationName: string;
+  title: string;
+  isVerified: boolean;
+  address?: any;
+}
+
 interface ConnectAccountsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,15 +42,17 @@ interface ConnectAccountsModalProps {
   mutate: () => void;
 }
 
+// Added routePrefix to handle custom API paths (like 'gbp' instead of 'google_business_profile')
 const platforms = [
-  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary", isDisabled: false },
-  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500", isDisabled: false },
-  { id: "FACEBOOK", name: "Facebook", color: "bg-primary", isDisabled: false },
-  { id: "REDDIT", name: "Reddit", color: "bg-green-600", isDisabled: false },
-  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600", isDisabled: false },
-  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", isDisabled: true },
-  { id: "TIKTOK", name: "TikTok", color: "bg-black", isDisabled: true },
-  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", isDisabled: true },
+  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary", routePrefix: "linkedin", isDisabled: false },
+  { id: "GOOGLE_BUSINESS_PROFILE", name: "Google Business", color: "bg-blue-600", routePrefix: "google/business", isDisabled: false },
+  { id: "FACEBOOK", name: "Facebook", color: "bg-blue-600", routePrefix: "facebook", isDisabled: false },
+  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500", routePrefix: "pinterest", isDisabled: false },
+  { id: "REDDIT", name: "Reddit", color: "bg-green-600", routePrefix: "reddit", isDisabled: false },
+  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600", routePrefix: "youtube", isDisabled: false },
+  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", routePrefix: "instagram", isDisabled: true },
+  { id: "TIKTOK", name: "TikTok", color: "bg-black", routePrefix: "tiktok", isDisabled: true },
+  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", routePrefix: "twitter", isDisabled: true },
 ];
 
 export default function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {
@@ -50,13 +60,19 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+  
   const [linkedInPages, setLinkedInPages] = useState<LinkedInPage[]>([]);
   const [loadingPages, setLoadingPages] = useState(false);
   const [renewingPageId, setRenewingPageId] = useState<string | null>(null);
 
-  const linkedInAccount = accounts.find((acc) => acc.platform === "LINKEDIN");
+  const [gbpLocations, setGbpLocations] = useState<GbpLocation[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const [refreshingGbp, setRefreshingGbp] = useState(false);
 
-  // Fetch LinkedIn pages when modal opens and LinkedIn is connected
+  const linkedInAccount = accounts.find((acc) => acc.platform === "LINKEDIN");
+  const gbpAccount = accounts.find((acc) => acc.platform === "GOOGLE_BUSINESS_PROFILE");
+
+  // Fetch LinkedIn pages
   useEffect(() => {
     if (!open || !linkedInAccount || !brandId) return;
 
@@ -76,6 +92,27 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
 
     fetchPages();
   }, [open, linkedInAccount?.id, brandId]);
+
+  // Fetch GBP Locations
+  useEffect(() => {
+    if (!open || !gbpAccount || !brandId) return;
+
+    const fetchLocations = async () => {
+      setLoadingLocations(true);
+      try {
+        const res = await fetch(`/api/accounts/gbp/locations?platformUserId=${gbpAccount.platformUserId}&brandId=${brandId}`);
+        if (!res.ok) throw new Error("Failed to fetch locations");
+        const data = await res.json();
+        setGbpLocations(data.locations || []);
+      } catch {
+        setGbpLocations([]);
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    fetchLocations();
+  }, [open, gbpAccount?.id, brandId]);
 
   const isPageTokenExpired = (expiresAt: string | null) => {
     if (!expiresAt) return true;
@@ -103,10 +140,19 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
     }
   };
 
-  const handleDisconnect = async (accountId: string, platform: Platform) => {
+  // Handle GBP re-authentication (refresh token)
+  const handleRefreshGbp = () => {
+    if (!gbpAccount || !session) return;
+    
+    setRefreshingGbp(true);
+    // Redirect to GBP auth with prompt=consent to force re-authentication
+    window.location.href = `/api/accounts/google/business/auth?userId=${session.user.id}&brandId=${brandId}&prompt=consent`;
+  };
+
+  const handleDisconnect = async (accountId: string, routePrefix: string) => {
     setDisconnectingId(accountId);
     try {
-      const response = await fetch(`/api/accounts/${platform.toLowerCase()}?brandId=${brandId}`, {
+      const response = await fetch(`/api/accounts/${routePrefix}?brandId=${brandId}`, {
         method: "DELETE",
       });
       
@@ -126,11 +172,11 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
     }
   };
 
-  const handleConnect = async (platform: Platform) => {
-    setConnectingPlatform(platform);
+  const handleConnect = async (platformId: string, routePrefix: string) => {
+    setConnectingPlatform(platformId);
     try {
       if (session) {
-        window.location.href = `/api/accounts/${platform.toLowerCase()}/auth?userId=${session.user.id}&brandId=${brandId}`;
+        window.location.href = `/api/accounts/${routePrefix}/auth?userId=${session.user.id}&brandId=${brandId}`;
       }
     } catch (error) {
       console.error("Connection failed:", error);
@@ -167,6 +213,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
           {platforms.map((platform) => {
             const connectedAccount = accounts.find((acc) => acc.platform === platform.id);
             const isLinkedIn = platform.id === "LINKEDIN";
+            const isGBP = platform.id === "GOOGLE_BUSINESS_PROFILE";
 
             return (
               <Card key={platform.id} className="transition-all hover:shadow-md">
@@ -174,6 +221,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${platform.isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'}`}>
+                        {/* Assuming getPlatformIcon supports "GOOGLE_BUSINESS_PROFILE" or defaults gracefully */}
                         {getPlatformIcon(platform.id, "h-6 w-6")}
                       </div>
                       <span className="font-medium">{platform.name}</span>
@@ -181,7 +229,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
 
                     {connectedAccount ? (
                       <div className="flex gap-2">
-                        {isLinkedIn ? (
+                        {isLinkedIn && (
                           <Button
                             type="button"
                             size="sm"
@@ -196,26 +244,28 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                               <><RefreshCw className="h-3.5 w-3.5" /> Renew Pages</>
                             )}
                           </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleRefreshToken(connectedAccount.id)}
-                            disabled={refreshingId === connectedAccount.id}
-                          >
-                            {refreshingId === connectedAccount.id ? (
-                              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Refreshing</>
-                            ) : (
-                              <><RefreshCw className="h-4 w-4 mr-1" /> Refresh</>
-                            )}
-                          </Button>
                         )}
+                        { !isLinkedIn && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRefreshToken(connectedAccount.id)}
+                              disabled={refreshingId === connectedAccount.id}
+                            >
+                              {refreshingId === connectedAccount.id ? (
+                                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Refreshing</>
+                              ) : (
+                                <><RefreshCw className="h-4 w-4 mr-1" /> Refresh</>
+                              )}
+                            </Button>
+                          )
+                        }
                         <Button
                           type="button"
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleDisconnect(connectedAccount.id, connectedAccount.platform)}
+                          onClick={() => handleDisconnect(connectedAccount.id, platform.routePrefix)}
                           disabled={disconnectingId === connectedAccount.id}
                         >
                           {disconnectingId === connectedAccount.id ? (
@@ -228,7 +278,7 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                     ) : (
                       <Button
                         type="button"
-                        onClick={() => handleConnect(platform.id as Platform)}
+                        onClick={() => handleConnect(platform.id, platform.routePrefix)}
                         disabled={connectingPlatform !== null || platform.isDisabled}
                         size="sm"
                         className="min-w-[80px]"
@@ -244,9 +294,9 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                     )}
                   </div>
 
-                  {/* LinkedIn pages list — only shown when LinkedIn is connected */}
+                  {/* LinkedIn pages list */}
                   {isLinkedIn && connectedAccount && (
-                    <div className="px-4 pb-4 space-y-1.5">
+                    <div className="px-4 pb-4 space-y-1.5 border-t pt-3">
                       {loadingPages ? (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1">
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -293,6 +343,44 @@ export default function ConnectAccountsModal({ open, onOpenChange, brandName, br
                                 Active
                               </Badge>
                             )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Google Business Profile locations list */}
+                  {isGBP && connectedAccount && (
+                    <div className="px-4 pb-4 space-y-1.5 border-t pt-3">
+                      {loadingLocations ? (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground px-2 py-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading locations...
+                        </div>
+                      ) : gbpLocations.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-2">
+                          No Google Business locations found.
+                        </p>
+                      ) : (
+                        gbpLocations.map((location) => (
+                          <div key={location.id} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-2">
+                              <Store className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-sm font-medium">{location.title}</span>
+                              {location.isVerified ? (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500 text-green-600">
+                                  Verified
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  Unverified
+                                </Badge>
+                              )}
+                            </div>
+                            <Badge variant="secondary" className="text-[10px] px-2 py-0 h-6 flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                              Synced
+                            </Badge>
                           </div>
                         ))
                       )}

@@ -12,6 +12,7 @@ import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.se
 import { publishToReddit } from "@/services/reddit.service"
 import { publishToInstagram } from "@/services/instagram.service"
 import { publishToTikTok } from "@/services/tiktok.service"
+import { publishToGoogleBusiness } from "@/services/google-business.service"
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
@@ -122,6 +123,7 @@ export async function POST(req: NextRequest) {
     const brandId = formData.get("brandId") as string;
     const accounts = JSON.parse(formData.get("accounts") as string);
     const socialAccountPageIds = JSON.parse((formData.get("socialAccountPageIds") as string) || "[]");
+    const gbpLocationIds = JSON.parse((formData.get("gbpLocationIds") as string) || "[]");
     const captions = JSON.parse(formData.get("captions") as string);
     const schedule = JSON.parse((formData.get("schedule") as string) || "null");
 
@@ -272,6 +274,60 @@ export async function POST(req: NextRequest) {
       createdPosts.push(post)
     }
 
+    // PROCESS GOOGLE BUSINESS PROFILE LOCATIONS
+    for (const gbpLocationId of gbpLocationIds) {
+      const gbpLocation = await prisma.gbpLocation.findUnique({
+        where: { id: gbpLocationId },
+        include: {
+          socialAccount: true,
+        },
+      })
+
+      if (!gbpLocation) {
+        console.error(`Google Business location with ID ${gbpLocationId} not found.`)
+        continue
+      }
+
+      if (gbpLocation.brandId !== brandId) {
+        console.error(`Google Business location with ID ${gbpLocationId} doesn't belong to brand ${brandId}.`)
+        continue
+      }
+
+      const caption = captions["GOOGLE_BUSINESS_PROFILE"]
+      if (!caption) continue
+
+      const post = await prisma.post.create({
+        data: {
+          title: title,
+          content: caption,
+          platform: "GOOGLE_BUSINESS_PROFILE",
+          scheduledAt: scheduledAt,
+          status: status,
+          userId: token.id,
+          brandId: brandId,
+          frequency: frequency,
+          socialAccountId: gbpLocation.socialAccountId,
+          gbpLocationId: gbpLocation.id,
+        },
+      })
+
+      if (mediaUrls.length > 0) {
+        for (const media of mediaUrls) {
+          await prisma.media.create({
+            data: {
+              postId: post.id,
+              userId: token.id,
+              brandId: brandId,
+              url: media.url,
+              type: media.type,
+            },
+          })
+        }
+      }
+
+      createdPosts.push(post)
+    }
+
     // THEN PROCESS REGULAR SOCIAL ACCOUNTS (but skip if pages of the same platform are selected)
     for (const accountId of accounts) {
       // Get social account with its brands to check if it belongs to the current brand
@@ -400,6 +456,8 @@ export async function POST(req: NextRequest) {
             await publishToInstagram(post);
           } else if(post.platform === "TIKTOK") {
             await publishToTikTok(post);
+          } else if(post.platform === "GOOGLE_BUSINESS_PROFILE") {
+            await publishToGoogleBusiness(post);
           }
 
           await prisma.post.update({

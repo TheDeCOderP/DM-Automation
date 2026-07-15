@@ -1,4 +1,4 @@
-// app/api/social-accounts/facebook/auth/route.ts
+// app/api/accounts/facebook/auth/route.ts
 import { NextResponse } from 'next/server';
 import { type NextRequest } from 'next/server';
 

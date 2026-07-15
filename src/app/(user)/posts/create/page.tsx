@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
-import type { Platform, SocialAccount, SocialAccountPage, Brand } from "@prisma/client";
+import type { Platform, SocialAccount, SocialAccountPage, Brand, GbpLocation } from "@prisma/client";
 import type { ScheduleData } from "@/types/scheduled-data";
 
 import BrandsCard from "./_components/BrandsCard";
@@ -63,6 +63,11 @@ export default function CreatePostPage() {
     return pages ? pages.split(',').filter(Boolean) : [];
   });
 
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>(() => {
+    const locations = searchParams.get('locations');
+    return locations ? locations.split(',').filter(Boolean) : [];
+  });
+
   // Fetch accounts filtered by selected brand
   const { data, isLoading } = useSwr(
     selectedBrandId ? `/api/accounts?brandId=${selectedBrandId}` : null,
@@ -74,6 +79,13 @@ export default function CreatePostPage() {
   // Fetch all brands for brand selection step
   const { data: allBrandsData } = useSwr('/api/brands', fetcher);
   const allBrands: Brand[] = allBrandsData?.data || [];
+
+  // Fetch Google Business Profile locations for the selected brand
+  const { data: locationsData } = useSwr(
+    selectedBrandId ? `/api/locations?brandId=${selectedBrandId}` : null,
+    fetcher
+  );
+  const gbpLocations: GbpLocation[] = locationsData?.data || [];
 
   const [schedule, setSchedule] = useState<ScheduleData>({
     startDate: new Date(),
@@ -92,6 +104,7 @@ export default function CreatePostPage() {
   useEffect(() => {
     setSelectedAccounts([]);
     setSelectedPageIds([]);
+    setSelectedLocationIds([]);
   }, [selectedBrandId]);
 
   // Update URL when state changes
@@ -113,13 +126,17 @@ export default function CreatePostPage() {
     if (selectedPageIds.length > 0) {
       params.set('pages', selectedPageIds.join(','));
     }
+
+    if (selectedLocationIds.length > 0) {
+      params.set('locations', selectedLocationIds.join(','));
+    }
     
     const newUrl = params.toString() 
       ? `/posts/create?${params.toString()}` 
       : '/posts/create';
     
     router.replace(newUrl, { scroll: false });
-  }, [activeStep, selectedBrandId, selectedAccounts, selectedPageIds, router]);
+  }, [activeStep, selectedBrandId, selectedAccounts, selectedPageIds, selectedLocationIds, router]);
 
   const brandAccounts = useMemo(() => {
     if (!selectedBrandId) return [] as SocialAccountWithPages[];
@@ -144,8 +161,12 @@ export default function CreatePostPage() {
       });
     }
 
+    if (selectedLocationIds.length > 0) {
+      platforms.add("GOOGLE_BUSINESS_PROFILE" as Platform);
+    }
+
     return Array.from(platforms);
-  }, [brandAccounts, selectedAccounts, selectedPageIds]);
+  }, [brandAccounts, selectedAccounts, selectedPageIds, selectedLocationIds]);
 
   const handleFilesChange = (files: File[]) => {
     setUploadedFiles(files);
@@ -155,7 +176,7 @@ export default function CreatePostPage() {
     if (!selectedBrandId) {
       toast.error("Please select a brand first");
       return;
-    } else if (selectedAccounts.length === 0 && selectedPageIds.length === 0) {
+    } else if (selectedAccounts.length === 0 && selectedPageIds.length === 0 && selectedLocationIds.length === 0) {
       toast.error("Please select at least one account or page");
       return;
     } else if (
@@ -178,6 +199,7 @@ export default function CreatePostPage() {
       formData.append("brandId", selectedBrandId);
       formData.append("accounts", JSON.stringify(selectedAccounts));
       formData.append("socialAccountPageIds", JSON.stringify(selectedPageIds));
+      formData.append("gbpLocationIds", JSON.stringify(selectedLocationIds));
       formData.append("captions", JSON.stringify(platformCaptions));
 
       if (isScheduled) {
@@ -216,7 +238,7 @@ export default function CreatePostPage() {
     }
   };
 
-  const allSelectedItemsCount = selectedAccounts.length + selectedPageIds.length;
+  const allSelectedItemsCount = selectedAccounts.length + selectedPageIds.length + selectedLocationIds.length;
 
   const steps = [
     { 
@@ -353,6 +375,9 @@ export default function CreatePostPage() {
               setSelectedAccounts={setSelectedAccounts}
               selectedPageIds={selectedPageIds}
               setSelectedPageIds={setSelectedPageIds}
+              selectedLocationIds={selectedLocationIds}
+              setSelectedLocationIds={setSelectedLocationIds}
+              gbpLocations={gbpLocations}
             />
           </div>
         )}

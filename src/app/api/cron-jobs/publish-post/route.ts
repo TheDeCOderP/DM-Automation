@@ -1,9 +1,11 @@
+// src/app/api/cron-jobs/publish-post/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { publishToTwitter } from "@/services/twitter.service";
 import { publishToYouTube } from "@/services/youtube.service";
 import { publishToFacebook } from "@/services/facebook.service";
 import { publishToPinterest } from "@/services/pinterest.service";
+import { publishToGoogleBusiness } from "@/services/google-business.service";
 import { publishToLinkedin, publishToLinkedInPage } from "@/services/linkedin.service";
 import { publishToReddit } from "@/services/reddit.service";
 import { publishToInstagram } from "@/services/instagram.service";
@@ -211,6 +213,8 @@ export async function POST(req: NextRequest) {
           await publishToInstagram(post);
         } else if (post.platform === "TIKTOK") {
           await publishToTikTok(post);
+        } else if (post.platform === "GOOGLE_BUSINESS_PROFILE") {
+          await publishToGoogleBusiness(post);
         }
 
         // Update post status to PUBLISHED

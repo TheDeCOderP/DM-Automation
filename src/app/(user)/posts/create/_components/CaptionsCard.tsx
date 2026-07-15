@@ -2,7 +2,7 @@
 import { toast } from "sonner";
 import * as React from "react";
 import { useEffect, useState, useRef } from "react";
-import { Sparkles, Facebook, Instagram, Linkedin, Twitter, Youtube, FileText } from "lucide-react"
+import { Sparkles, Facebook, Instagram, Linkedin, Twitter, Youtube, FileText, Building2 } from "lucide-react"
 
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -30,6 +30,7 @@ const socialMediaPlatforms: SocialPlatform[] = [
   { id: "PINTEREST", name: "Pinterest", icon: Sparkles, wordLimit: 5000 },
   { id: "REDDIT", name: "Reddit", icon: Sparkles, wordLimit: 5000 },
   { id: "TIKTOK", name: "TikTok", icon: Sparkles, wordLimit: 5000 },
+  { id: "GOOGLE_BUSINESS_PROFILE", name: "Google Business Profile", icon: Building2, wordLimit: 63206 },
 ]
 
 interface CaptionInputProps {
