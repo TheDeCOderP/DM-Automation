@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { decryptToken } from "@/lib/encryption";
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 
 export async function PUT(
   req: Request,
@@ -27,7 +28,12 @@ export async function PUT(
 
     if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 });
 
-    const accessToken = await decryptToken(business.socialAccount.accessToken);
+    let accessToken = await decryptToken(business.socialAccount.accessToken);
+
+    if (isTokenExpired(business.socialAccount.tokenExpiresAt)) {
+      console.log(`[GBP] Token expired for account ${business.socialAccount.id}. Refreshing...`);
+      accessToken = await refreshAccessToken(business.socialAccount);
+    }
 
     // 2. Fetch the GBP Accounts to retrieve the Account ID
     const accountsRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {

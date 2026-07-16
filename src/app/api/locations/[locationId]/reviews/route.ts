@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { decryptToken } from "@/lib/encryption";
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 
 // Helper to map Google's string star ratings to integers
 const mapStarRating = (rating: string): number => {
@@ -120,7 +121,12 @@ export async function POST(
       return NextResponse.json({ error: "Business not found" }, { status: 404 });
     }
 
-    const accessToken = await decryptToken(business.socialAccount.accessToken);
+    let accessToken = await decryptToken(business.socialAccount.accessToken);
+
+    if (isTokenExpired(business.socialAccount.tokenExpiresAt)) {
+      console.log(`[GBP] Token expired for account ${business.socialAccount.id}. Refreshing...`);
+      accessToken = await refreshAccessToken(business.socialAccount);
+    }
 
     // 1. Fetch the user's GBP accounts to get the required `accountId` prefix for the v4 API
     const accountsRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {

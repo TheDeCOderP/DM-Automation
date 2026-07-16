@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { decryptToken } from "@/lib/encryption";
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 
 // Security Helper
 async function verifyUserBrandAccess(userId: string, locationId: string) {
@@ -46,7 +47,12 @@ export async function GET(
       );
     }
 
-    const accessToken = await decryptToken(business.socialAccount.accessToken);
+    let accessToken = await decryptToken(business.socialAccount.accessToken);
+
+    if (isTokenExpired(business.socialAccount.tokenExpiresAt)) {
+      console.log(`[GBP] Token expired for account ${business.socialAccount.id}. Refreshing...`);
+      accessToken = await refreshAccessToken(business.socialAccount);
+    }
 
     // Calculate dynamic 30-day time range
     const endDate = new Date();

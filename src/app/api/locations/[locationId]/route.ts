@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { decryptToken } from "@/lib/encryption";
+import { isTokenExpired, refreshAccessToken } from "@/utils/token";
 
 // Helper to convert Google's string ratings to integers
 const mapStarRating = (rating: string) => {
@@ -68,7 +69,12 @@ export async function POST(
 
     if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 });
 
-    const accessToken = await decryptToken(business.socialAccount.accessToken);
+    let accessToken = await decryptToken(business.socialAccount.accessToken);
+
+    if (isTokenExpired(business.socialAccount.tokenExpiresAt)) {
+      console.log(`[GBP] Token expired for account ${business.socialAccount.id}. Refreshing...`);
+      accessToken = await refreshAccessToken(business.socialAccount);
+    }
 
     // 2. Fetch reviews from Google API (v4 endpoint handles reviews)
     const reviewsRes = await fetch(

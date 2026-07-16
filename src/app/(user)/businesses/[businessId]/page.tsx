@@ -70,7 +70,6 @@ export default function BusinessDashboardPage() {
     fetcher
   );
   const localPosts = postsData?.posts || [];
-  
   const reviews = reviewsData?.reviews || [];
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -461,7 +460,7 @@ export default function BusinessDashboardPage() {
                   {post.media && post.media.length > 0 ? (
                     <div className="relative h-48 w-full bg-muted overflow-hidden">
                       <img 
-                        src={post.media[0].sourceUrl} 
+                        src={post.media[0].googleUrl} 
                         alt="Post media" 
                         className="object-cover w-full h-full"
                       />

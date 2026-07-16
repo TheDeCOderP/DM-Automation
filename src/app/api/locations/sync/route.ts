@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { decryptToken } from "@/lib/encryption";
+import { refreshAccessToken, isTokenExpired } from "@/utils/token";
 
 export async function POST(req: Request) {
   try {
@@ -77,7 +78,11 @@ export async function POST(req: Request) {
       const { socialAccount } = link;
       
       // Decrypt credentials
-      const accessToken = await decryptToken(socialAccount.accessToken);
+      let accessToken = await decryptToken(socialAccount.accessToken);
+
+      if (isTokenExpired(socialAccount.tokenExpiresAt)) {
+        accessToken = await refreshAccessToken(socialAccount);
+      }
 
       // Fetch GBP Accounts (Agency / Location Groups / Personal Contexts)
       const accountsRes = await fetch('https://mybusinessaccountmanagement.googleapis.com/v1/accounts', {
