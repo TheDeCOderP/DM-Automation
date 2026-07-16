@@ -289,6 +289,7 @@ function getEventColor(platform: Platform): string {
     [Platform.CUSTOM_API]: "#6B7280",
     [Platform.WORDPRESS]: "#21759B",
     [Platform.DEV_TO]: "#000000",
+    [Platform.GOOGLE_BUSINESS_PROFILE]: "#4285F4",
   }
   return colors[platform] || "#6B7280"
 }

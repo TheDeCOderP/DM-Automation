@@ -69,6 +69,13 @@ export default function BusinessDashboardPage() {
     `/api/locations/${businessId}/posts`, 
     fetcher
   );
+
+  // Fetch detailed Google-native business info
+  const { data: businessInfo, isLoading: loadingBusinessInfo } = useSWR(
+    `/api/locations/${businessId}/info`, 
+    fetcher
+  );
+
   const localPosts = postsData?.posts || [];
   const reviews = reviewsData?.reviews || [];
 
@@ -228,18 +235,48 @@ export default function BusinessDashboardPage() {
         </TabsList>
 
         {/* ─── OVERVIEW TAB ─── */}
-        <TabsContent value="overview">
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader>
-              <CardTitle>Business Information</CardTitle>
-              <CardDescription>Manage your core Google Business profile details.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-40 flex items-center justify-center border-2 border-dashed border-border/60 rounded-lg bg-muted/10">
-                <p className="text-sm text-muted-foreground">Detailed business editing coming soon...</p>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="overview" className="space-y-6">
+          {loadingBusinessInfo ? (
+            <div className="space-y-4">
+              <Skeleton className="h-40 w-full" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span>{businessInfo?.phoneNumbers?.primaryPhone || "Not set"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Website:</span>
+                    <a href={businessInfo?.websiteUri} className="text-primary hover:underline">{businessInfo?.websiteUri}</a>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Business Hours</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  {businessInfo?.regularHours?.periods ? (
+                    <div className="space-y-1">
+                      {businessInfo.regularHours.periods.map((p: any) => (
+                        <div key={p.openDay} className="flex justify-between">
+                          <span className="capitalize">{p.openDay.toLowerCase()}</span>
+                          <span>{p.openTime.hours}:{p.openTime.minutes || '00'} - {p.closeTime.hours}:{p.closeTime.minutes || '00'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p>Hours not set</p>}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         {/* ─── REVIEWS TAB ─── */}
@@ -417,7 +454,7 @@ export default function BusinessDashboardPage() {
               <p className="text-sm text-muted-foreground">View your active announcements, offers, and updates live on Google.</p>
             </div>
             <Button 
-              onClick={() => router.push('/content-calendar')} 
+              onClick={() => router.push('/posts/create')} 
               className="shadow-sm whitespace-nowrap"
             >
               <PenSquare className="h-4 w-4 mr-2" />

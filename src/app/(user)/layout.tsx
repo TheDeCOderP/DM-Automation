@@ -35,7 +35,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       <SidebarInset>
         <AppHeader/>
         <LinkedInTokenExpiryBanner />
-        <main className='p-2'>
+        <main className='p-10'>
           {children}
         </main>
       </SidebarInset>
