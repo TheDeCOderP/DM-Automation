@@ -40,12 +40,12 @@ export async function GET(
     if (!business) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     // 🛑 NEW: Prevent 403 errors by blocking unverified locations
-    if (!business.isVerified) {
-      return NextResponse.json(
-        { error: "Performance insights are only available for verified locations. Please verify this business on Google." }, 
-        { status: 403 }
-      );
-    }
+    // if (!business.isVerified) {
+    //   return NextResponse.json(
+    //     { error: "Performance insights are only available for verified locations. Please verify this business on Google." }, 
+    //     { status: 403 }
+    //   );
+    // }
 
     let accessToken = await decryptToken(business.socialAccount.accessToken);
 

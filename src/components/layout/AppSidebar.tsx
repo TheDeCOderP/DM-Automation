@@ -150,14 +150,6 @@ export default function AppSidebar({ siteName, logoUrl }: { siteName?: string | 
                 />
               )}
             </div>
-
-            {/* Site Name */}
-            <div className="text-center space-y-1">
-              <h1 className="font-bold text-lg bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-                {siteName}
-              </h1>
-            DM Automation
-            </div>
           </div>
 
           {/* Collapsed State */}
