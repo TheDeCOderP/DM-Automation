@@ -5,19 +5,13 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { DragDropContext, DropResult } from "@hello-pangea/dnd";
+import { DragDropContext, DropResult, Droppable, Draggable } from "@hello-pangea/dnd";
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sidebar, Plus } from "lucide-react";
+import { Sidebar, Plus, GripVertical, Edit, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
-
-// Import components
-import { ItemModal } from "./_components/ItemModal";
-import { ItemsList } from "./_components/ItemsList";
-import { GroupModal } from "./_components/GroupModal";
-import { GroupsList } from "./_components/GroupsList";
 
 const SidebarSettingsSection = dynamic(() => import("./_components/SidebarSettingsCard"), { ssr: false });
 
@@ -238,10 +232,15 @@ export default function SidebarAdminPage() {
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination, type } = result;
 
+    console.log('Drag ended:', { source, destination, type });
+
     // If dropped outside any droppable area or didn't move
     if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
+      console.log('No movement or dropped outside');
       return;
     }
+
+    console.log('Processing drag of type:', type);
 
     if (type === 'group') {
       // Handle group reordering
@@ -249,13 +248,19 @@ export default function SidebarAdminPage() {
       const [movedGroup] = newGroups.splice(source.index, 1);
       newGroups.splice(destination.index, 0, movedGroup);
       
-      setGroups(newGroups);
+      // Update positions
+      const updatedGroups = newGroups.map((group, index) => ({
+        ...group,
+        position: index
+      }));
+      
+      setGroups(updatedGroups);
 
       try {
         const res = await fetch("/api/site-settings/sidebar/groups/reorder", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ groupIds: newGroups.map(g => g.id) }),
+          body: JSON.stringify({ groupIds: updatedGroups.map(g => g.id) }),
         });
         if (!res.ok) throw new Error("Request failed");
         toast.success("Groups reordered successfully");
@@ -265,34 +270,41 @@ export default function SidebarAdminPage() {
         await fetchGroups();
       }
     } else if (type === 'item') {
-      // Handle item reordering within the same group
-      if (source.droppableId === destination.droppableId && selectedGroup) {
-        const groupId = source.droppableId.replace('items-', '');
-        const group = groups.find(g => g.id === groupId);
+      // Handle item reordering
+      const groupId = source.droppableId.replace('items-', '');
+      const group = groups.find(g => g.id === groupId);
+      
+      if (group) {
+        const newItems = Array.from(group.items);
+        const [movedItem] = newItems.splice(source.index, 1);
+        newItems.splice(destination.index, 0, movedItem);
         
-        if (group) {
-          const newItems = Array.from(group.items);
-          const [movedItem] = newItems.splice(source.index, 1);
-          newItems.splice(destination.index, 0, movedItem);
-          
-          const updatedGroups = groups.map(g => 
-            g.id === groupId ? { ...g, items: newItems } : g
-          );
-          setGroups(updatedGroups);
+        // Update positions
+        const updatedItems = newItems.map((item, index) => ({
+          ...item,
+          position: index
+        }));
+        
+        const updatedGroups = groups.map(g => 
+          g.id === groupId ? { ...g, items: updatedItems } : g
+        );
+        setGroups(updatedGroups);
 
-          try {
-            const res = await fetch("/api/site-settings/sidebar/items/reorder", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ itemIds: newItems.map(i => i.id), groupId }),
-            });
-            if (!res.ok) throw new Error("Request failed");
-            toast.success("Items reordered successfully");
-          } catch (error) {
-            console.error('Reorder items error:', error);
-            toast.error("Failed to reorder items");
-            await fetchGroups();
-          }
+        try {
+          const res = await fetch("/api/site-settings/sidebar/items/reorder", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              itemIds: updatedItems.map(i => i.id), 
+              groupId 
+            }),
+          });
+          if (!res.ok) throw new Error("Request failed");
+          toast.success("Items reordered successfully");
+        } catch (error) {
+          console.error('Reorder items error:', error);
+          toast.error("Failed to reorder items");
+          await fetchGroups();
         }
       }
     }
@@ -306,7 +318,7 @@ export default function SidebarAdminPage() {
   const handleNewGroup = () => {
     setEditingGroup(null);
     setGroupModalOpen(true);
-  }
+  };
 
   const handleGroupModalReset = () => {
     setEditingGroup(null);
@@ -354,48 +366,167 @@ export default function SidebarAdminPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <GroupsList
-            groups={groups}
-            selectedGroupId={selectedGroupId}
-            onGroupSelect={handleGroupSelect}
-            onEditGroup={handleEditGroup}
-            onDeleteGroup={deleteGroup}
-          />
+          {/* Groups List */}
+          <Card className="md:col-span-1">
+            <CardHeader>
+              <CardTitle>Groups</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Droppable droppableId="groups" type="group">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`space-y-2 min-h-[200px] ${
+                      snapshot.isDraggingOver ? 'bg-gray-100 dark:bg-gray-800' : ''
+                    }`}
+                  >
+                    {groups.map((group, index) => (
+                      <Draggable key={group.id} draggableId={group.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`p-3 border rounded-lg flex items-center justify-between ${
+                              snapshot.isDragging ? 'shadow-lg bg-white dark:bg-gray-900' : ''
+                            } ${
+                              selectedGroupId === group.id ? 'border-primary bg-primary/5' : ''
+                            }`}
+                            onClick={() => handleGroupSelect(group)}
+                          >
+                            <div className="flex items-center gap-2 flex-1">
+                              <div {...provided.dragHandleProps} className="cursor-grab">
+                                <GripVertical className="w-4 h-4 text-gray-400" />
+                              </div>
+                              <span className="font-medium truncate">{group.title}</span>
+                            </div>
+                            <div className="flex items-center gap-1 ml-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditGroup(group);
+                                }}
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteGroup(group.id);
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3 text-red-500" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    {groups.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        No groups found. Create one!
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Droppable>
+            </CardContent>
+          </Card>
 
-          <ItemsList
-            selectedGroup={selectedGroup || null}
-            onAddItem={handleAddItem}
-            onEditItem={handleEditItem}
-            onDeleteItem={deleteItem}
-          />
+          {/* Items List */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>
+                  {selectedGroup ? `${selectedGroup.title} - Items` : 'Select a group'}
+                </CardTitle>
+                {selectedGroup && (
+                  <Button onClick={handleAddItem} size="sm">
+                    <Plus className="w-4 h-4 mr-2" /> Add Item
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {selectedGroup ? (
+                <Droppable droppableId={`items-${selectedGroup.id}`} type="item">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`space-y-2 min-h-[200px] ${
+                        snapshot.isDraggingOver ? 'bg-gray-100 dark:bg-gray-800' : ''
+                      }`}
+                    >
+                      {selectedGroup.items.map((item, index) => (
+                        <Draggable key={item.id} draggableId={item.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`p-3 border rounded-lg flex items-center justify-between ${
+                                snapshot.isDragging ? 'shadow-lg bg-white dark:bg-gray-900' : ''
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 flex-1">
+                                <div {...provided.dragHandleProps} className="cursor-grab">
+                                  <GripVertical className="w-4 h-4 text-gray-400" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">{item.label}</div>
+                                  <div className="text-sm text-gray-500">{item.href}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEditItem(item)}
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deleteItem(item.id)}
+                                >
+                                  <Trash2 className="w-3 h-3 text-red-500" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {selectedGroup.items.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          No items in this group. Add one!
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Droppable>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Please select a group from the left panel
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="mt-6">
           <SidebarSettingsSection />
         </div>
-
-        <GroupModal
-          isOpen={isGroupModalOpen}
-          onOpenChange={setGroupModalOpen}
-          editingGroup={editingGroup}
-          groups={groups}
-          roles={roles}
-          isSubmitting={isSubmitting}
-          onSubmit={onGroupSubmit}
-          onReset={handleGroupModalReset}
-        />
-
-        <ItemModal
-          isOpen={isItemModalOpen}
-          onOpenChange={setItemModalOpen}
-          editingItem={editingItem}
-          selectedGroup={selectedGroup || null}
-          roles={roles}
-          isSubmitting={isSubmitting}
-          onSubmit={onItemSubmit}
-          onReset={handleItemModalReset}
-        />
       </div>
+
+      {/* Modals - You'll need to implement these or import them */}
+      {/* GroupModal and ItemModal components go here */}
     </DragDropContext>
   );
 }

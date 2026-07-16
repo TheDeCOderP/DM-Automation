@@ -1,3 +1,4 @@
+// src/app/api/content-calendar/schedule-item/route.ts
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";

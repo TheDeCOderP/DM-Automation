@@ -1,3 +1,4 @@
+// src/app/api/content-calendar/generate-captions/route.ts
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -120,7 +121,21 @@ const PLATFORM_GUIDELINES = {
     hashtags: "3-5 trending + niche mix",
     algorithmTip: "Retention > everything",
     cta: ["Follow for more", "Duet this", "Comment 'YES'"],
-  }
+  },
+  GOOGLE_BUSINESS_PROFILE: { 
+    audience: "Local customers searching for services", 
+    tone: "Informative, promotional, local", 
+    hook: "Direct value proposition or local update", 
+    length: "100-300 words", 
+    structure: "Hook → Offer/Update → Clear CTA", 
+    formatting: "Short paragraphs, clear readable format",
+    emojiUsage: "Minimal (1-3)",
+    contentTypes: ["Updates", "Offers", "Events"],
+    engagementTriggers: ["Learn more", "Call now", "Visit website"],
+    hashtags: "None (Google doesn't use hashtags effectively)",
+    algorithmTip: "Keep keywords high up, focus on local relevance",
+    cta: ["Visit website", "Call us", "Learn more"] 
+  },
 };
 
 async function generateAllPlatformCaptions(

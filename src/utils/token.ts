@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { encryptToken } from "@/lib/encryption";
+import { decryptToken, encryptToken } from "@/lib/encryption";
 import type { SocialAccount } from "@prisma/client";
-
 
 export const getTokenValidDays = (expiryDate: Date | null | undefined): number => {
   if (!expiryDate) return 0;
@@ -23,6 +22,8 @@ export async function refreshAccessToken(socialAccount: SocialAccount): Promise<
     case "GOOGLE":
     case "YOUTUBE":
       return refreshGoogleAccessToken(socialAccount);
+    case "GOOGLE_BUSINESS_PROFILE":
+      return refreshGBPAccessToken(socialAccount);
     case "TWITTER":
       return refreshTwitterAccessToken(socialAccount);
     default:
@@ -39,6 +40,8 @@ async function refreshZohoAccessToken(socialAccount: SocialAccount): Promise<str
     throw new Error("Zoho client credentials are not configured.");
   }
 
+  const decryptedRefreshToken = await decryptToken(socialAccount.refreshToken);
+
   try {
     const refreshRes = await fetch('https://accounts.zoho.in/oauth/v2/token', {
       method: 'POST',
@@ -46,7 +49,7 @@ async function refreshZohoAccessToken(socialAccount: SocialAccount): Promise<str
       body: new URLSearchParams({
         client_id: process.env.ZOHO_CLIENT_ID!,
         client_secret: process.env.ZOHO_CLIENT_SECRET!,
-        refresh_token: socialAccount.refreshToken,
+        refresh_token: decryptedRefreshToken,
         grant_type: 'refresh_token',
       }),
     });
@@ -60,7 +63,7 @@ async function refreshZohoAccessToken(socialAccount: SocialAccount): Promise<str
     const { access_token, refresh_token, expires_in } = data;
 
     const encryptedAccessToken = await encryptToken(access_token);
-    let encryptedRefreshToken = socialAccount.refreshToken; // fallback
+    let encryptedRefreshToken = socialAccount.refreshToken;
     if (refresh_token) {
       encryptedRefreshToken = await encryptToken(refresh_token);
     }
@@ -91,6 +94,8 @@ async function refreshGoogleAccessToken(socialAccount: SocialAccount): Promise<s
     throw new Error("Google client credentials are not configured.");
   }
 
+  const decryptedRefreshToken = await decryptToken(socialAccount.refreshToken);
+
   try {
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -98,7 +103,7 @@ async function refreshGoogleAccessToken(socialAccount: SocialAccount): Promise<s
       body: new URLSearchParams({
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        refresh_token: socialAccount.refreshToken,
+        refresh_token: decryptedRefreshToken,
         grant_type: "refresh_token",
       }),
     });
@@ -134,6 +139,59 @@ async function refreshGoogleAccessToken(socialAccount: SocialAccount): Promise<s
   }
 }
 
+async function refreshGBPAccessToken(socialAccount: SocialAccount): Promise<string> {
+  if (!socialAccount.refreshToken) {
+    throw new Error("Google Business Profile refresh token is missing. User needs to re-authenticate.");
+  }
+
+  if (!process.env.GOOGLE_BUSINESS_PROFILE_CLIENT_ID || !process.env.GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET) {
+    throw new Error("Google Business Profile client credentials are not configured.");
+  }
+
+  const decryptedRefreshToken = await decryptToken(socialAccount.refreshToken);
+
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_BUSINESS_PROFILE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET,
+        refresh_token: decryptedRefreshToken,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Could not refresh Google Business Profile token. Reason: ${data.error_description || data.error || "Unknown error"}`);
+    }
+
+    const { access_token, refresh_token, expires_in } = data;
+
+    const encryptedAccessToken = await encryptToken(access_token);
+    let encryptedRefreshToken = socialAccount.refreshToken;
+    if (refresh_token) {
+      encryptedRefreshToken = await encryptToken(refresh_token);
+    }
+    const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
+
+    await prisma.socialAccount.update({
+      where: { id: socialAccount.id },
+      data: {
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
+        tokenExpiresAt,
+      },
+    });
+
+    return access_token;
+  } catch (error) {
+    console.error("Error refreshing Google Business Profile token:", error);
+    throw new Error("Failed to refresh Google Business Profile token");
+  }
+}
 
 async function refreshTwitterAccessToken(socialAccount: SocialAccount): Promise<string> {
     if (!socialAccount.refreshToken) {
@@ -143,6 +201,8 @@ async function refreshTwitterAccessToken(socialAccount: SocialAccount): Promise<
     if (!process.env.TWITTER_CLIENT_ID || !process.env.TWITTER_CLIENT_SECRET) {
         throw new Error("Twitter client credentials are not configured.");
     }
+
+    const decryptedRefreshToken = await decryptToken(socialAccount.refreshToken);
 
     try {
       const basicAuth = Buffer.from(
@@ -156,7 +216,7 @@ async function refreshTwitterAccessToken(socialAccount: SocialAccount): Promise<
               Authorization: `Basic ${basicAuth}`,
           },
           body: new URLSearchParams({
-              refresh_token: socialAccount.refreshToken,
+              refresh_token: decryptedRefreshToken,
               grant_type: "refresh_token",
               client_id: process.env.TWITTER_CLIENT_ID!,
           }),
@@ -170,7 +230,10 @@ async function refreshTwitterAccessToken(socialAccount: SocialAccount): Promise<
 
       const { access_token, refresh_token, expires_in } = data;
       const encryptedAccessToken = await encryptToken(access_token);
-      const encryptedRefreshToken = await encryptToken(refresh_token);
+      let encryptedRefreshToken = socialAccount.refreshToken;
+      if (refresh_token) {
+        encryptedRefreshToken = await encryptToken(refresh_token);
+      }
       const tokenExpiresAt = new Date(Date.now() + parseInt(expires_in) * 1000);
 
       await prisma.socialAccount.update({

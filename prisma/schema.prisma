@@ -28,6 +28,7 @@ enum Platform {
   HASHNODE
   DEV_TO
   CUSTOM_API
+  GOOGLE_BUSINESS_PROFILE
 }
 
 enum Frequency {
@@ -145,6 +146,7 @@ model Brand {
   databaseConnections      DatabaseConnection[]
   blogAutomationCalendars  BlogAutomationCalendar[]
   blogAutomations          BlogAutomation[]
+  gbpLocations             GbpLocation[]
 }
 
 model UserBrand {
@@ -182,8 +184,101 @@ model SocialAccount {
   brands SocialAccountBrand[]
   users  UserSocialAccount[]
   posts  Post[]
+  gbpLocations      GbpLocation[]
 
   @@unique([platform, platformUserId])
+}
+
+model GbpLocation {
+  id              String        @id @default(cuid())
+  
+  // Link back to the Google OAuth session that has access
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  
+  // Link to the brand for multi-tenant data isolation
+  brandId         String
+  brand           Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  // GBP Specific Identifiers
+  locationName    String        @unique // The exact resource name from API: e.g., "locations/123456789"
+  title           String        // The actual business name (e.g., "Joe's Pizza")
+  storeCode       String?       // Used by larger franchises to identify stores internally
+  
+  // Profile Data
+  primaryCategory Json?         // Stored as JSON: { categoryId: string, displayName: string }
+  websiteUri      String?
+  phone           String?
+  
+  // Geography
+  address         Json?         // Full PostalAddress object
+  latLng          Json?         // { latitude: float, longitude: float }
+
+  // GBP State Management
+  isVerified      Boolean       @default(false)
+  isSuspended     Boolean       @default(false)
+  isPublished     Boolean       @default(false)
+  
+  // Relations
+  reviews         GbpReview[]
+  analytics       GbpLocationAnalytics[]
+  posts           Post[]        // Requires adding gbpLocationId to your existing Post model
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([socialAccountId])
+  @@index([brandId])
+}
+
+model GbpReview {
+  id              String      @id @default(cuid())
+  gbpLocationId   String
+  location        GbpLocation @relation(fields: [gbpLocationId], references: [id], onDelete: Cascade)
+
+  reviewId        String      @unique // The unique review ID from Google
+  reviewerName    String?
+  reviewerImage   String?     @db.Text
+  
+  starRating      Int         // 1-5 stars (STAR_RATING_UNSPECIFIED, ONE, TWO, etc. mapped to Int)
+  comment         String?     @db.Text
+  
+  // Timestamps from Google
+  createTime      DateTime
+  updateTime      DateTime?
+
+  // Reply Management
+  replyComment    String?     @db.Text
+  replyUpdateTime DateTime?
+  isReplied       Boolean     @default(false)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([gbpLocationId])
+  @@index([starRating])
+  @@index([isReplied])
+}
+
+model GbpLocationAnalytics {
+  id              String      @id @default(cuid())
+  gbpLocationId   String
+  location        GbpLocation @relation(fields: [gbpLocationId], references: [id], onDelete: Cascade)
+
+  // Time-series data
+  date            DateTime    @db.Date
+  
+  // e.g., "BUSINESS_IMPRESSIONS_DESKTOP_MAPS", "CALL_CLICKS", "WEBSITE_CLICKS"
+  metricType      String      
+  value           Int
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Ensures you don't duplicate daily metrics during syncs
+  @@unique([gbpLocationId, date, metricType])
+  @@index([gbpLocationId])
+  @@index([date])
 }
 
 model UserSocialAccount {
@@ -272,6 +367,9 @@ model Post {
 
   socialAccountId String?
   socialAccount   SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+
+  gbpLocationId   String?
+  gbpLocation     GbpLocation? @relation(fields: [gbpLocationId], references: [id], onDelete: SetNull)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

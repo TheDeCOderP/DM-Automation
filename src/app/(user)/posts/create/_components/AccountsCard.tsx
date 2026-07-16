@@ -14,8 +14,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import PagesCard from "./PagesCard";
+import GbpLocationsCard from "./GbpLocationsCard";
 import { getPlatformIcon } from "@/utils/ui/icons";
-import type { SocialAccount, SocialAccountPage } from "@prisma/client";
+import type { SocialAccount, SocialAccountPage, GbpLocation } from "@prisma/client";
 
 interface SocialAccountWithPages extends SocialAccount {
   pages: SocialAccountPage[];
@@ -28,6 +29,9 @@ interface AccountsCardProps {
   setSelectedAccounts: React.Dispatch<React.SetStateAction<string[]>>;
   selectedPageIds: string[];
   setSelectedPageIds: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedLocationIds: string[];
+  setSelectedLocationIds: React.Dispatch<React.SetStateAction<string[]>>;
+  gbpLocations: GbpLocation[];
 }
 
 export default function AccountsCard({
@@ -37,6 +41,9 @@ export default function AccountsCard({
   setSelectedAccounts,
   selectedPageIds,
   setSelectedPageIds,
+  selectedLocationIds,
+  setSelectedLocationIds,
+  gbpLocations,
 }: AccountsCardProps) {
   const { open } = useSidebar();
 
@@ -72,13 +79,18 @@ export default function AccountsCard({
     setSelectedPageIds((prev) => (checked ? [...prev, pageId] : prev.filter((id) => id !== pageId)));
   };
 
-  const allSelectedCount = selectedAccounts.length + selectedPageIds.length;
+  const handleLocationChange = (locationId: string, checked: boolean) => {
+    setSelectedLocationIds((prev) => (checked ? [...prev, locationId] : prev.filter((id) => id !== locationId)));
+  };
+
+  const allSelectedCount = selectedAccounts.length + selectedPageIds.length + selectedLocationIds.length;
 
   const sectionCounts = {
     facebook: selectedPageIds.filter((id) => facebookPages.some((p) => p.id === id)).length,
     linkedin: selectedPageIds.filter((id) => linkedinPages.some((p) => p.id === id)).length,
     pinterest: selectedPageIds.filter((id) => pinterestPages.some((p) => p.id === id)).length,
     reddit: selectedPageIds.filter((id) => redditPages.some((p) => p.id === id)).length,
+    gbp: selectedLocationIds.length,
   };
 
   return (
@@ -120,7 +132,7 @@ export default function AccountsCard({
 
             {/* Accounts list */}
             <div className="space-y-4">
-              {accounts.filter(({ platform }) => platform !== "FACEBOOK" && platform !== "PINTEREST" && platform !== "REDDIT").map((account) => (
+              {accounts.filter(({ platform }) => !["FACEBOOK", "PINTEREST", "REDDIT", "GOOGLE_BUSINESS_PROFILE"].includes(platform)).map((account) => (
                 <div key={account.id} className="flex items-center gap-3">
                   <Checkbox
                     id={account.id}
@@ -198,6 +210,14 @@ export default function AccountsCard({
             platformUserId={platformUserIds.linkedin}
             brandId={brandId}
             isSidebarOpen={open}
+          />
+
+          <GbpLocationsCard
+            locations={gbpLocations}
+            selectedLocationIds={selectedLocationIds}
+            onLocationChange={handleLocationChange}
+            selectedCount={sectionCounts.gbp}
+            platformUserId={platformUserIds.facebook}
           />
         </div>
       </div>
