@@ -224,6 +224,7 @@ model GbpLocation {
   analytics       GbpLocationAnalytics[]
   posts           Post[]        // Requires adding gbpLocationId to your existing Post model
 
+  syncedAt        DateTime      @default(now())
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -252,6 +253,7 @@ model GbpReview {
   replyUpdateTime DateTime?
   isReplied       Boolean     @default(false)
 
+  syncedAt        DateTime    @default(now())
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -272,6 +274,7 @@ model GbpLocationAnalytics {
   metricType      String      
   value           Int
 
+  syncedAt        DateTime    @default(now())
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 

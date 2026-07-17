@@ -44,15 +44,15 @@ interface ConnectAccountsModalProps {
 
 // Added routePrefix to handle custom API paths (like 'gbp' instead of 'google_business_profile')
 const platforms = [
-  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary", routePrefix: "linkedin", isDisabled: false },
-  { id: "GOOGLE_BUSINESS_PROFILE", name: "Google Business", color: "bg-blue-600", routePrefix: "google/business", isDisabled: false },
-  { id: "FACEBOOK", name: "Facebook", color: "bg-blue-600", routePrefix: "facebook", isDisabled: false },
-  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500", routePrefix: "pinterest", isDisabled: false },
-  { id: "REDDIT", name: "Reddit", color: "bg-green-600", routePrefix: "reddit", isDisabled: false },
-  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600", routePrefix: "youtube", isDisabled: false },
-  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", routePrefix: "instagram", isDisabled: true },
-  { id: "TIKTOK", name: "TikTok", color: "bg-black", routePrefix: "tiktok", isDisabled: true },
-  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", routePrefix: "twitter", isDisabled: true },
+  { id: "LINKEDIN", name: "LinkedIn", color: "bg-primary", routePrefix: "linkedin", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "GOOGLE_BUSINESS_PROFILE", name: "Google Business", color: "bg-blue-600", routePrefix: "google/business", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "FACEBOOK", name: "Facebook", color: "bg-blue-600", routePrefix: "facebook", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "PINTEREST", name: "Pinterest", color: "bg-orange-500", routePrefix: "pinterest", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "REDDIT", name: "Reddit", color: "bg-green-600", routePrefix: "reddit", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "YOUTUBE", name: "YouTube", color: "bg-red-600", routePrefix: "youtube", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "INSTAGRAM", name: "Instagram", color: "bg-gradient-to-r from-purple-500 to-pink-500", routePrefix: "instagram", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "TIKTOK", name: "TikTok", color: "bg-black", routePrefix: "tiktok", isDisabled: process.env.NODE_ENV === 'production' },
+  { id: "TWITTER", name: "Twitter", color: "bg-sky-500", routePrefix: "twitter", isDisabled: process.env.NODE_ENV === 'production' },
 ];
 
 export default function ConnectAccountsModal({ open, onOpenChange, brandName, brandId, accounts, mutate }: ConnectAccountsModalProps) {

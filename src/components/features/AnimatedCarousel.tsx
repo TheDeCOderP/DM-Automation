@@ -20,6 +20,7 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
   { id: 6, src: "/carousel/tik-tok.png", alt: "tik-tok logo", name: "TikTok" },
   { id: 7, src: "/carousel/twitter.png", alt: "twitter logo", name: "Twitter" },
   { id: 8, src: "/carousel/youtube.png", alt: "youtube logo", name: "YouTube" },
+  { id: 9, src: "/carousel/google-business-profile.png", alt: "google business profile logo", name: "Google Business Profile" },
 ]
 
 interface StatsItem {
