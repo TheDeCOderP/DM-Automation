@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { toDateTimeLocalString, fromDateTimeLocalString } from "@/utils/format";
+import { getPlatformIcon } from "@/utils/ui/icons";
 
 const TONE_OPTIONS = [
   { value: "professional", label: "Professional" },
@@ -108,6 +109,7 @@ export default function EditCalendarItemModal({
     PINTEREST: item.captionPinterest || "",
     REDDIT: item.captionReddit || "",
     TIKTOK: item.captionTikTok || "",
+    GOOGLE_BUSINESS_PROFILE: item.captionGoogleBusinessProfile || "",
   });
   const [hashtags, setHashtags] = useState<string[]>(item.hashtags || []);
   const [hashtagInput, setHashtagInput] = useState("");
@@ -331,6 +333,7 @@ export default function EditCalendarItemModal({
           captionPinterest: captions.PINTEREST,
           captionReddit: captions.REDDIT,
           captionTikTok: captions.TIKTOK,
+          captionGoogleBusinessProfile: captions.GOOGLE_BUSINESS_PROFILE,
           hashtags,
           imagePrompt,
           imageUrl: imagePreview || item.imageUrl,
@@ -353,20 +356,6 @@ export default function EditCalendarItemModal({
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const getPlatformIcon = (platform: string) => {
-    const icons: Record<string, string> = {
-      LINKEDIN: "💼",
-      TWITTER: "🐦",
-      INSTAGRAM: "📸",
-      FACEBOOK: "👥",
-      YOUTUBE: "📺",
-      PINTEREST: "📌",
-      REDDIT: "🤖",
-      TIKTOK: "🎵",
-    };
-    return icons[platform] || "📱";
   };
 
   return (
@@ -506,7 +495,8 @@ export default function EditCalendarItemModal({
                         ) : (
                           <RefreshCw className="w-3 h-3 mr-1" />
                         )}
-                        {getPlatformIcon(platform)} {platform}
+                        {/* We use getPlatformIcon if you have it available, else default */}
+                        {platform}
                       </Button>
                     ))}
                   </div>
@@ -535,7 +525,6 @@ export default function EditCalendarItemModal({
               <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${platforms.length}, 1fr)` }}>
                 {platforms.map((platform: string) => (
                   <TabsTrigger key={platform} value={platform}>
-                    <span className="mr-1">{getPlatformIcon(platform)}</span>
                     {platform}
                   </TabsTrigger>
                 ))}
@@ -545,14 +534,14 @@ export default function EditCalendarItemModal({
                 <TabsContent key={platform} value={platform} className="space-y-2">
                   <Textarea
                     placeholder={`Enter ${platform} caption...`}
-                    value={captions[platform as keyof typeof captions]}
+                    value={captions[platform as keyof typeof captions] || ""}
                     onChange={(e) => handleCaptionChange(platform, e.target.value)}
                     rows={8}
                     disabled={isSaving}
                     className="resize-none"
                   />
                   <p className="text-sm text-muted-foreground">
-                    {captions[platform as keyof typeof captions].length} characters
+                    {(captions[platform as keyof typeof captions] || "").length} characters
                   </p>
                 </TabsContent>
               ))}

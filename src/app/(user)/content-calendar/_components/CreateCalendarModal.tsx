@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useSwr from "swr";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -26,6 +27,8 @@ import {
   Zap,
   MessageSquare,
   Store,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +36,8 @@ import { formatDate } from "@/utils/format";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +65,8 @@ import {
 import { Platform } from "@prisma/client";
 import { getPlatformIcon } from "@/utils/ui/icons";
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 interface CreateCalendarModalProps {
   brandId: string;
   connectedPlatforms?: string[];
@@ -73,6 +80,12 @@ interface PublicHoliday {
   localName: string;
   global: boolean;
   types: string[];
+}
+
+interface GbpLocation {
+  id: string;
+  title: string;
+  storeCode?: string | null;
 }
 
 const PLATFORMS = [
@@ -240,6 +253,16 @@ export default function CreateCalendarModal({
   const [postsPerWeek, setPostsPerWeek] = useState(5);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
 
+  // Google Business locations
+  const { data: locationsData, isLoading: isLoadingLocations } = useSwr(
+    brandId ? `/api/locations?brandId=${brandId}` : null,
+    fetcher
+  );
+  const gbpLocations: GbpLocation[] = locationsData?.data || [];
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
+
+  const isGbpSelected = selectedPlatforms.includes("GOOGLE_BUSINESS_PROFILE" as Platform);
+
   // Content settings
   const [tone, setTone] = useState("professional");
   const [ctaStyle, setCtaStyle] = useState("engagement");
@@ -337,16 +360,35 @@ export default function CreateCalendarModal({
   };
 
   const handlePlatformToggle = (platform: Platform) =>
-    setSelectedPlatforms(prev => prev.includes(platform) ? prev.filter(p => p !== platform) : [...prev, platform]);
+    setSelectedPlatforms(prev => {
+      const isRemoving = prev.includes(platform);
+      // Clear GBP location selections whenever GBP itself gets deselected
+      if (isRemoving && platform === ("GOOGLE_BUSINESS_PROFILE" as Platform)) {
+        setSelectedLocationIds([]);
+      }
+      return isRemoving ? prev.filter(p => p !== platform) : [...prev, platform];
+    });
 
   const handlePillarToggle = (pillar: string) =>
     setSelectedPillars(prev => prev.includes(pillar) ? prev.filter(p => p !== pillar) : [...prev, pillar]);
+
+  const handleLocationToggle = (locationId: string) =>
+    setSelectedLocationIds(prev =>
+      prev.includes(locationId) ? prev.filter(id => id !== locationId) : [...prev, locationId]
+    );
+
+  const handleSelectAllLocations = () => setSelectedLocationIds(gbpLocations.map((l) => l.id));
+  const handleDeselectAllLocations = () => setSelectedLocationIds([]);
 
   const handleGenerate = async () => {
     if (!topic.trim()) { toast.error("Please enter a topic"); return; }
     if (selectedPlatforms.length === 0) { toast.error("Please select at least one platform"); return; }
     if (duration < 7 || duration > 90) { toast.error("Duration must be between 7 and 90 days"); return; }
     if (postsPerWeek < 1 || postsPerWeek > 14) { toast.error("Posts per week must be between 1 and 14"); return; }
+    if (isGbpSelected && selectedLocationIds.length === 0) {
+      toast.error("Please select at least one Google Business location");
+      return;
+    }
 
     setIsGenerating(true);
     setProgress("Creating calendar structure...");
@@ -372,6 +414,7 @@ export default function CreateCalendarModal({
           customInstructions: customInstructions.trim() || undefined,
           holidays: enableHolidays && activeHolidays.length > 0 ? activeHolidays : undefined,
           countryCode: enableHolidays ? selectedCountry : undefined,
+          gbpLocationIds: isGbpSelected && selectedLocationIds.length > 0 ? selectedLocationIds : undefined,
         }),
         signal: controller.signal,
       });
@@ -574,7 +617,6 @@ export default function CreateCalendarModal({
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
                       {availablePlatforms.map((platform) => {
-                        const IconComponent = platform.icon;
                         const isSelected = selectedPlatforms.includes(platform.value as Platform);
                         return (
                           <button
@@ -601,6 +643,92 @@ export default function CreateCalendarModal({
                           </button>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {/* Google Business location picker — shown once GBP is selected */}
+                  {isGbpSelected && (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50/40 dark:bg-blue-950/10 p-3 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Store className="w-3.5 h-3.5 text-blue-600" />
+                          <FieldLabel required>Google Business Location(s)</FieldLabel>
+                        </div>
+                        {gbpLocations.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleSelectAllLocations}
+                              disabled={isGenerating || selectedLocationIds.length === gbpLocations.length}
+                              className="text-[11px] font-medium text-primary hover:underline disabled:opacity-40 disabled:no-underline"
+                            >
+                              Select all
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleDeselectAllLocations}
+                              disabled={isGenerating || selectedLocationIds.length === 0}
+                              className="text-[11px] font-medium text-muted-foreground hover:underline disabled:opacity-40 disabled:no-underline"
+                            >
+                              Deselect all
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {isLoadingLocations ? (
+                        <div className="flex items-center justify-center gap-2 py-3 text-xs text-muted-foreground">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Loading locations...
+                        </div>
+                      ) : gbpLocations.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic py-1">
+                          No Google Business locations found for this brand. Connect a Google Business Profile account first.
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-0.5">
+                          {gbpLocations.map((location) => {
+                            const checked = selectedLocationIds.includes(location.id);
+                            return (
+                              <div
+                                key={location.id}
+                                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg border text-xs transition-all ${
+                                  checked
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border bg-background hover:bg-muted"
+                                }`}
+                              >
+                                <Checkbox
+                                  id={`gbp-loc-${location.id}`}
+                                  checked={checked}
+                                  onCheckedChange={() => !isGenerating && handleLocationToggle(location.id)}
+                                  disabled={isGenerating}
+                                />
+                                <Avatar className="w-6 h-6 shrink-0">
+                                  <AvatarFallback className="bg-blue-50 text-blue-700">
+                                    <Building2 className="w-3 h-3" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <Label htmlFor={`gbp-loc-${location.id}`} className="flex-1 min-w-0 cursor-pointer">
+                                  <span className="block truncate font-medium text-foreground">{location.title}</span>
+                                  <span className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
+                                    <MapPin className="w-2.5 h-2.5" />
+                                    {location.storeCode || "Primary location"}
+                                  </span>
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {gbpLocations.length > 0 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {selectedLocationIds.length > 0
+                            ? `${selectedLocationIds.length} location${selectedLocationIds.length !== 1 ? "s" : ""} selected`
+                            : "Select at least one location to post to"}
+                        </p>
+                      )}
                     </div>
                   )}
                 </SectionCard>
@@ -882,6 +1010,7 @@ export default function CreateCalendarModal({
                         `#${hashtagCount}`,
                         enableHolidays && activeHolidays.length > 0 && `${activeHolidays.length} holidays`,
                         selectedPillars.length > 0 && `${selectedPillars.length} pillars`,
+                        isGbpSelected && selectedLocationIds.length > 0 && `${selectedLocationIds.length} GBP location${selectedLocationIds.length !== 1 ? "s" : ""}`,
                       ].filter(Boolean).join(" · ") || "None"}
                     </p>
                   </div>
@@ -914,7 +1043,12 @@ export default function CreateCalendarModal({
               </Button>
               <Button
                 onClick={handleGenerate}
-                disabled={isGenerating || !topic.trim() || selectedPlatforms.length === 0}
+                disabled={
+                  isGenerating ||
+                  !topic.trim() ||
+                  selectedPlatforms.length === 0 ||
+                  (isGbpSelected && selectedLocationIds.length === 0)
+                }
                 className="min-w-[160px]"
               >
                 {isGenerating
